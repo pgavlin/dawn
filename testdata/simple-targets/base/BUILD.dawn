@@ -29,7 +29,7 @@ erat placerat.
 """
     sh.exec(f"echo \"{text}\" >nulla.md")
 
-@target(deps=[":lorem", ":nulla"], generates=["out.md"], default=True)
+@target(sources=["lorem.md", "nulla.md"], generates=["out.md"], default=True)
 def cat():
     lorem = sh.output("cat lorem.md").strip()
     nulla = sh.output("cat nulla.md").strip()

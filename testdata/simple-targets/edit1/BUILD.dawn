@@ -42,7 +42,7 @@ sagittis. Fusce pulvinar metus et lorem fringilla, non tempor metus eleifend.
 """
     sh.exec(f"echo \"{text}\" >praesent.md")
 
-@target(deps=[":lorem", ":nulla", ":praesent"], generates=["out.md"], default=True)
+@target(sources=["lorem.md", "nulla.md", "praesent.md"], generates=["out.md"], default=True)
 def cat():
     lorem = sh.output("cat lorem.md").strip()
     nulla = sh.output("cat nulla.md").strip()

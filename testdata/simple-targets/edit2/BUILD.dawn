@@ -41,7 +41,7 @@ sagittis. Fusce pulvinar metus et lorem fringilla, non tempor metus eleifend.
 for [name, text] in texts.items():
     make_target(name, text)
 
-@target(deps=[f":{k}" for k in texts.keys()], generates=["out.md"], default=True)
+@target(sources=[f"{k}.md" for k in texts.keys()], generates=["out.md"], default=True)
 def cat():
     sh.exec(f"rm out.md || exit 0")
     for k in texts.keys():

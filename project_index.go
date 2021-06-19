@@ -81,6 +81,10 @@ func (t *indexTarget) dependencies() []string {
 	return t.deps
 }
 
+func (t *indexTarget) generates() []string {
+	return nil
+}
+
 func (t *indexTarget) info() targetInfo {
 	return targetInfo{
 		Doc:          t.doc,

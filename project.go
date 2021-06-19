@@ -126,6 +126,11 @@ func (proj *Project) load(index bool) (err error) {
 			return m.err
 		}
 	}
+
+	if err := proj.link(); err != nil {
+		return err
+	}
+
 	proj.saveIndex()
 	return nil
 }
@@ -562,6 +567,30 @@ func (proj *Project) loadSourceFile(l *label.Label) (*sourceFile, error) {
 		return nil, err
 	}
 	return f, nil
+}
+
+// link adds dependencies between targets that generate source files and the source files themselves.
+func (proj *Project) link() error {
+	for _, t := range proj.targets {
+		for _, g := range t.target.generates() {
+			g = g[len(proj.root)+1:]
+
+			label, err := sourceLabel("//", g)
+			if err != nil {
+				return err
+			}
+			f, ok := proj.targets[label.String()]
+			if !ok {
+				continue
+			}
+			generated := f.target.(*sourceFile)
+			if generated.generator != nil {
+				return fmt.Errorf("multiple generators for %v: %v, %v", label, t.target.Label(), generated.generator)
+			}
+			generated.generator = t.target.Label()
+		}
+	}
+	return nil
 }
 
 func equalStringSlices(x, y []string) bool {

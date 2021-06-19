@@ -84,6 +84,10 @@ func (f *function) dependencies() []string {
 	return f.deps
 }
 
+func (f *function) generates() []string {
+	return f.gens
+}
+
 func (f *function) info() targetInfo {
 	return f.targetInfo
 }

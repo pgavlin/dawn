@@ -24,6 +24,7 @@ type Target interface {
 	Doc() string
 
 	dependencies() []string
+	generates() []string
 	info() targetInfo
 	upToDate() (bool, error)
 	evaluate() (data string, changed bool, err error)
