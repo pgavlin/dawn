@@ -21,9 +21,10 @@ type renderer interface {
 
 // simple renderer
 type lineRenderer struct {
-	m      sync.Mutex
-	stdout io.Writer
-	stderr io.Writer
+	m        sync.Mutex
+	stdout   io.Writer
+	stderr   io.Writer
+	onLoaded func()
 }
 
 func (e *lineRenderer) Close() error {
@@ -54,6 +55,10 @@ func (e *lineRenderer) LoadDone(err error) {
 		fmt.Fprintf(os.Stderr, "failed to load project: %v", err)
 	} else {
 		fmt.Fprintf(os.Stdout, "project loaded")
+	}
+
+	if e.onLoaded != nil {
+		e.onLoaded()
 	}
 }
 
@@ -260,6 +265,9 @@ type statusRenderer struct {
 	evaluating targetList
 	done       targetList
 	statusLine string
+	loaded     bool
+
+	onLoaded func()
 
 	stdout io.Writer
 }
@@ -314,6 +322,14 @@ func (e *statusRenderer) render(now time.Time, closed bool) {
 		e.line(e.stats.line())
 	}
 
+	// If the project finished loading during the last quantum, inform any waiters.
+	if e.loaded {
+		if e.onLoaded != nil {
+			e.onLoaded()
+		}
+		e.loaded = false
+	}
+
 	e.dirty = false
 }
 
@@ -338,6 +354,10 @@ func (e *statusRenderer) ModuleLoadFailed(label *label.Label, err error) {
 }
 
 func (e *statusRenderer) LoadDone(err error) {
+	e.m.Lock()
+	defer e.m.Unlock()
+
+	e.loaded, e.dirty = true, true
 }
 
 func (e *statusRenderer) TargetUpToDate(label *label.Label) {
@@ -407,15 +427,15 @@ func (e *statusRenderer) Close() error {
 	return nil
 }
 
-func newRenderer() (renderer, error) {
+func newRenderer(onLoaded func()) (renderer, error) {
 	new := func() renderer {
 		if !term.IsTerminal(os.Stdout) {
-			return &lineRenderer{stdout: os.Stdout, stderr: os.Stderr}
+			return &lineRenderer{stdout: os.Stdout, stderr: os.Stderr, onLoaded: onLoaded}
 		}
 
 		width, _, err := term.GetSize(os.Stdout)
 		if err != nil {
-			return &lineRenderer{stdout: os.Stdout, stderr: os.Stderr}
+			return &lineRenderer{stdout: os.Stdout, stderr: os.Stderr, onLoaded: onLoaded}
 		}
 
 		events := &statusRenderer{
@@ -424,6 +444,7 @@ func newRenderer() (renderer, error) {
 			maxWidth:   width,
 			stdout:     os.Stdout,
 			lastUpdate: time.Now(),
+			onLoaded:   onLoaded,
 		}
 
 		events.stats.update(time.Now())

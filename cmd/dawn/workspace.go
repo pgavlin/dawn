@@ -96,7 +96,9 @@ func (w *workspace) validLabels(_ *cobra.Command, _ []string, _ string) ([]strin
 }
 
 func (w *workspace) loadProject(args []string, index, quiet bool) error {
-	renderer, err := newRenderer()
+	rendered := make(chan bool)
+
+	renderer, err := newRenderer(func() { close(rendered) })
 	if err != nil {
 		return err
 	}
@@ -124,6 +126,8 @@ func (w *workspace) loadProject(args []string, index, quiet bool) error {
 	}
 	w.project = project
 	w.graph = buildGraph(w.project)
+
+	<-rendered
 	return nil
 }
 
