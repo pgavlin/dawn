@@ -1,0 +1,301 @@
+package pickle
+
+import (
+	"fmt"
+	"io"
+	"math"
+	"reflect"
+
+	"go.starlark.net/starlark"
+)
+
+type failure error
+
+type writer struct {
+	w io.Writer
+}
+
+func (w writer) Write(b []byte) (int, error) {
+	if _, err := w.w.Write(b); err != nil {
+		panic(failure(err))
+	}
+	return len(b), nil
+}
+
+func (w writer) WriteByte(b byte) error {
+	buf := [1]byte{b}
+	w.Write(buf[:])
+	return nil
+}
+
+func (w writer) WriteString(s string) (int, error) {
+	return w.Write([]byte(s))
+}
+
+// Pickler may be implemented to provide support for pickling non-primitive values.
+type Pickler interface {
+	// Pickle is called to pickle a non-primitive value.
+	Pickle(x starlark.Value) (module, name string, args starlark.Tuple, err error)
+}
+
+// A PicklerFunc is an implementation of Pickler that implements Pickle by
+// calling itself.
+type PicklerFunc func(x starlark.Value) (module, name string, args starlark.Tuple, err error)
+
+func (f PicklerFunc) Pickle(x starlark.Value) (module, name string, args starlark.Tuple, err error) {
+	return f(x)
+}
+
+// An Encoder encodes values to an underlying Writer.
+type Encoder struct {
+	w       writer
+	memo    map[starlark.Value]int
+	pickler Pickler
+}
+
+// NewEncoder creates a new Encoder that writes to the given reader and pickles
+// non-primitive values using the given Pickler.
+func NewEncoder(w io.Writer, pickler Pickler) *Encoder {
+	return &Encoder{
+		w:       writer{w},
+		memo:    map[starlark.Value]int{},
+		pickler: pickler,
+	}
+}
+
+func (e *Encoder) memoized(x starlark.Value) (int, bool) {
+	if reflect.TypeOf(x).Comparable() {
+		id, ok := e.memo[x]
+		return id, ok
+	}
+	return 0, false
+}
+
+func (e *Encoder) memoize(x starlark.Value) {
+	if reflect.TypeOf(x).Comparable() {
+		id := len(e.memo)
+		e.memo[x] = id
+
+		e.w.WriteByte(opMEMOIZE)
+	}
+}
+
+func (e *Encoder) encodeString(opShort, opLong byte, x string) {
+	var b [5]byte
+
+	l := len(x)
+	if l < 256 {
+		b[0], b[1] = opShort, byte(l)
+		e.w.Write(b[:2])
+	} else {
+		b[0], b[1], b[2], b[3], b[4] = opLong, byte(l), byte(l>>8), byte(l>>16), byte(l>>24)
+		e.w.Write(b[:5])
+	}
+
+	e.w.WriteString(x)
+}
+
+func (e *Encoder) encode(x starlark.Value) {
+	// If we've memoized this object, emit a BINGET.
+	if id, ok := e.memoized(x); ok {
+		var b [5]byte
+		if id < 256 {
+			b[0], b[1] = opBINGET, byte(id)
+			e.w.Write(b[:2])
+		} else {
+			b[0], b[1], b[2], b[3], b[4] = opLONG_BINGET, byte(id), byte(id>>8), byte(id>>16), byte(id>>24)
+			e.w.Write(b[:5])
+		}
+		return
+	}
+
+	switch x := x.(type) {
+	case starlark.NoneType:
+		e.w.WriteByte(opNONE)
+
+	case starlark.Bool:
+		if x {
+			e.w.WriteByte(opNEWTRUE)
+		} else {
+			e.w.WriteByte(opNEWFALSE)
+		}
+
+	case starlark.Int:
+		i64, ok := x.Int64()
+		if !ok || i64 < math.MinInt32 || i64 > math.MaxInt32 {
+			e.w.WriteByte(opINT)
+			text, err := x.BigInt().MarshalText()
+			if err != nil {
+				panic(failure(err))
+			}
+			e.w.Write(text)
+			e.w.WriteByte('\n')
+			return
+		}
+
+		var b [5]byte
+		switch {
+		case i64 >= 0 && i64 < 1<<8:
+			b[0], b[1] = opBININT1, byte(i64)
+			e.w.Write(b[:2])
+		case i64 >= 0 && i64 < 1<<16:
+			b[0], b[1], b[2] = opBININT2, byte(i64), byte(i64>>8)
+			e.w.Write(b[:3])
+		default:
+			b[0], b[1], b[2], b[3], b[4] = opBININT, byte(i64), byte(i64>>8), byte(i64>>16), byte(i64>>24)
+			e.w.Write(b[:5])
+		}
+
+	case starlark.Float:
+		bits := math.Float64bits(float64(x))
+
+		var b [9]byte
+		b[0] = opBINFLOAT
+		b[1], b[2], b[3], b[4], b[5], b[6], b[7], b[8] = byte(bits), byte(bits>>8), byte(bits>>16), byte(bits>>24), byte(bits>>32), byte(bits>>40), byte(bits>>48), byte(bits>>56)
+		e.w.Write(b[:])
+
+	case starlark.String:
+		e.encodeString(opSHORT_BINUNICODE, opBINUNICODE, string(x))
+
+	case starlark.Bytes:
+		e.encodeString(opSHORT_BINBYTES, opBINBYTES, string(x))
+
+	case *starlark.List:
+		e.w.WriteByte(opEMPTY_LIST)
+		e.memoize(x)
+
+		switch len := x.Len(); len {
+		case 0:
+			// done
+		case 1:
+			e.encode(x.Index(0))
+			e.w.WriteByte(opAPPEND)
+		default:
+			first := true
+			for i := 0; i < len; {
+				batch := len - i
+				if batch > 1000 {
+					batch = 1000
+				}
+
+				if !first {
+					e.encode(x)
+				}
+				first = false
+
+				e.w.WriteByte(opMARK)
+				for ; batch > 0; i, batch = i+1, batch-1 {
+					e.encode(x.Index(i))
+				}
+				e.w.WriteByte(opAPPENDS)
+			}
+		}
+
+	case starlark.Tuple:
+		// TODO: recursive tuples
+
+		switch len(x) {
+		case 0:
+			e.w.WriteByte(opEMPTY_TUPLE)
+		case 1:
+			e.encode(x[0])
+			e.w.WriteByte(opTUPLE1)
+		case 2:
+			e.encode(x[0])
+			e.encode(x[1])
+			e.w.WriteByte(opTUPLE2)
+		case 3:
+			e.encode(x[0])
+			e.encode(x[1])
+			e.encode(x[2])
+			e.w.WriteByte(opTUPLE3)
+		default:
+			e.w.WriteByte(opMARK)
+			for _, elem := range x {
+				e.encode(elem)
+			}
+			e.w.WriteByte(opTUPLE)
+		}
+		e.memoize(x)
+
+	case *starlark.Dict:
+		e.w.WriteByte(opEMPTY_DICT)
+		e.memoize(x)
+
+		items, first := x.Items(), true
+		for len(items) > 0 {
+			batch := items
+			if len(batch) > 1000 {
+				batch = batch[:1000]
+			}
+			items = items[len(batch):]
+
+			if !first {
+				e.encode(x)
+			}
+			first = false
+
+			e.w.WriteByte(opMARK)
+			for _, kvp := range batch {
+				e.encode(kvp[0])
+				e.encode(kvp[1])
+			}
+			e.w.WriteByte(opSETITEMS)
+		}
+
+	case *starlark.Set:
+		e.w.WriteByte(opEMPTY_SET)
+		e.memoize(x)
+
+		elems, first := x.Elems(), true
+		for len(elems) > 0 {
+			batch := elems
+			if len(batch) > 1000 {
+				batch = batch[:1000]
+			}
+			elems = elems[len(batch):]
+
+			if !first {
+				e.encode(x)
+			}
+			first = false
+
+			e.w.WriteByte(opMARK)
+			for _, elem := range batch {
+				e.encode(elem)
+			}
+			e.w.WriteByte(opADDITEMS)
+		}
+
+	default:
+		if e.pickler == nil {
+			panic(failure(fmt.Errorf("cannot pickle value of type %T", x)))
+		}
+
+		module, name, args, err := e.pickler.Pickle(x)
+		if err != nil {
+			panic(failure(err))
+		}
+
+		e.encodeString(opSHORT_BINUNICODE, opBINUNICODE, module)
+		e.encodeString(opSHORT_BINUNICODE, opBINUNICODE, name)
+		e.w.WriteByte(opSTACK_GLOBAL)
+		e.encode(args)
+		e.w.WriteByte(opNEWOBJ)
+
+		e.memoize(x)
+	}
+}
+
+// Encode encodes the given value to the underlying Writer.
+func (e *Encoder) Encode(x starlark.Value) (err error) {
+	defer func() {
+		if f, ok := recover().(failure); ok {
+			err = error(f)
+		}
+	}()
+
+	e.encode(x)
+	e.w.WriteByte(opSTOP)
+	return nil
+}

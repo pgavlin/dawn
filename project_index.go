@@ -1,0 +1,174 @@
+package dawn
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+	"sort"
+
+	"github.com/pgavlin/dawn/label"
+	"go.starlark.net/starlark"
+)
+
+// A TargetSummary contains summarial information about a build target.
+type TargetSummary struct {
+	// Label is the target's label.
+	Label *label.Label `json:"label"`
+	// Summary is a summary of the target's docstring (as returned by DocSummary(t)).
+	Summary string `json:"summary"`
+}
+
+type index struct {
+	Flags   []*Flag         `json:"flags"`
+	Targets []TargetSummary `json:"targets"`
+}
+
+// Targets returns the targets listed in the index file of the project rooted at the given
+// directory.
+func Targets(root string) ([]TargetSummary, error) {
+	work := filepath.Join(root, ".dawn", "build")
+
+	f, err := os.Open(filepath.Join(work, "index.json"))
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	var index index
+	if err := json.NewDecoder(f).Decode(&index); err != nil {
+		return nil, err
+	}
+
+	return index.Targets, nil
+}
+
+// An indexTarget is a synthetic target created by an index-only load.
+type indexTarget struct {
+	proj  *Project
+	label *label.Label
+	deps  []string
+	doc   string
+}
+
+func (t *indexTarget) Name() string {
+	return t.label.String()
+}
+
+func (t *indexTarget) Doc() string {
+	return t.doc
+}
+
+func (t *indexTarget) String() string        { return t.label.String() }
+func (t *indexTarget) Type() string          { return t.label.Kind }
+func (t *indexTarget) Freeze()               {} // immutable
+func (t *indexTarget) Truth() starlark.Bool  { return starlark.True }
+func (t *indexTarget) Hash() (uint32, error) { return starlark.String(t.label.String()).Hash() }
+
+func (t *indexTarget) Project() *Project {
+	return t.proj
+}
+
+func (t *indexTarget) Label() *label.Label {
+	return t.label
+}
+
+func (t *indexTarget) Dependencies() []*label.Label {
+	return targetDependencies(t)
+}
+
+func (t *indexTarget) dependencies() []string {
+	return t.deps
+}
+
+func (t *indexTarget) info() targetInfo {
+	return targetInfo{
+		Doc:          t.doc,
+		Dependencies: t.deps,
+	}
+}
+
+func (t *indexTarget) upToDate() (bool, error) {
+	return true, nil
+}
+
+func (*indexTarget) evaluate() (data string, changed bool, err error) {
+	return "", false, fmt.Errorf("index targets are not executable; please reload the project")
+}
+
+func (proj *Project) loadIndex() error {
+	f, err := os.Open(filepath.Join(proj.work, "index.json"))
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	var index index
+	if err := json.NewDecoder(f).Decode(&index); err != nil {
+		return err
+	}
+
+	for _, flag := range index.Flags {
+		proj.flags[flag.Name] = flag
+	}
+
+	for _, summary := range index.Targets {
+		l := summary.Label
+
+		info, err := proj.loadTargetInfo(l)
+		if err != nil {
+			return err
+		}
+
+		var target Target
+		if IsSource(l) {
+			components := label.Split(l.Package)[1:]
+			path := filepath.Join(proj.root, filepath.Join(components...), l.Target)
+
+			target = &sourceFile{
+				proj:  proj,
+				label: l,
+				path:  path,
+			}
+		} else {
+			target = &indexTarget{
+				proj:  proj,
+				label: l,
+				doc:   info.Doc,
+				deps:  info.Dependencies,
+			}
+		}
+
+		proj.targets[l.String()] = &runTarget{target: target}
+	}
+
+	return nil
+}
+
+func (proj *Project) saveIndex() error {
+	f, err := os.Create(filepath.Join(proj.work, "index.json"))
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	index := index{
+		Flags:   make([]*Flag, 0, len(proj.args)),
+		Targets: make([]TargetSummary, 0, len(proj.targets)),
+	}
+	for _, arg := range proj.flags {
+		index.Flags = append(index.Flags, arg)
+	}
+	sort.Slice(index.Flags, func(i, j int) bool { return index.Flags[i].Name < index.Flags[j].Name })
+	for _, t := range proj.targets {
+		index.Targets = append(index.Targets, TargetSummary{
+			Label:   t.target.Label(),
+			Summary: DocSummary(t.target),
+		})
+	}
+	sort.Slice(index.Targets, func(i, j int) bool { return index.Targets[i].Label.String() < index.Targets[j].Label.String() })
+
+	enc := json.NewEncoder(f)
+	enc.SetIndent("", "    ")
+	return enc.Encode(index)
+}

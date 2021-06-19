@@ -1,0 +1,11 @@
+@target(sources=["lorem.md", "nulla.md", "praesent.md"], default=True)
+def cat():
+    lorem = sh.output("cat lorem.md")
+    nulla = sh.output("cat nulla.md")
+    praesent = sh.output("cat praesent.md")
+
+    sh.exec(f"rm out.md || exit 0")
+    sh.exec(f"echo \"{lorem}\" >>out.md")
+    sh.exec(f"echo \"{nulla}\" >>out.md")
+    sh.exec(f"echo \"{praesent}\" >> out.md")
+

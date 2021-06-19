@@ -1,0 +1,24 @@
+sources = ["lorem.md", "nulla.md", "praesent.md"]
+
+@target(sources=sources, default=True)
+def cat():
+    sh.exec("rm out.md || exit 0")
+    for s in sources:
+        text = sh.output(f"cat {s}")
+        sh.exec(f"echo \"{text}\" >>out.md")
+
+    literal = """Nulla ex eros, fermentum eget diam a, aliquam maximus odio. Quisque luctus dui
+felis, ac bibendum magna condimentum id. In vulputate, mi at molestie consequat,
+diam risus tincidunt odio, a blandit eros nunc a massa. Sed eget nisl tincidunt,
+pretium mauris sed, sagittis metus. Curabitur eget euismod tortor. Duis semper
+ultrices nulla, ut pharetra sem. Donec finibus accumsan metus, porta finibus
+turpis imperdiet quis. Nulla lacus nibh, lacinia a lobortis vel, molestie varius
+augue. Curabitur non ante metus. Nunc augue arcu, tempus ut massa sed, tincidunt
+fermentum metus. Sed accumsan, sem vitae aliquet tristique, augue sapien
+hendrerit lectus, auctor porta quam erat a erat. Phasellus mollis vehicula dolor
+imperdiet efficitur. Nulla posuere egestas ex et tristique. Pellentesque
+habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas.
+Donec in dolor ante. Phasellus eget varius tellus.
+"""
+
+    sh.exec(f"echo \"{literal}\" >>out.md")

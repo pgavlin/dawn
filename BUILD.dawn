@@ -1,0 +1,14 @@
+load("//.dawn:go_sources.dawn", "go_sources")
+
+version = "0.0.1"
+
+debug = parse_flag("debug", type=bool, help="True to run a debug build")
+
+@target(sources=go_sources(), default=True)
+def dawn():
+    """
+    Builds the dawn CLI.
+    """
+
+    gcflags = "-gcflags=\"all=-N -l\"" if debug else ""
+    sh.exec(f"go install {gcflags} -ldflags \"-X github.com/pgavlin/dawn/cmd/dawn.version={version}\" github.com/pgavlin/dawn/cmd/dawn")

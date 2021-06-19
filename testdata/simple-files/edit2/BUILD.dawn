@@ -1,0 +1,8 @@
+sources = ["lorem.md", "nulla.md", "praesent.md"]
+
+@target(sources=sources, default=True)
+def cat():
+    sh.exec("rm out.md || exit 0")
+    for s in sources:
+        text = sh.output(f"cat {s}")
+        sh.exec(f"echo \"{text}\" >>out.md")

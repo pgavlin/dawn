@@ -1,0 +1,50 @@
+def make_target(name, text):
+    @target(name=name)
+    def _target():
+        sh.exec(f"echo \"{text}\" >{name}.md")
+
+texts = {
+    "lorem": """Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam aliquam, dolor ut
+accumsan venenatis, magna tellus iaculis nisl, id lobortis felis mauris vel mi.
+Maecenas augue ex, fermentum id elit eu, gravida egestas ipsum. Maecenas at
+malesuada nulla, sed vestibulum mauris. Quisque nibh diam, bibendum facilisis
+commodo vehicula, tristique non turpis. Proin iaculis ipsum eget erat pretium,
+vel semper lectus rhoncus. Nunc ipsum mauris, faucibus ac interdum eu, vulputate
+in sem. Proin pharetra odio egestas cursus mattis. Nulla tincidunt posuere nisl,
+eget egestas arcu laoreet sed. Vivamus nec eros nisi. In hac habitasse platea
+dictumst. Integer metus urna, porta sit amet urna et, commodo imperdiet metus.
+Donec lacus massa, bibendum eu pharetra eu, imperdiet et velit. Vivamus
+pellentesque tortor eu lectus mattis condimentum. Cras vel dignissim eros.
+Aenean sem eros, facilisis quis vestibulum eu, luctus sed est.
+""",
+    "nulla": """Nulla in risus accumsan dolor porta ullamcorper non id justo. Quisque
+sollicitudin venenatis purus at volutpat. Maecenas rhoncus ornare arcu non
+semper. Morbi arcu felis, facilisis in ligula vitae, maximus scelerisque nulla.
+Fusce eget risus elementum, euismod nisi et, vulputate diam. Proin molestie nisl
+ipsum, ac consectetur neque gravida quis. Vivamus tincidunt non elit vitae
+cursus. Vestibulum orci nisi, pharetra id enim sit amet, varius ornare velit.
+Praesent dui risus, posuere ut dignissim a, dapibus quis erat. Cras blandit
+dolor ac tempor bibendum. Ut lobortis neque eget nisl bibendum, vitae facilisis
+erat placerat.
+""",
+    "praesent": """Praesent mattis dictum aliquam. Donec a mattis diam. Vivamus ullamcorper turpis
+a ex hendrerit convallis. Maecenas tempus ex vel lacinia feugiat. Pellentesque
+vestibulum imperdiet tortor, et interdum nibh. Donec a libero massa. Donec
+gravida purus id mauris consectetur feugiat. Phasellus nulla dolor, mollis sit
+amet arcu ultricies, laoreet commodo turpis. Vestibulum ex sapien, posuere non
+bibendum non, sagittis eu metus. Nullam et elit tempus, pretium erat sit amet,
+tincidunt neque. Aenean placerat massa ut dui commodo, eu finibus felis
+sagittis. Fusce pulvinar metus et lorem fringilla, non tempor metus eleifend.
+""",
+}
+
+for [name, text] in texts.items():
+    make_target(name, text)
+
+@target(deps=[f":{k}" for k in texts.keys()], default=True)
+def cat():
+    sh.exec(f"rm out.md || exit 0")
+    for k in texts.keys():
+        text = sh.output(f"cat {k}.md").strip()
+        sh.exec(f"echo \"{text}\" >>out.md")
+        sh.exec("echo \"\" >>out.md")
