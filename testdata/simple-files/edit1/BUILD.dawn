@@ -1,4 +1,4 @@
-@target(sources=["lorem.md", "nulla.md", "praesent.md"], default=True)
+@target(sources=["lorem.md", "nulla.md", "praesent.md"], generates=["out.md"], default=True)
 def cat():
     lorem = sh.output("cat lorem.md")
     nulla = sh.output("cat nulla.md")

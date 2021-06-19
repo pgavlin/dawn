@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -26,6 +27,7 @@ type function struct {
 	always     bool
 	targetInfo targetInfo
 	deps       []string
+	gens       []string
 	docs       string
 	function   starlark.HasEnv
 	oldEnv     starlark.Value
@@ -100,7 +102,24 @@ func (f *function) upToDate() (bool, error) {
 		return true, nil
 	}
 
-	return starlark.EqualDepth(f.oldEnv, f.newEnv, 1000)
+	eq, err := starlark.EqualDepth(f.oldEnv, f.newEnv, 1000)
+	if err != nil {
+		return false, fmt.Errorf("comparing function environments: %w", err)
+	}
+	if !eq {
+		return false, nil
+	}
+
+	// if this target generates files, check to see that they exist
+	for _, out := range f.gens {
+		if _, err = os.Stat(out); err != nil {
+			if os.IsNotExist(err) {
+				return false, nil
+			}
+			return false, fmt.Errorf("checking generated files: %w", err)
+		}
+	}
+	return true, nil
 }
 
 func (f *function) newThread() *starlark.Thread {

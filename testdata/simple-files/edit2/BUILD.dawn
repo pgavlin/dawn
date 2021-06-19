@@ -1,6 +1,6 @@
 sources = ["lorem.md", "nulla.md", "praesent.md"]
 
-@target(sources=sources, default=True)
+@target(sources=sources, generates=["out.md"], default=True)
 def cat():
     sh.exec("rm out.md || exit 0")
     for s in sources:

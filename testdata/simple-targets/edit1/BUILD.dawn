@@ -1,4 +1,4 @@
-@target
+@target(generates=["lorem.md"])
 def lorem():
     text = """Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam aliquam, dolor ut
 accumsan venenatis, magna tellus iaculis nisl, id lobortis felis mauris vel mi.
@@ -15,7 +15,7 @@ Aenean sem eros, facilisis quis vestibulum eu, luctus sed est.
 """
     sh.exec(f"echo \"{text}\" >lorem.md")
 
-@target
+@target(generates=["nulla.md"])
 def nulla():
     text = """Nulla in risus accumsan dolor porta ullamcorper non id justo. Quisque
 sollicitudin venenatis purus at volutpat. Maecenas rhoncus ornare arcu non
@@ -29,7 +29,7 @@ erat placerat.
 """
     sh.exec(f"echo \"{text}\" >nulla.md")
 
-@target
+@target(generates=["praesent.md"])
 def praesent():
     text = """Praesent mattis dictum aliquam. Donec a mattis diam. Vivamus ullamcorper turpis
 a ex hendrerit convallis. Maecenas tempus ex vel lacinia feugiat. Pellentesque
@@ -42,7 +42,7 @@ sagittis. Fusce pulvinar metus et lorem fringilla, non tempor metus eleifend.
 """
     sh.exec(f"echo \"{text}\" >praesent.md")
 
-@target(deps=[":lorem", ":nulla", ":praesent"], default=True)
+@target(deps=[":lorem", ":nulla", ":praesent"], generates=["out.md"], default=True)
 def cat():
     lorem = sh.output("cat lorem.md").strip()
     nulla = sh.output("cat nulla.md").strip()

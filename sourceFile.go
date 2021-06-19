@@ -21,9 +21,9 @@ type sourceFile struct {
 	sum    string
 }
 
-func sourceLabel(pkg, sourcePath string) (*label.Label, error) {
+func repoSourcePath(pkg, sourcePath string) (string, error) {
 	if sourcePath == "" {
-		return nil, errors.New("path must not be empty")
+		return "", errors.New("path must not be empty")
 	}
 
 	if !path.IsAbs(sourcePath) {
@@ -32,7 +32,16 @@ func sourceLabel(pkg, sourcePath string) (*label.Label, error) {
 
 	sourcePath = path.Clean(sourcePath)
 	if sourcePath == ".." || strings.HasPrefix(sourcePath, "../") {
-		return nil, fmt.Errorf("source file %v is outside of the project root", sourcePath)
+		return "", fmt.Errorf("source file %v is outside of the project root", sourcePath)
+	}
+
+	return sourcePath, nil
+}
+
+func sourceLabel(pkg, sourcePath string) (*label.Label, error) {
+	sourcePath, err := repoSourcePath(pkg, sourcePath)
+	if err != nil {
+		return nil, err
 	}
 
 	pkg, target := "//", sourcePath
