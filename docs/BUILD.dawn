@@ -1,0 +1,3 @@
+@target(sources=["markdown/**", "mkdocs.yml"], generates=["site"])
+def site():
+    sh.exec("mkdocs build")

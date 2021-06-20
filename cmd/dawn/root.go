@@ -15,8 +15,8 @@ var termWidth int
 var rootCmd = &cobra.Command{
 	Version:      version,
 	Use:          "dawn",
-	Short:        "dawn is a minimalistic polyglot build system in Starlark and Go.",
-	Long:         `A minimalistic polyglot build system in Starlark and Go.`,
+	Short:        "dawn is a pragmatic polyglot build system.",
+	Long:         `A pragmatic polyglot build system.`,
 	Args:         cobra.ArbitraryArgs,
 	SilenceUsage: true,
 	PersistentPreRunE: func(_ *cobra.Command, _ []string) error {
