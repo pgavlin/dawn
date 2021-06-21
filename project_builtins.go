@@ -114,6 +114,10 @@ func (proj *Project) builtin_contains(thread *starlark.Thread, fn *starlark.Buil
 		return nil, err
 	}
 
+	if filepath.VolumeName(path) != filepath.VolumeName(proj.root) {
+		return starlark.Tuple{starlark.None, starlark.False}, nil
+	}
+
 	rel, err := filepath.Rel(proj.root, path)
 	if err != nil {
 		return nil, err
