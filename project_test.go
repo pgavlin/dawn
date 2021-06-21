@@ -1,6 +1,7 @@
 package dawn
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"testing"
@@ -15,6 +16,12 @@ import (
 	starlark_json "go.starlark.net/lib/json"
 	"go.starlark.net/starlark"
 )
+
+func readFile(t *testing.T, path string) []byte {
+	contents, err := os.ReadFile(path)
+	require.NoError(t, err)
+	return bytes.ReplaceAll(contents, []byte{'\r', '\n'}, []byte{'\n'})
+}
 
 type projectTest struct {
 	path     string
@@ -70,12 +77,8 @@ func TestSimpleFiles(t *testing.T) {
 		path:  "testdata/simple-files",
 		edits: []string{"edit1", "edit2", "edit3"},
 		validate: func(t *testing.T, dir string) {
-			expected, err := os.ReadFile(filepath.Join(dir, "expected.md"))
-			require.NoError(t, err)
-
-			actual, err := os.ReadFile(filepath.Join(dir, "out.md"))
-			require.NoError(t, err)
-
+			expected := readFile(t, filepath.Join(dir, "expected.md"))
+			actual := readFile(t, filepath.Join(dir, "out.md"))
 			assert.Equal(t, expected, actual)
 		},
 	}
@@ -87,12 +90,8 @@ func TestSimpleTargets(t *testing.T) {
 		path:  "testdata/simple-targets",
 		edits: []string{"edit1", "edit2"},
 		validate: func(t *testing.T, dir string) {
-			expected, err := os.ReadFile(filepath.Join(dir, "expected.md"))
-			require.NoError(t, err)
-
-			actual, err := os.ReadFile(filepath.Join(dir, "out.md"))
-			require.NoError(t, err)
-
+			expected := readFile(t, filepath.Join(dir, "expected.md"))
+			actual := readFile(t, filepath.Join(dir, "out.md"))
 			assert.Equal(t, expected, actual)
 		},
 	}
