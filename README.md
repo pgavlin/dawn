@@ -2,7 +2,6 @@
 
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/pgavlin/dawn)](https://pkg.go.dev/github.com/pgavlin/dawn)
 [![codecov](https://codecov.io/gh/pgavlin/dawn/branch/master/graph/badge.svg)](https://codecov.io/gh/pgavlin/dawn)
-[![Go Report Card](https://goreportcard.com/badge/github.com/pgavlin/dawn)](https://goreportcard.com/report/github.com/pgavlin/dawn)
 [![Test](https://github.com/pgavlin/dawn/workflows/Test/badge.svg)](https://github.com/pgavlin/dawn/actions?query=workflow%3ATest)
 
 `dawn` helps you modernize your build without leaving your existing ecosystems behind.
