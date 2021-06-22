@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/pgavlin/dawn/label"
@@ -44,6 +45,8 @@ func sourceLabel(pkg, sourcePath string) (*label.Label, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	sourcePath = filepath.ToSlash(sourcePath)
 
 	pkg, target := "//", sourcePath
 	if lastSlash := strings.LastIndexByte(sourcePath, '/'); lastSlash != -1 {
