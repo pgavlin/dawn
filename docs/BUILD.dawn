@@ -1,3 +1,7 @@
 @target(sources=os.glob(["markdown/**", "mkdocs.yml"]), generates=["site"])
 def site():
+    """
+    Builds the dawn docs site using mkdocs.
+    """
+
     sh.exec("mkdocs build")

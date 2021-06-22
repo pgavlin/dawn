@@ -15,4 +15,8 @@ def dawn():
 
 @target(deps=[":dawn", "docs:site"])
 def default():
+    """
+    Builds the dawn CLI and docs.
+    """
+
     pass
