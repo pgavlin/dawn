@@ -4,7 +4,24 @@ version = "0.0.1"
 
 debug = parse_flag("debug", type=bool, help="True to run a debug build")
 
-@target(sources=go_sources())
+@target(sources=go_sources(path("//cmd/dawn-gen-builtins")))
+def dawn_gen_builtins():
+    """
+    Builds the dawn-gen-builtins tool for generating Starlark builtin wrappers.
+    """
+
+    gcflags = "-gcflags=\"all=-N -l\"" if debug else ""
+    sh.exec(f"go install {gcflags} github.com/pgavlin/dawn/cmd/dawn-gen-builtins")
+
+@target(deps=[dawn_gen_builtins], sources=["project_builtins.go"], generates=["builtins.go"])
+def dawn_builtins():
+    """
+    Generates wrappers + documentation for builtin functions.
+    """
+
+    sh.exec("dawn-gen-builtins . builtins.go")
+
+@target(sources=go_sources(path("//cmd/dawn")))
 def dawn():
     """
     Builds the dawn CLI.
@@ -18,5 +35,3 @@ def default():
     """
     Builds the dawn CLI and docs.
     """
-
-    pass

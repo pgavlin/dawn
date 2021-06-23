@@ -44,8 +44,11 @@ func (t *runTarget) Evaluate(engine runner.Engine) error {
 	depsUpToDate := equalStringSlices(info.Dependencies, deps)
 	for i, dep := range engine.EvaluateTargets(deps...) {
 		if dep.Error != nil {
-			if _, ok := dep.Error.(UnknownTargetError); ok {
+			switch err := dep.Error.(type) {
+			case UnknownTargetError:
 				proj.events.TargetFailed(label, fmt.Errorf("missing dependency: %w", dep.Error))
+			case runner.CyclicDependencyError:
+				proj.events.TargetFailed(label, err)
 			}
 			return fmt.Errorf("dependency %v failed", deps[i])
 		}

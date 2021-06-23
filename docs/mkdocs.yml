@@ -1,3 +1,6 @@
 site_name: My Docs
-site_url: https://example.com/
+site_url: https://dawn-build.io
 docs_dir: markdown
+nav:
+  - Home: index.md
+theme: readthedocs

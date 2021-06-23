@@ -254,11 +254,11 @@ func (proj *Project) REPLEnv(stdout io.Writer, pkg *label.Label) (thread *starla
 	thread.Print = func(_ *starlark.Thread, msg string) {
 		fmt.Fprintln(stdout, msg)
 	}
-	globals["get_target"] = starlark.NewBuiltin("get_target", proj.builtin_get_target).WithDoc(get_targetDoc)
-	globals["flags"] = starlark.NewBuiltin("flags", proj.builtin_flags).WithDoc(flagsDoc)
-	globals["targets"] = starlark.NewBuiltin("targets", proj.builtin_targets).WithDoc(targetsDoc)
-	globals["sources"] = starlark.NewBuiltin("sources", proj.builtin_sources).WithDoc(sourcesDoc)
-	globals["run"] = starlark.NewBuiltin("run", proj.builtin_run).WithDoc(runDoc)
+	globals["get_target"] = proj.newBuiltin_get_target()
+	globals["flags"] = proj.newBuiltin_flags()
+	globals["targets"] = proj.newBuiltin_targets()
+	globals["sources"] = proj.newBuiltin_sources()
+	globals["run"] = proj.newBuiltin_run()
 	return thread, globals
 }
 

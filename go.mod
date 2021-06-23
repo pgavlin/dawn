@@ -17,6 +17,7 @@ require (
 	go.starlark.net v0.0.0-20210429133630-0c63ff3779a6
 	golang.org/x/sys v0.0.0-20210503080704-8803ae5d1324
 	golang.org/x/term v0.0.0-20210503060354-a79de5458b56
+	golang.org/x/tools v0.0.0-20191112195655-aa38f8e97acc
 	mvdan.cc/sh/v3 v3.3.0
 )
 

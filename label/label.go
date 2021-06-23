@@ -44,7 +44,7 @@ func Parse(rawlabel string) (*Label, error) {
 	}
 
 	module, version, pkg := "", (*semver.Version)(nil), ""
-	if moduleAt := strings.IndexByte(moduleAndPkg, '@'); moduleAt != -1 {
+	if moduleAt := strings.IndexByte(moduleAndPkg, '@'); moduleAt != -1 && !strings.HasPrefix(moduleAndPkg, "//") {
 		module, pkg = moduleAndPkg[:moduleAt], moduleAndPkg[moduleAt+1:]
 		if versionPlus := strings.IndexByte(module, '+'); versionPlus != -1 {
 			v, err := semver.ParseTolerant(module[versionPlus+1:])

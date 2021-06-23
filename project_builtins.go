@@ -1,3 +1,4 @@
+//go:generate go run ./cmd/dawn-gen-builtins . builtins.go
 package dawn
 
 import (
@@ -44,16 +45,13 @@ func (a *flagValue) Type() string {
 	return a.type_.Name()
 }
 
-const pathDoc = `
-    Returns the absolute OS path that corresponds to the given label.
-`
-
-func (proj *Project) builtin_path(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	var rawlabel string
-	if err := starlark.UnpackArgs(fn.Name(), args, kwargs, "label", &rawlabel); err != nil {
-		return nil, err
-	}
-
+// def path(label):
+//     """
+//     Returns the absolute OS path that corresponds to the given label.
+//     """
+//
+//starlark:builtin
+func (proj *Project) builtin_path(thread *starlark.Thread, fn *starlark.Builtin, rawlabel string) (starlark.Value, error) {
 	m := thread.Local("module").(*module)
 
 	l, err := label.Parse(rawlabel)
@@ -69,16 +67,13 @@ func (proj *Project) builtin_path(thread *starlark.Thread, fn *starlark.Builtin,
 	return starlark.String(filepath.Join(proj.root, filepath.Join(components...), l.Target)), nil
 }
 
-const labelDoc = `
-    Returns the label that corresponds to the given OS path, if any.
-`
-
-func (proj *Project) builtin_label(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	var path string
-	if err := starlark.UnpackArgs(fn.Name(), args, kwargs, "path", &path); err != nil {
-		return nil, err
-	}
-
+// def label(path):
+//     """
+//     Returns the label that corresponds to the given OS path, if any.
+//     """
+//
+//starlark:builtin
+func (proj *Project) builtin_label(thread *starlark.Thread, fn *starlark.Builtin, path string) (starlark.Value, error) {
 	m := thread.Local("module").(*module)
 
 	l, err := sourceLabel(m.label.Package, path)
@@ -97,18 +92,15 @@ func (proj *Project) builtin_label(thread *starlark.Thread, fn *starlark.Builtin
 
 var parentDir = string([]rune{'.', '.', os.PathSeparator})
 
-const containsDoc = `
-    Returns the label that corresponds to the given OS path if the path is
-    contained in the current project. If the path is not contained in the
-    current project, contains returns (None, False).
-`
-
-func (proj *Project) builtin_contains(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	var path string
-	if err := starlark.UnpackArgs(fn.Name(), args, kwargs, "path", &path); err != nil {
-		return nil, err
-	}
-
+// def contains(path):
+//     """
+//     Returns the label that corresponds to the given OS path if the path is
+//     contained in the current project. If the path is not contained in the
+//     current project, contains returns (None, False).
+//     """
+//
+//starlark:builtin
+func (proj *Project) builtin_contains(thread *starlark.Thread, fn *starlark.Builtin, path string) (starlark.Value, error) {
 	path, err := filepath.Abs(path)
 	if err != nil {
 		return nil, err
@@ -131,32 +123,31 @@ func (proj *Project) builtin_contains(thread *starlark.Thread, fn *starlark.Buil
 	return starlark.Tuple{starlark.String("/" + strings.Join(components, "/")), starlark.True}, nil
 }
 
-const parse_flagDoc = `
-    Defines and parses a new project flag in the current package.
-
-    :param name: the name of the flag.
-    :param default: the default value for the flag, if any.
-    :param type: the type to which the flag's argument should be converted. Defaults to str.
-    :param choices: the valid values for the flag. Defaults to any value.
-    :param required: True if the flag must be set.
-    :param help: the help string for the flag.
-
-    :returns: the flag's value.
-`
-
-func (proj *Project) builtin_parse_flag(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	var (
-		name     string
-		default_ starlark.Value
-		type_    starlark.Callable
-		choices  []starlark.Value
-		required bool
-		help     string
-	)
-	if err := starlark.UnpackArgs(fn.Name(), args, kwargs, "name", &name, "default?", &default_, "type?", &type_, "choices?", &choices, "required?", &required, "help?", &help); err != nil {
-		return nil, err
-	}
-
+// def parse_flag(name, default=None, type=None, choices=None, required=None, help=None):
+//     """
+//     Defines and parses a new project flag in the current package.
+//
+//     :param name: the name of the flag.
+//     :param default: the default value for the flag, if any.
+//     :param type: the type to which the flag's argument should be converted. Defaults to str.
+//     :param choices: the valid values for the flag. Defaults to any value.
+//     :param required: True if the flag must be set.
+//     :param help: the help string for the flag.
+//
+//     :returns: the flag's value.
+//     """
+//
+//starlark:builtin
+func (proj *Project) builtin_parse_flag(
+	thread *starlark.Thread,
+	fn *starlark.Builtin,
+	name string,
+	default_ starlark.Value, //??
+	type_ starlark.Callable, //??
+	choices []starlark.Value, //??
+	required bool, //??
+	help string, //??
+) (starlark.Value, error) {
 	if name == "" {
 		return nil, fmt.Errorf("%v: name must not be empty", fn.Name())
 	}
@@ -239,25 +230,25 @@ func (proj *Project) builtin_parse_flag(thread *starlark.Thread, fn *starlark.Bu
 
 const targetDoc = `
     Defines a new build target in the current package. Typically used as a
-	decorator, in which case the decorated function is treated as the value
-	of the function parameter.
+    decorator, in which case the decorated function is treated as the value
+    of the function parameter.
 
     :param name: the name of the target.
     :param deps: the target's dependencies. Must be a sequence whose elements
                  are either labels or other build targets.
     :param sources: the target's source files. Must be a sequence of strings.
                     Each string will be interpreted relative to the package's
-    				directory (if the path is relative) or project root (if
-    				the path is absolute).
-	:param generates: any files generated by the targets. Must be a sequence of
-	                  strings. Paths are interpreted identically to those in
-					  the sources parameter.
+                    directory (if the path is relative) or project root (if
+                    the path is absolute).
+    :param generates: any files generated by the targets. Must be a sequence of
+                      strings. Paths are interpreted identically to those in
+                      the sources parameter.
     :param function: the target's callback function. If this parameter is None,
-	                 target returns a decorator function rather than a target.
+                     target returns a decorator function rather than a target.
     :param default: True if the target is its package's default target.
     :param always: True if the target should always be considered out-of-date.
-	:param docs: the docs for the target. Normally picked up from the
-	             function's docstring.
+    :param docs: the docs for the target. Normally picked up from the
+                 function's docstring.
 
     :returns: the new build target object or a decorator if function is None.
 `
@@ -378,29 +369,30 @@ func (proj *Project) builtin_target(thread *starlark.Thread, fn *starlark.Builti
 }
 
 const globDoc = `
-	Return a list of paths relative to the root that match the given include
-	and exclude patterns. Typically passed to the sources parameter of target.
-
-	- '*' matches any number of non-path-separator characters
-	- '**' matches any number of any characters
-	- '?' matches a single character
-
-	:param include: the patterns to include.
-	:param exclude: the patterns to exclude.
-
-	:returns: the matched paths
 `
 
-func (proj *Project) builtin_glob(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	var (
-		include util.StringList
-		exclude util.StringList
-	)
-
-	if err := starlark.UnpackArgs(fn.Name(), args, kwargs, "include", &include, "exclude?", &exclude); err != nil {
-		return nil, err
-	}
-
+// def glob(include, exclude=None):
+//     """
+//     Return a list of paths relative to the root that match the given include
+//     and exclude patterns. Typically passed to the sources parameter of target.
+//
+//     - '*' matches any number of non-path-separator characters
+//     - '**' matches any number of any characters
+//     - '?' matches a single character
+//
+//     :param include: the patterns to include.
+//     :param exclude: the patterns to exclude.
+//
+//     :returns: the matched paths
+//     """
+//
+//starlark:builtin
+func (proj *Project) builtin_glob(
+	thread *starlark.Thread,
+	fn *starlark.Builtin,
+	include util.StringList,
+	exclude util.StringList,
+) (starlark.Value, error) {
 	includeRE, err := util.CompileGlobs([]string(include))
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", fn.Name(), err)
@@ -424,16 +416,16 @@ func (proj *Project) builtin_glob(thread *starlark.Thread, fn *starlark.Builtin,
 		if len(path) == 0 {
 			return nil
 		}
+		path = filepath.ToSlash(path)
+
 		if path == "/.dawn/build" {
 			return fs.SkipDir
 		}
-		components := filepath.SplitList(path[1:])
 
 		if d.IsDir() {
 			return nil
 		}
 
-		path = strings.Join(components, "/")
 		if includeRE.MatchString(path) && !excludeRE.MatchString(path) {
 			sources.Append(starlark.String(path))
 		}
@@ -445,26 +437,26 @@ func (proj *Project) builtin_glob(thread *starlark.Thread, fn *starlark.Builtin,
 	return sources, nil
 }
 
-const runDoc = `
-	Builds a target.
-
-	:param label_or_target: the label or target to run.
-	:param always: True if all targets should be considered out-of-date.
-	:param dry_run: True if the targets to run should be displayed but not run.
-	:param callback: a callback that receives build events. If absent,
-	                 events will be displayed using the default renderer.
-`
-
-func (proj *Project) builtin_run(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (_ starlark.Value, err error) {
-	var (
-		labelOrTarget starlark.Value
-		options       RunOptions
-		callback      starlark.Callable
-	)
-	if err = starlark.UnpackArgs(fn.Name(), args, kwargs, "label_or_target", &labelOrTarget, "always??", &options.Always, "dry_run??", &options.DryRun, "event_callback??", &callback); err != nil {
-		return nil, err
-	}
-
+// def run(label_or_target, always=None, dry_run=None, callback=None):
+//     """
+//     Builds a target.
+//
+//     :param label_or_target: the label or target to run.
+//     :param always: True if all targets should be considered out-of-date.
+//     :param dry_run: True if the targets to run should be displayed but not run.
+//     :param callback: a callback that receives build events. If absent,
+//                      events will be displayed using the default renderer.
+//     """
+//
+//starlark:builtin
+func (proj *Project) builtin_run(
+	thread *starlark.Thread,
+	fn *starlark.Builtin,
+	labelOrTarget starlark.Value,
+	always bool,
+	dryRun bool,
+	callback starlark.Callable,
+) (_ starlark.Value, err error) {
 	m := thread.Local("module").(*module)
 
 	var l *label.Label
@@ -500,23 +492,28 @@ func (proj *Project) builtin_run(thread *starlark.Thread, fn *starlark.Builtin, 
 		}()
 	}
 
+	options := RunOptions{
+		Always: always,
+		DryRun: dryRun,
+	}
 	return starlark.None, proj.Run(l, &options)
 }
 
-const get_targetDoc = `
-	Gets the target with the given label, if it exists.
-
-	:param: label: the target's label.
-
-	:returns: the target with the given label.
-`
-
-func (proj *Project) builtin_get_target(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	var rawlabel string
-	if err := starlark.UnpackArgs(fn.Name(), args, kwargs, "label", &rawlabel); err != nil {
-		return nil, err
-	}
-
+// def get_target(label):
+//     """
+//     Gets the target with the given label, if it exists.
+//
+//     :param: label: the target's label.
+//
+//     :returns: the target with the given label.
+//     """
+//
+//starlark:builtin
+func (proj *Project) builtin_get_target(
+	thread *starlark.Thread,
+	fn *starlark.Builtin,
+	rawlabel string,
+) (starlark.Value, error) {
 	m := thread.Local("module").(*module)
 
 	label, err := label.Parse(rawlabel)
@@ -539,11 +536,13 @@ const flagsDoc = `
 	Lists the project's flags.
 `
 
-func (proj *Project) builtin_flags(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	if err := starlark.UnpackPositionalArgs(fn.Name(), args, kwargs, 0); err != nil {
-		return nil, err
-	}
-
+// def flags():
+//     """
+//     Lists the project's flags.
+//     """
+//
+//starlark:builtin
+func (proj *Project) builtin_flags(thread *starlark.Thread, fn *starlark.Builtin) (starlark.Value, error) {
 	proj.m.Lock()
 	defer proj.m.Unlock()
 
@@ -557,15 +556,13 @@ func (proj *Project) builtin_flags(thread *starlark.Thread, fn *starlark.Builtin
 	return starlark.NewList(flags), nil
 }
 
-const targetsDoc = `
-	Lists the project's targets.
-`
-
-func (proj *Project) builtin_targets(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	if err := starlark.UnpackPositionalArgs(fn.Name(), args, kwargs, 0); err != nil {
-		return nil, err
-	}
-
+// def targets():
+//     """
+//     Lists the project's targets.
+//     """
+//
+//starlark:builtin
+func (proj *Project) builtin_targets(thread *starlark.Thread, fn *starlark.Builtin) (starlark.Value, error) {
 	proj.m.Lock()
 	defer proj.m.Unlock()
 
@@ -582,14 +579,13 @@ func (proj *Project) builtin_targets(thread *starlark.Thread, fn *starlark.Built
 	return starlark.NewList(targets), nil
 }
 
-const sourcesDoc = `
-	Lists the project's sources.
-`
-
-func (proj *Project) builtin_sources(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	if err := starlark.UnpackPositionalArgs(fn.Name(), args, kwargs, 0); err != nil {
-		return nil, err
-	}
+// def sources():
+//     """
+//     Lists the project's sources.
+//     """
+//
+//starlark:builtin
+func (proj *Project) builtin_sources(thread *starlark.Thread, fn *starlark.Builtin) (starlark.Value, error) {
 	paths := proj.Sources()
 	return util.StringList(paths).List(), nil
 }

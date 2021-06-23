@@ -53,6 +53,18 @@ func TestParseLabel(t *testing.T) {
 			&Label{Kind: "kind", Package: "//abs-pkg", Target: "target"},
 		},
 		{
+			"//abs-pkg/with/@symbol",
+			&Label{Package: "//abs-pkg/with/@symbol"},
+		},
+		{
+			"//abs-pkg/with/@symbol:target",
+			&Label{Package: "//abs-pkg/with/@symbol", Target: "target"},
+		},
+		{
+			"kind://abs-pkg/with/@symbol:target",
+			&Label{Kind: "kind", Package: "//abs-pkg/with/@symbol", Target: "target"},
+		},
+		{
 			"rel-pkg/path",
 			&Label{Package: "rel-pkg/path"},
 		},

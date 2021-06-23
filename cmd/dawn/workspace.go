@@ -97,8 +97,15 @@ func (w *workspace) validLabels(_ *cobra.Command, _ []string, _ string) ([]strin
 
 func (w *workspace) loadProject(args []string, index, quiet bool) error {
 	rendered := make(chan bool)
+	firstLoad := true
 
-	renderer, err := newRenderer(func() { close(rendered) })
+	renderer, err := newRenderer(func() {
+		// We only care about the first onload event.
+		if firstLoad {
+			close(rendered)
+			firstLoad = false
+		}
+	})
 	if err != nil {
 		return err
 	}
