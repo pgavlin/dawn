@@ -403,7 +403,7 @@ func (proj *Project) targetInfoPath(l *label.Label) string {
 		target = "BUILD.dawn"
 	}
 
-	targetPath := url.PathEscape(l.Package[2:] + ":" + target)
+	targetPath := url.PathEscape(l.Package[2:] + "/" + target)
 	return filepath.Join(proj.work, kind+"s", targetPath)
 }
 
