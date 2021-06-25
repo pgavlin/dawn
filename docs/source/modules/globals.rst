@@ -1,3 +1,6 @@
+:code:`globals`
+=================
+
 .. py:module:: globals
 
 
@@ -137,4 +140,5 @@
    :param callback: a callback that receives build events. If absent,
                     events will be displayed using the default renderer.
    
+
 

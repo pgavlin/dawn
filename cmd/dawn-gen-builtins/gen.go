@@ -228,8 +228,17 @@ func genFunctionWrappers(w io.Writer, pkg *packages.Package, fns []*function) er
 
 //go:embed object_docs.tmpl
 var objectDocsTemplateText string
-var objectDocsTemplate = template.Must(template.New("Object").Parse(objectDocsTemplateText))
+
+//go:embed module_docs.tmpl
+var moduleDocsTemplateText string
+
+var moduleDocsTemplate *template.Template
+
+func init() {
+	moduleDocsTemplate = template.Must(template.New("ModuleDocs").Parse(moduleDocsTemplateText))
+	template.Must(moduleDocsTemplate.New("Object").Parse(objectDocsTemplateText))
+}
 
 func genModuleDocs(w io.Writer, m *object) error {
-	return objectDocsTemplate.Execute(w, m)
+	return moduleDocsTemplate.Execute(w, m)
 }

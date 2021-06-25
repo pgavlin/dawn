@@ -1,4 +1,4 @@
-@target(sources=os.glob(["source/**", "conf.py"]), generates=["build"])
+@target(sources=os.glob(["../README.rst", "source/**", "conf.py"]), generates=["build"])
 def site():
     """
     Builds the dawn docs site using sphinx.

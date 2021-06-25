@@ -18,8 +18,8 @@ jobs:
       uses: actions/setup-python@v1
       with:
         python-version: 3.7
-    - name: Install mkdocs
-      run: pip install mkdocs
+    - name: Install sphinx
+      run: pip install sphinx sphinx-rtd-theme
     - name: Checkout code
       uses: actions/checkout@v2
     - name: Bootstrap
