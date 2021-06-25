@@ -13,13 +13,13 @@ def dawn_gen_builtins():
     gcflags = "-gcflags=\"all=-N -l\"" if debug else ""
     sh.exec(f"go install {gcflags} github.com/pgavlin/dawn/cmd/dawn-gen-builtins")
 
-@target(deps=[dawn_gen_builtins], sources=["project_builtins.go"], generates=["builtins.go"])
+@target(deps=[dawn_gen_builtins], sources=["project_builtins.go"], generates=["builtins.go", "docs/source/modules"])
 def dawn_builtins():
     """
     Generates wrappers + documentation for builtin functions.
     """
 
-    sh.exec("dawn-gen-builtins . builtins.go")
+    sh.exec("dawn-gen-builtins . builtins.go docs/source/modules")
 
 @target(sources=go_sources(path("//cmd/dawn")))
 def dawn():

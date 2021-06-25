@@ -1,7 +1,7 @@
-@target(sources=os.glob(["markdown/**", "mkdocs.yml"]), generates=["site"])
+@target(sources=os.glob(["source/**", "conf.py"]), generates=["build"])
 def site():
     """
-    Builds the dawn docs site using mkdocs.
+    Builds the dawn docs site using sphinx.
     """
 
-    sh.exec("mkdocs build")
+    sh.exec("sphinx-build -M html source build")

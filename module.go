@@ -118,12 +118,12 @@ func (m *module) env(proj *Project) (*starlark.Thread, starlark.StringDict, erro
 
 	builtins["host"] = builtin_host
 
-	builtins["cache"] = builtin_cache
+	builtins["Cache"] = builtin_cache
 	builtins["path"] = proj.newBuiltin_path()
 	builtins["label"] = proj.newBuiltin_label()
 	builtins["contains"] = proj.newBuiltin_contains()
 	builtins["parse_flag"] = proj.newBuiltin_parse_flag()
-	builtins["target"] = starlark.NewBuiltin("target", proj.builtin_target).WithDoc(targetDoc)
+	builtins["target"] = proj.newBuiltin_target()
 	builtins["glob"] = proj.newBuiltin_glob()
 
 	builtins["package"] = starlark.String(m.label.Package)

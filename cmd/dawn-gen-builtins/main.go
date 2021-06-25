@@ -3,17 +3,18 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"golang.org/x/tools/go/packages"
 )
 
 func main() {
-	if len(os.Args) != 3 {
-		fmt.Fprintf(os.Stderr, "usage: %v <import path> <output path>\n", os.Args[0])
+	if len(os.Args) != 4 {
+		fmt.Fprintf(os.Stderr, "usage: %v <import path> <function wrappers path> <docs output directory path>\n", os.Args[0])
 		os.Exit(-1)
 	}
 
-	importPath, outputPath := os.Args[1], os.Args[2]
+	importPath, wrappersPath, docsPath := os.Args[1], os.Args[2], os.Args[3]
 
 	pkgs, err := packages.Load(&packages.Config{
 		Mode: packages.NeedSyntax | packages.NeedTypesInfo | packages.NeedTypes | packages.NeedCompiledGoFiles,
@@ -28,16 +29,14 @@ func main() {
 		os.Exit(-1)
 	}
 
-	f, err := os.Create(outputPath)
+	f, err := os.Create(wrappersPath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "creating output file: %v\n", err)
+		fmt.Fprintf(os.Stderr, "creating %v: %v\n", wrappersPath, err)
 		os.Exit(-1)
 	}
 	defer f.Close()
 
-	// TODO: imports
-
-	functions, err := gatherPackage(pkgs[0])
+	modules, functions, err := gatherPackage(pkgs[0])
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(-1)
@@ -45,5 +44,23 @@ func main() {
 	if err = genFunctionWrappers(f, pkgs[0], functions); err != nil {
 		fmt.Fprintf(os.Stderr, "generating function wrappers: %v\n", err)
 		os.Exit(-1)
+	}
+
+	writeModuleDocs := func(m *object) error {
+		path := filepath.Join(docsPath, m.Name+".rst")
+		f, err := os.Create(path)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+
+		return genModuleDocs(f, m)
+	}
+
+	for _, m := range modules {
+		if err := writeModuleDocs(m); err != nil {
+			fmt.Fprintf(os.Stderr, "generating module docs for %v: %v\n", m.Name, err)
+			os.Exit(-1)
+		}
 	}
 }

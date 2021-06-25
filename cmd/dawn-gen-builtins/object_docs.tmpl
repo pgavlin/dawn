@@ -1,0 +1,19 @@
+{{- $qualifier := "" -}}
+{{- $method := "function" -}}
+{{- if eq .Kind "class" -}}
+{{- $qualifier = (print .Name ".") -}}
+{{- $method = "method" -}}
+{{- end -}}
+.. py:{{.Kind}}:: {{.Name}}
+{{.Docstring}}
+{{range .Children}}
+{{template "Object" .}}
+{{end}}
+{{range .Attributes}}
+.. py:attribute:: {{.Name}}
+{{.Docstring}}
+{{end}}
+{{range .Methods}}
+.. py:{{$method}}:: {{$qualifier}}{{.Name}}{{.Signature}}
+{{.Docstring}}
+{{end}}

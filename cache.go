@@ -15,9 +15,9 @@ type cache struct {
 	onceM *starlark.Builtin
 }
 
-var builtin_cache = starlark.NewBuiltin("cache", func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+var builtin_cache = starlark.NewBuiltin("Cache", func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	c := &cache{entries: map[string]starlark.Value{}}
-	c.onceM = starlark.NewBuiltin("once", c.once).WithDoc(onceDoc)
+	c.onceM = c.newOnce()
 	return c, nil
 })
 
@@ -29,21 +29,15 @@ func (c *cache) get(key string) (starlark.Value, bool) {
 	return v, ok
 }
 
-const onceDoc = `
-	once calls the given function if and only if key is not present in the cache.
-
-	The result is stored in the cache under the given key.
-`
-
-func (c *cache) once(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	var (
-		key      string
-		function starlark.Callable
-	)
-	if err := starlark.UnpackArgs(fn.Name(), args, kwargs, "key", &key, "function", &function); err != nil {
-		return nil, err
-	}
-
+// def once(key, callable):
+//     """
+//     once calls the given callable if and only if key is not present in the cache.
+//
+//     The result is stored in the cache under the given key.
+//     """
+//
+//starlark:builtin
+func (c *cache) once(thread *starlark.Thread, fn *starlark.Builtin, key string, function starlark.Callable) (starlark.Value, error) {
 	if v, ok := c.get(key); ok {
 		return v, nil
 	}

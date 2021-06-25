@@ -30,10 +30,7 @@ func Glob(t *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs 
 		return nil, fmt.Errorf("%s: %w", fn.Name(), err)
 	}
 
-	dir, err := os.Getwd()
-	if err != nil {
-		return nil, fmt.Errorf("%v: getting working directory: %w", fn.Name(), err)
-	}
+	dir := util.Getwd(t)
 
 	var matches []starlark.Value
 	err = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {

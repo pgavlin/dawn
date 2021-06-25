@@ -1,6 +1,8 @@
 package dawn
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
@@ -93,7 +95,7 @@ func (f *sourceFile) generates() []string {
 }
 
 func (f *sourceFile) info() targetInfo {
-	return targetInfo{}
+	return targetInfo{Dependencies: f.dependencies()}
 }
 
 func (f *sourceFile) upToDate() (bool, error) {
@@ -128,5 +130,32 @@ func fileSum(path string) (string, error) {
 	}
 	defer f.Close()
 
+	stat, err := f.Stat()
+	if err != nil {
+		return "", err
+	}
+	if stat.IsDir() {
+		return dirSum(path, f)
+	}
+
 	return util.SHA256(f)
+}
+
+func dirSum(path string, dir *os.File) (string, error) {
+	entries, err := dir.ReadDir(0)
+	if err != nil {
+		return "", err
+	}
+
+	h := sha256.New()
+	for _, entry := range entries {
+		sum, err := fileSum(filepath.Join(path, entry.Name()))
+		if err != nil {
+			return "", err
+		}
+		if _, err := h.Write([]byte(sum)); err != nil {
+			return "", err
+		}
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
 }

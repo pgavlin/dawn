@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -393,8 +394,6 @@ type targetInfo struct {
 }
 
 func (proj *Project) targetInfoPath(l *label.Label) string {
-	components := label.Split(l.Package)[1:]
-
 	kind := l.Kind
 	if kind == "" {
 		kind = "target"
@@ -404,7 +403,8 @@ func (proj *Project) targetInfoPath(l *label.Label) string {
 		target = "BUILD.dawn"
 	}
 
-	return filepath.Join(proj.work, kind+"s", filepath.Join(components...), target)
+	targetPath := url.PathEscape(l.Package[2:] + ":" + target)
+	return filepath.Join(proj.work, kind+"s", targetPath)
 }
 
 func (proj *Project) loadTargetInfo(label *label.Label) (targetInfo, error) {
@@ -612,3 +612,78 @@ func IsTarget(l *label.Label) bool {
 func IsSource(l *label.Label) bool {
 	return l.Kind == "source"
 }
+
+// def globals():
+//     # Per-module globals
+//
+//     @attribute
+//     def host():
+//         """
+//         Provides information about the host on which dawn is running.
+//         """
+//
+//     @attribute
+//     def package():
+//         """
+//         The name of the package that contains the executing Starlark module.
+//         """
+//
+//     @constructor
+//     def Cache():
+//         """
+//         A Cache provides a simple, concurrency-safe string -> value map
+//         for use by dawn programs.
+//         """
+//
+//         @method("*cache.once")
+//         def once():
+//             pass
+//
+//     @function("*Project.builtin_path")
+//     def path():
+//         pass
+//
+//     @function("*Project.builtin_label")
+//     def label():
+//         pass
+//
+//     @function("*Project.builtin_contains")
+//     def contains():
+//         pass
+//
+//     @function("*Project.builtin_parse_flag")
+//     def parse_flag():
+//         pass
+//
+//     @function("*Project.builtin_target")
+//     def target():
+//         pass
+//
+//     @function("*Project.builtin_glob")
+//     def glob():
+//         pass
+//
+//     # REPL methods
+//
+//     @function("*Project.builtin_get_target")
+//     def get_target():
+//         pass
+//
+//     @function("*Project.builtin_flags")
+//     def flags():
+//         pass
+//
+//     @function("*Project.builtin_targets")
+//     def targets():
+//         pass
+//
+//     @function("*Project.builtin_sources")
+//     def sources():
+//         pass
+//
+//     @function("*Project.builtin_run")
+//     def run():
+//         pass
+//
+//starlark:module
+type globalModule int

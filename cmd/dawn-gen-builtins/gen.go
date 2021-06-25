@@ -14,23 +14,23 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
-func getDocstring(def *syntax.DefStmt) string {
+func getDocstring(def *syntax.DefStmt) (string, bool) {
 	body := def.Body
 	if len(body) == 0 {
-		return ""
+		return "", false
 	}
 	expr, ok := body[0].(*syntax.ExprStmt)
 	if !ok {
-		return ""
+		return "", false
 	}
 	lit, ok := expr.X.(*syntax.Literal)
 	if !ok {
-		return ""
+		return "", false
 	}
 	if lit.Token != syntax.STRING {
-		return ""
+		return "", false
 	}
-	return lit.Value.(string)
+	return lit.Value.(string), true
 }
 
 func getSigil(decl *ast.Field) string {
@@ -53,7 +53,7 @@ func typeStringImpl(w io.Writer, imports importSet, pkg *packages.Package, x ast
 	case *ast.Ident:
 		fmt.Fprint(w, x.Name)
 	case *ast.SelectorExpr:
-		if t, ok := pkg.TypesInfo.Types[x].Type.(*types.Named); ok {
+		if t, ok := pkg.TypesInfo.Types[x].Type.(*types.Named); ok && imports != nil {
 			pkg := t.Obj().Pkg()
 			imports[pkg.Path()] = packageImport{
 				Name: pkg.Name(),
@@ -98,7 +98,7 @@ func typeString(imports importSet, pkg *packages.Package, x ast.Expr) (type_ str
 
 //go:embed function_wrappers.tmpl
 var functionWrappersTemplateText string
-var functionWrappersTemplate = template.Must(template.New("functionWrapper").Parse(functionWrappersTemplateText))
+var functionWrappersTemplate = template.Must(template.New("FunctionWrappers").Parse(functionWrappersTemplateText))
 
 type packageImport struct {
 	Name string
@@ -128,11 +128,12 @@ type functionData struct {
 }
 
 func genFunctionWrapper(imports importSet, pkg *packages.Package, f *function) (*functionData, error) {
+	docstring, _ := getDocstring(f.def)
 	data := functionData{
 		Name:        f.decl.Name.Name,
 		FactoryName: f.factoryName,
 		Def:         f.def.Name.Name,
-		Docstring:   getDocstring(f.def),
+		Docstring:   docstring,
 	}
 
 	if f.decl.Recv != nil && len(f.decl.Recv.List) != 0 {
@@ -195,11 +196,6 @@ func genFunctionWrapper(imports importSet, pkg *packages.Package, f *function) (
 	return &data, nil
 }
 
-func genFunctionDocs(f *function) (string, error) {
-	// TODO: implement
-	return "", nil
-}
-
 func genFunctionWrappers(w io.Writer, pkg *packages.Package, fns []*function) error {
 	var data struct {
 		Package   string
@@ -228,4 +224,12 @@ func genFunctionWrappers(w io.Writer, pkg *packages.Package, fns []*function) er
 
 	data.Package = pkg.Types.Name()
 	return functionWrappersTemplate.Execute(w, data)
+}
+
+//go:embed object_docs.tmpl
+var objectDocsTemplateText string
+var objectDocsTemplate = template.Must(template.New("Object").Parse(objectDocsTemplateText))
+
+func genModuleDocs(w io.Writer, m *object) error {
+	return objectDocsTemplate.Execute(w, m)
 }
