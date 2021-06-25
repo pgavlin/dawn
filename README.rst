@@ -1,6 +1,6 @@
-*********************************
+**********************************
 ☀️ dawn: Pragmatic Polyglot Builds
-*********************************
+**********************************
 
 .. meta::
    :description lang=en: Build multi-language software projects without sacrificing productivity.
