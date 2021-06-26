@@ -98,9 +98,9 @@
    the given include and exclude patterns. Typically passed to the sources parameter
    of target.
 
-   - '*' matches any number of non-path-separator characters
-   - '**' matches any number of any characters
-   - '?' matches a single character
+   - `*` matches any number of non-path-separator characters
+   - `**` matches any number of any characters
+   - `?` matches a single character
 
    :param include: the patterns to include.
    :param exclude: the patterns to exclude.
