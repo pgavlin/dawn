@@ -1,6 +1,8 @@
 :code:`globals`
 =================
 
+
+
 .. py:module:: globals
 
 

@@ -6,4 +6,5 @@
    :caption: API Reference
 
    modules/globals
+   modules/sh
    api

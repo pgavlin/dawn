@@ -96,10 +96,6 @@ func typeString(imports importSet, pkg *packages.Package, x ast.Expr) (type_ str
 	return buf.String(), nil
 }
 
-//go:embed function_wrappers.tmpl
-var functionWrappersTemplateText string
-var functionWrappersTemplate = template.Must(template.New("FunctionWrappers").Parse(functionWrappersTemplateText))
-
 type packageImport struct {
 	Name string
 	Path string
@@ -119,21 +115,23 @@ type functionParam struct {
 }
 
 type functionData struct {
-	Name        string
-	FactoryName string
-	Def         string
-	Docstring   string
-	Receiver    *functionReceiver
-	Params      []functionParam
+	Name         string
+	FactoryName  string
+	FunctionName string
+	Def          string
+	Docstring    string
+	Receiver     *functionReceiver
+	Params       []functionParam
 }
 
 func genFunctionWrapper(imports importSet, pkg *packages.Package, f *function) (*functionData, error) {
 	docstring, _ := getDocstring(f.def)
 	data := functionData{
-		Name:        f.decl.Name.Name,
-		FactoryName: f.factoryName,
-		Def:         f.def.Name.Name,
-		Docstring:   docstring,
+		Name:         f.decl.Name.Name,
+		FactoryName:  f.factoryName,
+		FunctionName: f.functionName,
+		Def:          f.def.Name.Name,
+		Docstring:    docstring,
 	}
 
 	if f.decl.Recv != nil && len(f.decl.Recv.List) != 0 {
@@ -226,19 +224,30 @@ func genFunctionWrappers(w io.Writer, pkg *packages.Package, fns []*function) er
 	return functionWrappersTemplate.Execute(w, data)
 }
 
+func genModuleDocs(w io.Writer, m *object) error {
+	return moduleDocsTemplate.Execute(w, m)
+}
+
+//go:embed function_wrappers.tmpl
+var functionWrappersTemplateText string
+
 //go:embed object_docs.tmpl
 var objectDocsTemplateText string
 
 //go:embed module_docs.tmpl
 var moduleDocsTemplateText string
 
+var functionWrappersTemplate *template.Template
+
 var moduleDocsTemplate *template.Template
 
 func init() {
+	functionWrappersTemplate = template.Must(template.New("FunctionWrappers").Funcs(template.FuncMap{
+		"sanitize": func(s string) string {
+			return strings.ReplaceAll(s, "`", "`+\"`\"+`")
+		},
+	}).Parse(functionWrappersTemplateText))
+
 	moduleDocsTemplate = template.Must(template.New("ModuleDocs").Parse(moduleDocsTemplateText))
 	template.Must(moduleDocsTemplate.New("Object").Parse(objectDocsTemplateText))
-}
-
-func genModuleDocs(w io.Writer, m *object) error {
-	return moduleDocsTemplate.Execute(w, m)
 }

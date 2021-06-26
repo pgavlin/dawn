@@ -5,15 +5,17 @@ import (
 	"go/ast"
 	"regexp"
 	"strings"
+	"unicode"
 
 	"go.starlark.net/syntax"
 	"golang.org/x/tools/go/packages"
 )
 
 type function struct {
-	def         *syntax.DefStmt
-	decl        *ast.FuncDecl
-	factoryName string
+	def          *syntax.DefStmt
+	decl         *ast.FuncDecl
+	factoryName  string
+	functionName string
 }
 
 type object struct {
@@ -119,26 +121,37 @@ func parseDecl(name string, doc *ast.CommentGroup) (*syntax.DefStmt, error) {
 	return def, nil
 }
 
-func getFactoryName(comment *ast.Comment, funcName string) string {
+func getFunctionNames(comment *ast.Comment, funcName string) (string, string) {
+	factory, function := "new"+pascalCase(funcName), "starlark_"+funcName
+
 	options := strings.Split(comment.Text[len("//starlark:builtin"):], ",")
 	for _, option := range options {
+		option = strings.TrimSpace(option)
 		equals := strings.IndexByte(option, '=')
 		if equals == -1 {
 			continue
 		}
 		name, value := option[:equals], option[equals+1:]
-		if name == "factory" {
-			return value
+		switch name {
+		case "factory":
+			factory = value
+		case "function":
+			function = value
 		}
 	}
-	return "new" + pascalCase(funcName)
+	return factory, function
 }
 
 func getStarlarkAnnotation(comments *ast.CommentGroup) (*ast.Comment, string, bool) {
 	if comments != nil {
 		for _, comment := range comments.List {
 			if strings.HasPrefix(comment.Text, "//starlark:") {
-				return comment, comment.Text[len("//starlark:"):], true
+				kind := comment.Text[len("//starlark:"):]
+				firstSpace := strings.IndexFunc(kind, unicode.IsSpace)
+				if firstSpace != -1 {
+					kind = kind[:firstSpace]
+				}
+				return comment, kind, true
 			}
 		}
 	}
@@ -299,10 +312,12 @@ func gatherFile(file *ast.File) ([]objectDecl, []*function, error) {
 				if err != nil {
 					return nil, nil, err
 				}
+				factoryName, functionName := getFunctionNames(comment, decl.Name.Name)
 				functions = append(functions, &function{
-					def:         def,
-					decl:        decl,
-					factoryName: getFactoryName(comment, decl.Name.Name),
+					def:          def,
+					decl:         decl,
+					factoryName:  factoryName,
+					functionName: functionName,
 				})
 			}
 		case *ast.GenDecl:

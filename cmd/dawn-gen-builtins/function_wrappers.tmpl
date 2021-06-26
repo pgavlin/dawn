@@ -12,11 +12,11 @@ import (
 
 {{range .Functions}}
 func {{with .Receiver}}({{.Name}} {{.Type}}) {{end}}{{.FactoryName}}() *starlark.Builtin {
-	const doc = `{{.Docstring}}`
-	return starlark.NewBuiltin("{{.Def}}", {{with .Receiver}}{{.Name}}.{{end}}starlark_{{.Name}}).WithDoc(doc)
+	const doc = `{{sanitize .Docstring}}`
+	return starlark.NewBuiltin("{{.Def}}", {{with .Receiver}}{{.Name}}.{{end}}{{.FunctionName}}).WithDoc(doc)
 }
 
-func {{with .Receiver}}({{.Name}} {{.Type}}) {{end}}starlark_{{.Name}}(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+func {{with .Receiver}}({{.Name}} {{.Type}}) {{end}}{{.FunctionName}}(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	{{if .Params}}
 	var (
 		{{range .Params}}

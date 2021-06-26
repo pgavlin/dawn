@@ -1,11 +1,13 @@
 {{- $qualifier := "" -}}
 {{- $method := "function" -}}
+{{- $docstring := "" -}}
 {{- if eq .Kind "class" -}}
 {{- $qualifier = (print .Name ".") -}}
 {{- $method = "method" -}}
+{{- $docstring = .Docstring -}}
 {{- end -}}
 .. py:{{.Kind}}:: {{.Name}}
-{{.Docstring}}
+{{$docstring}}
 {{range .Children}}
 {{template "Object" .}}
 {{end}}
