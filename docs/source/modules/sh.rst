@@ -3,9 +3,11 @@
 
 
    The sh module provides functions for executing POSIX Shell, Bash, and
-   mksh commands. The implementation uses the mvdan.cc/sh interpreter,
+   mksh commands. The implementation uses the `mvdan.cc/sh`_ interpreter
    instead of relying on the system shell, and therefore provides a
    consistent experience across all platforms (including Windows).
+
+   .. _mvdan.cc/sh: https://github.com/mvdan/sh
    
 
 .. py:module:: sh
