@@ -9,8 +9,7 @@
 .. py:function:: encode(x)
 
    The encode function converts x to JSON by cases:
-   - A Starlark value that implements Go's standard json.Marshal
-     interface defines its own JSON encoding.
+
    - None, True, and False are converted to null, true, and false, respectively.
    - Starlark int values, no matter how large, are encoded as decimal integers.
      Some decoders may not be able to decode very large integers.
@@ -22,6 +21,7 @@
      It is an error if any key is not a string.
    - any other Starlark Iterable (e.g. list, tuple) is encoded as a JSON array.
    - a Starlark HasAttrs (e.g. struct) is encoded as a JSON object.
+
    It an application-defined type matches more than one the cases describe above,
    (e.g. it implements both Iterable and HasFields), the first case takes precedence.
    Encoding any other value yields an error.
@@ -44,10 +44,12 @@
 .. py:function:: decode(x)
 
    Returns the Starlark value denoted by a JSON string.
+
    - Numbers are parsed as int or float, depending on whether they
      contain a decimal point.
    - JSON objects are parsed as new unfrozen Starlark dicts.
    - JSON arrays are parsed as new unfrozen Starlark lists.
+
    Decoding fails if x is not a valid JSON string.
 
    :param str x: the string to decode
