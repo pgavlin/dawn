@@ -74,7 +74,7 @@ func NewOutput() *starlark.Builtin {
              (stdout, True) if the process succeeds and (stderr, False)
              if the process fails.
    `
-	return starlark.NewBuiltin("exec", Output).WithDoc(doc)
+	return starlark.NewBuiltin("output", Output).WithDoc(doc)
 }
 
 

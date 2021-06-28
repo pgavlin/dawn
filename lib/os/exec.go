@@ -49,7 +49,7 @@ func execf(
 	return starlark.None, nil
 }
 
-// def exec(command, cwd=None, env=None, try_=None):
+// def output(command, cwd=None, env=None, try_=None):
 //     """
 //     Run an executable and return its output. If the process fails, the
 //     calling module will abort unless `try_` is set to True, in which case

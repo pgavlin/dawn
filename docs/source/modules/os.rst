@@ -36,7 +36,7 @@
              otherwise. To capture the process's output, use output.
    
 
-.. py:function:: exec(command, cwd=None, env=None, try_=None)
+.. py:function:: output(command, cwd=None, env=None, try_=None)
 
    Run an executable and return its output. If the process fails, the
    calling module will abort unless `try_` is set to True, in which case
