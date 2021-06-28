@@ -172,7 +172,7 @@ func genFunctionWrapper(imports importSet, pkg *packages.Package, f *function) (
 		}
 	}
 
-	if len(f.def.Params) != len(data.Params) {
+	if len(f.def.Params) != len(data.Params) && f.functionName != f.decl.Name.Name {
 		return nil, fmt.Errorf("definition and declaration of %v have different parameter counts", data.Name)
 	}
 	for i, p := range f.def.Params {

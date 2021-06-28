@@ -1,0 +1,7 @@
+@target(deps=["//:dawn_gen_builtins"], sources=["path.go", "module.go"], generates=["builtins.go"])
+def gen_builtins():
+    """
+    Generates wrappers + documentation for builtin functions.
+    """
+
+    sh.exec("dawn-gen-builtins . builtins.go ../../../docs/source/modules")

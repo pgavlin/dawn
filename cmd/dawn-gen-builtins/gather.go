@@ -198,6 +198,13 @@ func parseObjectDecl(def *syntax.DefStmt) (*objectDecl, error) {
 			}
 			class.kind = "class"
 			children = append(children, *class)
+		case "module":
+			if len(args) != 0 {
+				return nil, fmt.Errorf("module decorator expects no arguyments")
+			}
+			docstring, _ := getDocstring(def)
+			module := objectDecl{name: def.Name.Name, kind: "module", doc: docstring}
+			children = append(children, module)
 		case "attribute":
 			if len(args) != 0 {
 				return nil, fmt.Errorf("attribute decorator expects no arguments")
@@ -237,6 +244,12 @@ func parseObjectDecl(def *syntax.DefStmt) (*objectDecl, error) {
 //     def class():
 //         """
 //         Class docs
+//         """
+//
+//     @module
+//     def module():
+//         """
+//         Module docs, if any
 //         """
 //
 //     @attribute

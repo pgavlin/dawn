@@ -16,6 +16,7 @@ func {{with .Receiver}}({{.Name}} {{.Type}}) {{end}}{{.FactoryName}}() *starlark
 	return starlark.NewBuiltin("{{.Def}}", {{with .Receiver}}{{.Name}}.{{end}}{{.FunctionName}}).WithDoc(doc)
 }
 
+{{if ne .FunctionName .Name}}
 func {{with .Receiver}}({{.Name}} {{.Type}}) {{end}}{{.FunctionName}}(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	{{if .Params}}
 	var (
@@ -33,4 +34,5 @@ func {{with .Receiver}}({{.Name}} {{.Type}}) {{end}}{{.FunctionName}}(thread *st
 	{{end}}
 	return {{with .Receiver}}{{.Name}}.{{end}}{{.Name}}(thread, fn{{range .Params}}, {{.Name}}{{end}})
 }
+{{end}}
 {{end}}

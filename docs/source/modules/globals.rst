@@ -6,6 +6,7 @@
 .. py:module:: globals
 
 
+
 .. py:class:: Cache
 
        A Cache provides a simple, concurrency-safe string -> value map
@@ -20,6 +21,7 @@
 
    The result is stored in the cache under the given key.
    
+
 
 
 

@@ -9,7 +9,12 @@
 .. py:{{.Kind}}:: {{.Name}}
 {{$docstring}}
 {{range .Children}}
+{{if eq .Kind "module"}}
+:py:mod:`{{.Name}}`
+{{.Docstring}}
+{{else}}
 {{template "Object" .}}
+{{end}}
 {{end}}
 {{range .Attributes}}
 .. py:attribute:: {{.Name}}

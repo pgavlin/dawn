@@ -33,6 +33,7 @@ func NewExec() *starlark.Builtin {
 	return starlark.NewBuiltin("exec", Exec).WithDoc(doc)
 }
 
+
 func Exec(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	
 	var (
@@ -52,6 +53,7 @@ func Exec(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kw
 	
 	return execf(thread, fn, cmdV, cwd, envV, try)
 }
+
 
 func NewOutput() *starlark.Builtin {
 	const doc = `
@@ -75,6 +77,7 @@ func NewOutput() *starlark.Builtin {
 	return starlark.NewBuiltin("exec", Output).WithDoc(doc)
 }
 
+
 func Output(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	
 	var (
@@ -95,12 +98,14 @@ func Output(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, 
 	return output(thread, fn, cmdV, cwd, envV, try)
 }
 
+
 func NewExists() *starlark.Builtin {
 	const doc = `
    Returns true if a file exists at the given path.
    `
 	return starlark.NewBuiltin("exists", Exists).WithDoc(doc)
 }
+
 
 func Exists(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	
@@ -116,6 +121,7 @@ func Exists(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, 
 	return exists(thread, fn, path)
 }
 
+
 func NewGetcwd() *starlark.Builtin {
 	const doc = `
    Returns the current OS working directory. This is typically the path of
@@ -123,6 +129,7 @@ func NewGetcwd() *starlark.Builtin {
    `
 	return starlark.NewBuiltin("getcwd", Getcwd).WithDoc(doc)
 }
+
 
 func Getcwd(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	
@@ -132,6 +139,7 @@ func Getcwd(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, 
 	
 	return getcwd(thread, fn)
 }
+
 
 func NewGlob() *starlark.Builtin {
 	const doc = `
@@ -150,6 +158,7 @@ func NewGlob() *starlark.Builtin {
 	return starlark.NewBuiltin("glob", Glob).WithDoc(doc)
 }
 
+
 func Glob(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	
 	var (
@@ -165,4 +174,5 @@ func Glob(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kw
 	
 	return glob(thread, fn, include, exclude)
 }
+
 

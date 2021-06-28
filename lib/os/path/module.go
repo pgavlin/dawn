@@ -7,16 +7,58 @@ import (
 	"go.starlark.net/starlarkstruct"
 )
 
+// def path():
+//     """
+//     The path module provides utility functions for manipulating host-specific
+//     paths. This module uses either forward- or backwards-facing slashes for
+//     separating path components, depending on the host operating system.
+//     """
+//
+//     @attribute
+//     def sep():
+//         """
+//         The host-specific path separator.
+//         """
+//
+//     @function("isAbs")
+//     def is_abs():
+//         pass
+//
+//     @function("abs")
+//     def abs():
+//         pass
+//
+//     @function("base")
+//     def base():
+//         pass
+//
+//     @function("dir")
+//     def dir():
+//         pass
+//
+//     @function("Join")
+//     def join():
+//         pass
+//
+//     @function("split")
+//     def split():
+//         pass
+//
+//     @function("splitext")
+//     def splitext():
+//         pass
+//
+//starlark:module
 var Module = &starlarkstruct.Module{
 	Name: "path",
 	Members: starlark.StringDict{
 		"sep":      starlark.String(string([]rune{filepath.Separator})),
-		"is_abs":   starlark.NewBuiltin("path.is_abs", IsAbs),
-		"abs":      starlark.NewBuiltin("path.abs", Abs),
-		"base":     starlark.NewBuiltin("path.base", Base),
-		"dir":      starlark.NewBuiltin("path.dir", Dir),
-		"join":     starlark.NewBuiltin("path.join", Join),
-		"split":    starlark.NewBuiltin("path.split", Split),
-		"splitext": starlark.NewBuiltin("path.splitext", Splitext),
+		"is_abs":   NewIsAbs(),
+		"abs":      NewAbs(),
+		"base":     NewBase(),
+		"dir":      NewDir(),
+		"join":     NewJoin(),
+		"split":    NewSplit(),
+		"splitext": NewSplitext(),
 	},
 }

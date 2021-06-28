@@ -6,5 +6,7 @@
    :caption: API Reference
 
    modules/globals
+   modules/os
+   modules/path
    modules/sh
    api

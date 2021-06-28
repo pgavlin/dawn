@@ -22,6 +22,7 @@ func (c *cache) newOnce() *starlark.Builtin {
 	return starlark.NewBuiltin("once", c.starlark_once).WithDoc(doc)
 }
 
+
 func (c *cache) starlark_once(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	
 	var (
@@ -38,12 +39,14 @@ func (c *cache) starlark_once(thread *starlark.Thread, fn *starlark.Builtin, arg
 	return c.once(thread, fn, key, function)
 }
 
+
 func (proj *Project) newBuiltin_path() *starlark.Builtin {
 	const doc = `
    Returns the absolute OS path that corresponds to the given label.
    `
 	return starlark.NewBuiltin("path", proj.starlark_builtin_path).WithDoc(doc)
 }
+
 
 func (proj *Project) starlark_builtin_path(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	
@@ -59,12 +62,14 @@ func (proj *Project) starlark_builtin_path(thread *starlark.Thread, fn *starlark
 	return proj.builtin_path(thread, fn, rawlabel)
 }
 
+
 func (proj *Project) newBuiltin_label() *starlark.Builtin {
 	const doc = `
    Returns the label that corresponds to the given OS path, if any.
    `
 	return starlark.NewBuiltin("label", proj.starlark_builtin_label).WithDoc(doc)
 }
+
 
 func (proj *Project) starlark_builtin_label(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	
@@ -80,6 +85,7 @@ func (proj *Project) starlark_builtin_label(thread *starlark.Thread, fn *starlar
 	return proj.builtin_label(thread, fn, path)
 }
 
+
 func (proj *Project) newBuiltin_contains() *starlark.Builtin {
 	const doc = `
    Returns the label that corresponds to the given OS path if the path is
@@ -88,6 +94,7 @@ func (proj *Project) newBuiltin_contains() *starlark.Builtin {
    `
 	return starlark.NewBuiltin("contains", proj.starlark_builtin_contains).WithDoc(doc)
 }
+
 
 func (proj *Project) starlark_builtin_contains(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	
@@ -102,6 +109,7 @@ func (proj *Project) starlark_builtin_contains(thread *starlark.Thread, fn *star
 	
 	return proj.builtin_contains(thread, fn, path)
 }
+
 
 func (proj *Project) newBuiltin_parse_flag() *starlark.Builtin {
 	const doc = `
@@ -118,6 +126,7 @@ func (proj *Project) newBuiltin_parse_flag() *starlark.Builtin {
    `
 	return starlark.NewBuiltin("parse_flag", proj.starlark_builtin_parse_flag).WithDoc(doc)
 }
+
 
 func (proj *Project) starlark_builtin_parse_flag(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	
@@ -142,6 +151,7 @@ func (proj *Project) starlark_builtin_parse_flag(thread *starlark.Thread, fn *st
 	
 	return proj.builtin_parse_flag(thread, fn, name, default_, type_, choices, required, help)
 }
+
 
 func (proj *Project) newBuiltin_target() *starlark.Builtin {
 	const doc = `
@@ -171,6 +181,7 @@ func (proj *Project) newBuiltin_target() *starlark.Builtin {
 	return starlark.NewBuiltin("target", proj.starlark_builtin_target).WithDoc(doc)
 }
 
+
 func (proj *Project) starlark_builtin_target(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	
 	var (
@@ -199,6 +210,7 @@ func (proj *Project) starlark_builtin_target(thread *starlark.Thread, fn *starla
 	return proj.builtin_target(thread, fn, name, deps, sources, generates, function, default_, always, docs)
 }
 
+
 func (proj *Project) newBuiltin_glob() *starlark.Builtin {
 	const doc = `
    Return a list of paths relative to the calling module's directory that match
@@ -217,6 +229,7 @@ func (proj *Project) newBuiltin_glob() *starlark.Builtin {
 	return starlark.NewBuiltin("glob", proj.starlark_builtin_glob).WithDoc(doc)
 }
 
+
 func (proj *Project) starlark_builtin_glob(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	
 	var (
@@ -233,6 +246,7 @@ func (proj *Project) starlark_builtin_glob(thread *starlark.Thread, fn *starlark
 	return proj.builtin_glob(thread, fn, include, exclude)
 }
 
+
 func (proj *Project) newBuiltin_run() *starlark.Builtin {
 	const doc = `
    Builds a target.
@@ -245,6 +259,7 @@ func (proj *Project) newBuiltin_run() *starlark.Builtin {
    `
 	return starlark.NewBuiltin("run", proj.starlark_builtin_run).WithDoc(doc)
 }
+
 
 func (proj *Project) starlark_builtin_run(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	
@@ -266,6 +281,7 @@ func (proj *Project) starlark_builtin_run(thread *starlark.Thread, fn *starlark.
 	return proj.builtin_run(thread, fn, labelOrTarget, always, dryRun, callback)
 }
 
+
 func (proj *Project) newBuiltin_get_target() *starlark.Builtin {
 	const doc = `
    Gets the target with the given label, if it exists.
@@ -276,6 +292,7 @@ func (proj *Project) newBuiltin_get_target() *starlark.Builtin {
    `
 	return starlark.NewBuiltin("get_target", proj.starlark_builtin_get_target).WithDoc(doc)
 }
+
 
 func (proj *Project) starlark_builtin_get_target(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	
@@ -291,12 +308,14 @@ func (proj *Project) starlark_builtin_get_target(thread *starlark.Thread, fn *st
 	return proj.builtin_get_target(thread, fn, rawlabel)
 }
 
+
 func (proj *Project) newBuiltin_flags() *starlark.Builtin {
 	const doc = `
    Lists the project's flags.
    `
 	return starlark.NewBuiltin("flags", proj.starlark_builtin_flags).WithDoc(doc)
 }
+
 
 func (proj *Project) starlark_builtin_flags(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	
@@ -307,12 +326,14 @@ func (proj *Project) starlark_builtin_flags(thread *starlark.Thread, fn *starlar
 	return proj.builtin_flags(thread, fn)
 }
 
+
 func (proj *Project) newBuiltin_targets() *starlark.Builtin {
 	const doc = `
    Lists the project's targets.
    `
 	return starlark.NewBuiltin("targets", proj.starlark_builtin_targets).WithDoc(doc)
 }
+
 
 func (proj *Project) starlark_builtin_targets(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	
@@ -323,12 +344,14 @@ func (proj *Project) starlark_builtin_targets(thread *starlark.Thread, fn *starl
 	return proj.builtin_targets(thread, fn)
 }
 
+
 func (proj *Project) newBuiltin_sources() *starlark.Builtin {
 	const doc = `
    Lists the project's sources.
    `
 	return starlark.NewBuiltin("sources", proj.starlark_builtin_sources).WithDoc(doc)
 }
+
 
 func (proj *Project) starlark_builtin_sources(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	
@@ -338,4 +361,5 @@ func (proj *Project) starlark_builtin_sources(thread *starlark.Thread, fn *starl
 	
 	return proj.builtin_sources(thread, fn)
 }
+
 

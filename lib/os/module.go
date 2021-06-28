@@ -12,6 +12,12 @@ import (
 //     functionality. Functions in this package expect and return host paths.
 //     """
 //
+//     @module
+//     def path():
+//         """
+//         The path module provides functions to manipulate host paths.
+//         """
+//
 //     @function("execf")
 //     def exec():
 //         pass

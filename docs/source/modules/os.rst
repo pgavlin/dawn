@@ -10,6 +10,13 @@
 
 
 
+:py:mod:`path`
+
+       The path module provides functions to manipulate host paths.
+       
+
+
+
 
 .. py:function:: exec(command, cwd=None, env=None, try_=None)
 
