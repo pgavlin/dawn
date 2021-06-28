@@ -11,7 +11,6 @@ import (
 	"github.com/pgavlin/dawn/label"
 	starlark_os "github.com/pgavlin/dawn/lib/os"
 	starlark_sh "github.com/pgavlin/dawn/lib/sh"
-	starlark_sha256 "github.com/pgavlin/dawn/lib/sha256"
 	"github.com/spf13/cobra"
 	starlark_json "go.starlark.net/lib/json"
 	"go.starlark.net/repl"
@@ -120,10 +119,9 @@ func (w *workspace) loadProject(args []string, index, quiet bool) error {
 		Args:   args,
 		Events: events,
 		Builtins: starlark.StringDict{
-			"json":   starlark_json.Module,
-			"os":     starlark_os.Module,
-			"sh":     starlark_sh.Module,
-			"sha256": starlark_sha256.Module,
+			"json": starlark_json.Module,
+			"os":   starlark_os.Module,
+			"sh":   starlark_sh.Module,
 		},
 		PreferIndex: !w.reindex && index,
 	}
