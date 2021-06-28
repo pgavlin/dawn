@@ -8,12 +8,13 @@ import (
 	"go.starlark.net/starlark"
 )
 
-func Exists(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	var path string
-	if err := starlark.UnpackArgs(fn.Name(), args, kwargs, "path", &path); err != nil {
-		return nil, err
-	}
-
+// def exists(path):
+//     """
+//     Returns true if a file exists at the given path.
+//     """
+//
+//starlark:builtin factory=NewExists,function=Exists
+func exists(thread *starlark.Thread, fn *starlark.Builtin, path string) (starlark.Value, error) {
 	cwd := util.Getwd(thread)
 	if !filepath.IsAbs(path) {
 		path = filepath.Join(cwd, path)
@@ -30,10 +31,13 @@ func Exists(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, 
 	}
 }
 
-func Getcwd(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	if err := starlark.UnpackPositionalArgs(fn.Name(), args, kwargs, 0); err != nil {
-		return nil, err
-	}
-
+// def getcwd():
+//     """
+//     Returns the current OS working directory. This is typically the path of
+//     the directory containg the root module on the callstack.
+//     """
+//
+//starlark:builtin factory=NewGetcwd,function=Getcwd
+func getcwd(thread *starlark.Thread, fn *starlark.Builtin) (starlark.Value, error) {
 	return starlark.String(util.Getwd(thread)), nil
 }

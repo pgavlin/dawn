@@ -36,7 +36,7 @@
 
 .. py:function:: output(command, cwd=None, env=None, try_=None)
 
-   Execute a shell command and capture its output. The command must be a
+   Execute a shell command and return its output. The command must be a
    valid POSIX Shell, Bash, or mksh command. Any commands that are not
    shell builtins must be available on the path. If the command fails, the
    calling module will abort unless `try_` is set to True, in which case

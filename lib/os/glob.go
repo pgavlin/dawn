@@ -10,16 +10,23 @@ import (
 	"go.starlark.net/starlark"
 )
 
-func Glob(t *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	var (
-		include util.StringList
-		exclude util.StringList
-	)
-
-	if err := starlark.UnpackArgs(fn.Name(), args, kwargs, "include", &include, "exclude?", &exclude); err != nil {
-		return nil, err
-	}
-
+// def glob(include, exclude=None):
+//     """
+//     Return a list of paths rooted in the current directory that match the
+//     given include and exclude patterns.
+//
+//     - `*` matches any number of non-path-separator characters
+//     - `**` matches any number of any characters
+//     - `?` matches a single character
+//
+//     :param include: the patterns to include.
+//     :param exclude: the patterns to exclude.
+//
+//     :returns: the matched paths
+//     """
+//
+//starlark:builtin factory=NewGlob,function=Glob
+func glob(t *starlark.Thread, fn *starlark.Builtin, include, exclude util.StringList) (starlark.Value, error) {
 	includeRE, err := util.CompileGlobs([]string(include))
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", fn.Name(), err)

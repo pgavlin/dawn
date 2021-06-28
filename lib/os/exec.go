@@ -10,8 +10,34 @@ import (
 	"go.starlark.net/starlark"
 )
 
-func Exec(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	cmd, err := command(thread, fn, args, kwargs)
+// def exec(command, cwd=None, env=None, try_=None):
+//     """
+//     Run an executable. If the process fails, the calling module will
+//     abort unless `try_` is set to True, in which case the contents of
+//     standard error will be returned.
+//
+//     :param command: a list of strings indicating the executable to run
+//                     and its arguments (e.g. `["dawn", "build"]`).
+//     :param cwd: the working directory for the command. Defaults to the
+//                 calling module's directory.
+//     :param env: any environment variables to set when running the command.
+//     :param `try_`: when True, the calling module will not be aborted if
+//                  the process fails.
+//
+//     :returns: the contents of standard error if `try_` is set and None
+//               otherwise. To capture the process's output, use output.
+//     """
+//
+//starlark:builtin factory=NewExec,function=Exec
+func execf(
+	thread *starlark.Thread,
+	fn *starlark.Builtin,
+	cmdV util.StringList,
+	cwd string,
+	envV starlark.IterableMapping,
+	try bool,
+) (starlark.Value, error) {
+	cmd, err := command(thread, fn, cmdV, cwd, envV)
 	if err != nil {
 		return nil, err
 	}
@@ -23,8 +49,36 @@ func Exec(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kw
 	return starlark.None, nil
 }
 
-func Output(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	cmd, err := command(thread, fn, args, kwargs)
+// def exec(command, cwd=None, env=None, try_=None):
+//     """
+//     Run an executable and return its output. If the process fails, the
+//     calling module will abort unless `try_` is set to True, in which case
+//     the contents of standard error will be returned.
+//
+//     :param command: a list of strings indicating the executable to run
+//                     and its arguments (e.g. `["dawn", "build"]`).
+//     :param cwd: the working directory for the command. Defaults to the
+//                 calling module's directory.
+//     :param env: any environment variables to set when running the command.
+//     :param `try_`: when True, the calling module will not be aborted if
+//                  the process fails.
+//
+//     :returns: the contents of standard output if `try_` is not truthy and the
+//               process succeeds. If `try_` is truthy, output returns
+//               (stdout, True) if the process succeeds and (stderr, False)
+//               if the process fails.
+//     """
+//
+//starlark:builtin factory=NewOutput,function=Output
+func output(
+	thread *starlark.Thread,
+	fn *starlark.Builtin,
+	cmdV util.StringList,
+	cwd string,
+	envV starlark.IterableMapping,
+	try bool,
+) (starlark.Value, error) {
+	cmd, err := command(thread, fn, cmdV, cwd, envV)
 	if err != nil {
 		return nil, err
 	}
@@ -40,17 +94,13 @@ func Output(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, 
 	return starlark.String(stdout.String()), nil
 }
 
-func command(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (*exec.Cmd, error) {
-	var (
-		command util.StringList
-		cwd     string
-		envV    starlark.IterableMapping
-	)
-
-	if err := starlark.UnpackArgs(fn.Name(), args, kwargs, "command", &command, "cwd?", &cwd, "env?", &envV); err != nil {
-		return nil, err
-	}
-
+func command(
+	thread *starlark.Thread,
+	fn *starlark.Builtin,
+	command util.StringList,
+	cwd string,
+	envV starlark.IterableMapping,
+) (*exec.Cmd, error) {
 	if len(command) == 0 {
 		return nil, fmt.Errorf("%v: command must have at least one element", fn.Name())
 	}
