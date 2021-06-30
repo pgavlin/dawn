@@ -4,14 +4,30 @@ version = "0.0.1"
 
 debug = parse_flag("debug", type=bool, help="True to run a debug build")
 
-@target(sources=go_sources(path("//cmd/dawn-gen-builtins")))
-def dawn_gen_builtins():
-    """
-    Builds the dawn-gen-builtins tool for generating Starlark builtin wrappers.
-    """
+def go_binary(name, output=None, docs=None, deps=None, goos=None, goarch=None):
+    (suffix, env) = ("", {})
+    if goos:
+        suffix = f"{suffix}_{goos}"
+        env["GOOS"] = goos
+    if goarch:
+        suffix = f"{suffix}_{goarch}"
+        env["GOARCH"] = goarch
 
     gcflags = "-gcflags=\"all=-N -l\"" if debug else ""
-    sh.exec(f"go install {gcflags} github.com/pgavlin/dawn/cmd/dawn-gen-builtins")
+    cmd = "install"
+    if output:
+        cmd = f"build -o {output}"
+
+    @target(name=name.replace("-", "_")+suffix, docs=docs, deps=deps, sources=go_sources(path(f"//cmd/{name}")))
+    def binary():
+        sh.exec(f"go {cmd} {gcflags} github.com/pgavlin/dawn/cmd/{name}", env=env)
+
+    return binary
+
+dawn_gen_builtins = go_binary(
+    name="dawn-gen-builtins",
+    docs="Builds the dawn-gen-builtins tool for generating Starlark builtin wrappers.",
+)
 
 @target(deps=[dawn_gen_builtins], sources=["project.go", "project_builtins.go"], generates=["builtins.go", "docs/source/modules"])
 def dawn_builtins():
@@ -21,14 +37,24 @@ def dawn_builtins():
 
     sh.exec("dawn-gen-builtins . builtins.go docs/source/modules")
 
-@target(sources=go_sources(path("//cmd/dawn")))
-def dawn():
-    """
-    Builds the dawn CLI.
-    """
+dawn = go_binary(
+    name="dawn",
+    docs="Builds the dawn CLI.",
+)
 
-    gcflags = "-gcflags=\"all=-N -l\"" if debug else ""
-    sh.exec(f"go install {gcflags} -ldflags \"-X github.com/pgavlin/dawn/cmd/dawn.version={version}\" github.com/pgavlin/dawn/cmd/dawn")
+all_dawn_deps = []
+for goos in ["darwin", "linux", "windows"]:
+    for goarch in ["amd64"]:
+        output = os.path.join("dist", f"dawn_{goos}_{goarch}", "dawn")
+        bin = go_binary(name="dawn", output=output, docs=f"Builds the dawn CLI for {goos}/{goarch}.", goos=goos, goarch=goarch)
+        all_dawn_deps.append(bin)
+
+@target(deps=all_dawn_deps)
+def dawn_goreleaser():
+    """
+    Builds the dawn CLI for various (OS, architecture) pairs and copies the
+    results to the location expected by Goreleaser.
+    """
 
 @target(deps=[":dawn", "docs:site"])
 def default():

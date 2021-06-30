@@ -4,4 +4,4 @@ def site():
     Builds the dawn docs site using sphinx.
     """
 
-    sh.exec("sphinx-build -M html source build")
+    sh.exec("sphinx-build -W -b html source build")

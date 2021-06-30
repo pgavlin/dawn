@@ -17,12 +17,13 @@ import (
 
 // A sourceFile represents a single source file inside of a project.
 type sourceFile struct {
-	proj      *Project
-	label     *label.Label
-	generator *label.Label
-	path      string
-	oldSum    string
-	sum       string
+	proj       *Project
+	label      *label.Label
+	targetInfo targetInfo
+	generator  *label.Label
+	path       string
+	oldSum     string
+	sum        string
 }
 
 func repoSourcePath(pkg, sourcePath string) (string, error) {
@@ -95,7 +96,7 @@ func (f *sourceFile) generates() []string {
 }
 
 func (f *sourceFile) info() targetInfo {
-	return targetInfo{Dependencies: f.dependencies()}
+	return f.targetInfo
 }
 
 func (f *sourceFile) upToDate() (bool, error) {
@@ -119,6 +120,7 @@ func (f *sourceFile) load() error {
 		return err
 	}
 
+	f.targetInfo = info
 	f.oldSum = info.Data
 	return nil
 }

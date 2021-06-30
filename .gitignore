@@ -16,3 +16,4 @@
 
 # dawn build files
 .dawn/build
+dist/

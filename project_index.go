@@ -45,10 +45,12 @@ func Targets(root string) ([]TargetSummary, error) {
 
 // An indexTarget is a synthetic target created by an index-only load.
 type indexTarget struct {
-	proj  *Project
-	label *label.Label
-	deps  []string
-	doc   string
+	proj    *Project
+	label   *label.Label
+	deps    []string
+	depData map[string]string
+	doc     string
+	data    string
 }
 
 func (t *indexTarget) Name() string {
@@ -88,7 +90,8 @@ func (t *indexTarget) generates() []string {
 func (t *indexTarget) info() targetInfo {
 	return targetInfo{
 		Doc:          t.doc,
-		Dependencies: t.deps,
+		Dependencies: t.depData,
+		Data:         t.data,
 	}
 }
 
@@ -135,11 +138,18 @@ func (proj *Project) loadIndex() error {
 				path:  path,
 			}
 		} else {
+			deps := make([]string, 0, len(info.Dependencies))
+			for k := range info.Dependencies {
+				deps = append(deps, k)
+			}
+			sort.Strings(deps)
 			target = &indexTarget{
-				proj:  proj,
-				label: l,
-				doc:   info.Doc,
-				deps:  info.Dependencies,
+				proj:    proj,
+				label:   l,
+				doc:     info.Doc,
+				deps:    deps,
+				depData: info.Dependencies,
+				data:    info.Data,
 			}
 		}
 

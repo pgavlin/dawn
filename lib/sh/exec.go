@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 
 	"github.com/pgavlin/dawn/util"
@@ -116,9 +117,20 @@ func command(thread *starlark.Thread, command, cwd string, env starlark.Iterable
 	if env != nil {
 		items := env.Items()
 
-		pairs := make([]string, len(items))
-		for i, kvp := range items {
-			pairs[i] = fmt.Sprintf("%v=%v", kvp[0], kvp[1])
+		environ := os.Environ()
+		pairs := make([]string, 0, len(environ)+len(items))
+		pairs = append(pairs, environ...)
+		for _, kvp := range items {
+			key, ok := starlark.AsString(kvp[0])
+			if !ok {
+				key = kvp[0].String()
+			}
+			value, ok := starlark.AsString(kvp[1])
+			if !ok {
+				value = kvp[1].String()
+			}
+
+			pairs = append(pairs, fmt.Sprintf("%v=%v", key, value))
 		}
 
 		options = append(options, interp.Env(expand.ListEnviron(pairs...)))

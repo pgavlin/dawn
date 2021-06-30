@@ -387,10 +387,10 @@ func (proj *Project) unknownTarget(label string) error {
 }
 
 type targetInfo struct {
-	Doc          string   `json:"doc,omitempty"`
-	Dependencies []string `json:"dependencies,omitempty"`
-	Data         string   `json:"stamp,omitempty"`
-	Rerun        bool     `json:"rerun,omitempty"`
+	Doc          string            `json:"doc,omitempty"`
+	Dependencies map[string]string `json:"dependencies,omitempty"`
+	Data         string            `json:"stamp,omitempty"`
+	Rerun        bool              `json:"rerun,omitempty"`
 }
 
 func (proj *Project) targetInfoPath(l *label.Label) string {
@@ -593,12 +593,17 @@ func (proj *Project) link() error {
 	return nil
 }
 
-func equalStringSlices(x, y []string) bool {
+func equalStringMaps(x, y map[string]string) bool {
 	if len(x) != len(y) {
 		return false
 	}
-	for i, s := range x {
-		if y[i] != s {
+	for k, vx := range x {
+		if vy, ok := y[k]; !ok || vx != vy {
+			return false
+		}
+	}
+	for k := range y {
+		if _, ok := x[k]; !ok {
 			return false
 		}
 	}

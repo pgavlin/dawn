@@ -34,14 +34,16 @@ type Target interface {
 type runTarget struct {
 	target  Target
 	changed bool
+	data    string
 }
 
 func (t *runTarget) Evaluate(engine runner.Engine) error {
 	proj, label, info := t.target.Project(), t.target.Label(), t.target.info()
 
 	// Evaluate the target's dependencies.
+	depsUpToDate := true
 	deps := t.target.dependencies()
-	depsUpToDate := equalStringSlices(info.Dependencies, deps)
+	depData := map[string]string{}
 	for i, dep := range engine.EvaluateTargets(deps...) {
 		if dep.Error != nil {
 			switch err := dep.Error.(type) {
@@ -52,7 +54,14 @@ func (t *runTarget) Evaluate(engine runner.Engine) error {
 			}
 			return fmt.Errorf("dependency %v failed", deps[i])
 		}
-		if dep.Target.(*runTarget).changed {
+
+		label := deps[i]
+
+		newData := dep.Target.(*runTarget).data
+		depData[label] = newData
+
+		prevData, ok := info.Dependencies[label]
+		if !ok || dep.Target.(*runTarget).changed || newData != prevData {
 			depsUpToDate = false
 		}
 	}
@@ -85,17 +94,17 @@ func (t *runTarget) Evaluate(engine runner.Engine) error {
 		// If the target fails, record that it must be re-run on the next build.
 		proj.saveTargetInfo(label, targetInfo{
 			Doc:          t.target.Doc(),
-			Dependencies: deps,
+			Dependencies: depData,
 			Rerun:        true,
 		})
 		return err
 	}
 
 	// Save the target's metadata.
-	t.changed = changed
+	t.changed, t.data = changed, data
 	err = proj.saveTargetInfo(label, targetInfo{
 		Doc:          t.target.Doc(),
-		Dependencies: deps,
+		Dependencies: depData,
 		Data:         data,
 	})
 	if err != nil {

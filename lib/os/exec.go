@@ -113,14 +113,25 @@ func command(
 	if envV != nil {
 		items := envV.Items()
 
-		env = make([]string, len(items))
-		for i, kvp := range items {
-			env[i] = fmt.Sprintf("%v=%v", kvp[0], kvp[1])
+		pairs := make([]string, 0, len(env)+len(items))
+		pairs = append(pairs, env...)
+		for _, kvp := range items {
+			key, ok := starlark.AsString(kvp[0])
+			if !ok {
+				key = kvp[0].String()
+			}
+			value, ok := starlark.AsString(kvp[1])
+			if !ok {
+				value = kvp[1].String()
+			}
+
+			pairs = append(pairs, fmt.Sprintf("%v=%v", key, value))
 		}
 	}
 
 	cmd := exec.Command(command[0], command[1:]...)
 	cmd.Dir = cwd
+	cmd.Env = env
 
 	return cmd, nil
 }

@@ -1,3 +1,5 @@
+//go:generate go run github.com/pgavlin/dawn/cmd/dawn-gen-builtins . builtins.go ../../docs/source/modules
+
 package os
 
 import (
