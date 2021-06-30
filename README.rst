@@ -5,6 +5,9 @@
 .. meta::
    :description lang=en: Build multi-language software projects without sacrificing productivity.
 
+.. image:: https://readthedocs.org/projects/dawn-build/badge/?version=latest&style=flat
+   :target: https://dawn-build.io
+   :alt: Read the Docs
 .. image:: https://pkg.go.dev/badge/github.com/pgavlin/dawn
    :target: https://pkg.go.dev/github.com/pgavlin/dawn
    :alt: pkg.go.dev
