@@ -19,11 +19,13 @@ var rootCmd = &cobra.Command{
 	Long:         `A pragmatic polyglot build system.`,
 	Args:         cobra.ArbitraryArgs,
 	SilenceUsage: true,
-	PersistentPreRunE: func(_ *cobra.Command, _ []string) error {
+	PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 		termWidth, _, _ = term.GetSize(os.Stdout)
 
-		if err := work.init(); err != nil {
-			return err
+		if cmd.Use != "init" {
+			if err := work.init(); err != nil {
+				return err
+			}
 		}
 		return prof.start()
 	},
@@ -50,6 +52,7 @@ func init() {
 	rootCmd.PersistentFlags().SetInterspersed(false)
 	rootCmd.Flags().SetInterspersed(false)
 
+	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(buildCmd)
 	rootCmd.AddCommand(watchCmd)
 	rootCmd.AddCommand(replCmd)

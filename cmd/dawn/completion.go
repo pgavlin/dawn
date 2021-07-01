@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -13,54 +14,56 @@ var completionCmd = &cobra.Command{
 
 Bash:
 
-  $ source <(yourprogram completion bash)
+  $ source <(dawn completion bash)
 
   # To load completions for each session, execute once:
   # Linux:
-  $ yourprogram completion bash > /etc/bash_completion.d/yourprogram
+  $ dawn completion bash > /etc/bash_completion.d/dawn
   # macOS:
-  $ yourprogram completion bash > /usr/local/etc/bash_completion.d/yourprogram
+  $ dawn completion bash > /usr/local/etc/bash_completion.d/dawn
 
 Zsh:
 
   # If shell completion is not already enabled in your environment,
-  # you will need to enable it.  You can execute the following once:
+  # you will need to enable it. You can execute the following once:
 
   $ echo "autoload -U compinit; compinit" >> ~/.zshrc
 
   # To load completions for each session, execute once:
-  $ yourprogram completion zsh > "${fpath[1]}/_yourprogram"
+  $ dawn completion zsh > "${fpath[1]}/_dawn"
 
   # You will need to start a new shell for this setup to take effect.
 
 fish:
 
-  $ yourprogram completion fish | source
+  $ dawn completion fish | source
 
   # To load completions for each session, execute once:
-  $ yourprogram completion fish > ~/.config/fish/completions/yourprogram.fish
+  $ dawn completion fish > ~/.config/fish/completions/dawn.fish
 
 PowerShell:
 
-  PS> yourprogram completion powershell | Out-String | Invoke-Expression
+  PS> dawn completion powershell | Out-String | Invoke-Expression
 
   # To load completions for every new session, run:
-  PS> yourprogram completion powershell > yourprogram.ps1
+  PS> dawn completion powershell > dawn.ps1
   # and source this file from your PowerShell profile.
 `,
 	DisableFlagsInUseLine: true,
 	ValidArgs:             []string{"bash", "zsh", "fish", "powershell"},
 	Args:                  cobra.ExactValidArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		switch args[0] {
 		case "bash":
-			cmd.Root().GenBashCompletion(os.Stdout)
+			return cmd.Root().GenBashCompletion(os.Stdout)
 		case "zsh":
-			cmd.Root().GenZshCompletion(os.Stdout)
+			return cmd.Root().GenZshCompletion(os.Stdout)
 		case "fish":
-			cmd.Root().GenFishCompletion(os.Stdout, true)
+			return cmd.Root().GenFishCompletion(os.Stdout, true)
 		case "powershell":
-			cmd.Root().GenPowerShellCompletion(os.Stdout)
+			return cmd.Root().GenPowerShellCompletion(os.Stdout)
+		default:
+			return fmt.Errorf("unsupported shell %v", args[0])
 		}
 	},
 }

@@ -9,7 +9,6 @@ behind dawn.
 
 - :doc:`Quick Start <getting-started/quick-start>`
 - :doc:`Core Concepts <getting-started/core-concepts>`
-- :doc:`What's Next <getting-started/whats-next>`
 
 .. toctree::
    :maxdepth: 2
@@ -18,7 +17,6 @@ behind dawn.
 
    getting-started/quick-start
    getting-started/core-concepts
-   getting-started/whats-next
 
 .. toctree::
    :maxdepth: 2

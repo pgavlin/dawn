@@ -30,4 +30,25 @@ with many of the benefits of a modern build system:
 - Cross-platform tooling
 - ...and more
 
+Installation
+============
+
+The simplest way to install dawn_ is using the installation script:
+
+.. tabs::
+
+   .. code-tab:: bash macOS/Linux
+
+        curl -fsSL https://get.dawn-build.io | sh
+
+   .. code-tab:: powershell Windows
+
+        @"%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -InputFormat None -ExecutionPolicy Bypass -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; iex ((New-Object System.Net.WebClient).DownloadString('https://get.dawn-build.io/install.ps1'))" && SET "PATH=%PATH%;%USERPROFILE%\.dawn\bin"
+
+Alternatively, dawn_ may be installed manually using `go install`:
+
+.. code-block:: bash
+
+   go install github.com/pgavlin/dawn@latest
+
 .. _dawn: https://dawn-build.io

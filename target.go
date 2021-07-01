@@ -40,6 +40,9 @@ type runTarget struct {
 func (t *runTarget) Evaluate(engine runner.Engine) error {
 	proj, label, info := t.target.Project(), t.target.Label(), t.target.info()
 
+	// Copy the current version of the data.
+	t.data = info.Data
+
 	// Evaluate the target's dependencies.
 	depsUpToDate := true
 	deps := t.target.dependencies()
@@ -101,11 +104,14 @@ func (t *runTarget) Evaluate(engine runner.Engine) error {
 	}
 
 	// Save the target's metadata.
-	t.changed, t.data = changed, data
+	t.changed = changed
+	if changed {
+		t.data = data
+	}
 	err = proj.saveTargetInfo(label, targetInfo{
 		Doc:          t.target.Doc(),
 		Dependencies: depData,
-		Data:         data,
+		Data:         t.data,
 	})
 	if err != nil {
 		proj.events.TargetFailed(label, err)

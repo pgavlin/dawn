@@ -38,7 +38,7 @@ func (w *workspace) init() error {
 		if _, err := os.Stat(filepath.Join(rootDir, ".dawnconfig")); err == nil {
 			break
 		}
-		if rootDir == "" {
+		if rootDir == "/" || rootDir == "." {
 			return errors.New("could not find .dawnconfig")
 		}
 		rootDir = filepath.Dir(rootDir)

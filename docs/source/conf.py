@@ -32,6 +32,7 @@ release = '0.1.0'
 # ones.
 extensions = [
     'sphinx.ext.autosectionlabel',
+    'sphinx_tabs.tabs',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
