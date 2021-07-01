@@ -9,7 +9,7 @@ import (
 
 var prof = &profiler{}
 var work = &workspace{}
-var version = "0.0.0"
+var version = "development"
 var termWidth int
 
 var rootCmd = &cobra.Command{

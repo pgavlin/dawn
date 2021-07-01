@@ -1,10 +1,10 @@
 load("//.dawn:go_sources.dawn", "go_sources")
 
-version = "0.0.1"
+version = "0.1.0"
 
 debug = parse_flag("debug", type=bool, help="True to run a debug build")
 
-def go_binary(name, output=None, docs=None, deps=None, goos=None, goarch=None):
+def go_binary(name, ldflags=None, output=None, docs=None, deps=None, goos=None, goarch=None):
     (suffix, env) = ("", {})
     if goos:
         suffix = f"{suffix}_{goos}"
@@ -18,9 +18,11 @@ def go_binary(name, output=None, docs=None, deps=None, goos=None, goarch=None):
     if output:
         cmd = f"build -o {output}"
 
+    ldflags = ldflags or ""
+
     @target(name=name.replace("-", "_")+suffix, docs=docs, deps=deps, sources=go_sources(path(f"//cmd/{name}")))
     def binary():
-        sh.exec(f"go {cmd} {gcflags} github.com/pgavlin/dawn/cmd/{name}", env=env)
+        sh.exec(f"go {cmd} {gcflags} {ldflags} github.com/pgavlin/dawn/cmd/{name}", env=env)
 
     return binary
 
@@ -37,16 +39,19 @@ def dawn_builtins():
 
     sh.exec("dawn-gen-builtins . builtins.go docs/source/modules")
 
+ldflags = f"-ldflags=\"-X main.version={version}\""
+
 dawn = go_binary(
     name="dawn",
     docs="Builds the dawn CLI.",
+    ldflags=ldflags,
 )
 
 all_dawn_deps = []
 for goos in ["darwin", "linux", "windows"]:
     for goarch in ["amd64"]:
         output = os.path.join("dist", f"dawn_{goos}_{goarch}", "dawn")
-        bin = go_binary(name="dawn", output=output, docs=f"Builds the dawn CLI for {goos}/{goarch}.", goos=goos, goarch=goarch)
+        bin = go_binary(name="dawn", ldflags=ldflags, output=output, docs=f"Builds the dawn CLI for {goos}/{goarch}.", goos=goos, goarch=goarch)
         all_dawn_deps.append(bin)
 
 @target(deps=all_dawn_deps)
