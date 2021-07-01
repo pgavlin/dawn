@@ -19,7 +19,7 @@ jobs:
       with:
         python-version: 3.7
     - name: Install sphinx
-      run: pip install sphinx sphinx-rtd-theme
+      run: pip install sphinx sphinx-rtd-theme sphinx-tabs
     - name: Checkout code
       uses: actions/checkout@v2
     - name: Bootstrap
