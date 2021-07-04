@@ -107,7 +107,7 @@ func (proj *Project) downloadModule(l *label.Label, version, destPath string) er
 }
 
 func (proj *Project) fetchModule(l *label.Label) (path string, err error) {
-	filename := l.Target
+	filename := l.Name
 	if filename == "" {
 		filename = "BUILD.dawn"
 	}

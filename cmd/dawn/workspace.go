@@ -127,6 +127,7 @@ func (w *workspace) loadProject(args []string, index, quiet bool) error {
 	}
 	project, err := dawn.Load(w.root, options)
 	if err != nil {
+		renderer.Close()
 		return err
 	}
 	w.project = project
@@ -173,13 +174,17 @@ func (w *workspace) sources(label *label.Label) ([]string, error) {
 }
 
 func (w *workspace) repl(label *label.Label) error {
-	repl.REPL(w.project.REPLEnv(os.Stdout, label))
+	thread, globals := w.project.REPLEnv(os.Stdout, label)
+	globals["depends"] = w.newBuiltin_depends()
+	globals["what_depends"] = w.newBuiltin_whatDepends()
+
+	repl.REPL(thread, globals)
 	return nil
 }
 
 func (w *workspace) labelOrNearestDefault(l *label.Label) *label.Label {
 	original := l
-	if l.Target != "default" {
+	if l.Name != "default" {
 		return l
 	}
 

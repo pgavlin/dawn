@@ -37,7 +37,7 @@ type function struct {
 }
 
 func (f *function) Name() string {
-	return f.label.Package + ":" + f.label.Target
+	return f.label.Package + ":" + f.label.Name
 }
 
 func (f *function) Doc() string {
@@ -53,19 +53,23 @@ func (f *function) Hash() (uint32, error) { return starlark.String(f.label.Strin
 func (f *function) Attr(name string) (starlark.Value, error) {
 	switch name {
 	case "label":
-		return starlark.String(f.label.String()), nil
+		return f.label, nil
 	case "always":
 		return starlark.Bool(f.always), nil
 	case "env":
 		globals, defaults, freevars := f.function.Env()
 		return starlark.Tuple{globals, defaults, freevars}, nil
+	case "dependencies":
+		return util.StringList(f.deps).List(), nil
+	case "generates":
+		return util.StringList(f.gens).List(), nil
 	default:
 		return nil, nil
 	}
 }
 
 func (f *function) AttrNames() []string {
-	return []string{"label", "always", "env"}
+	return []string{"label", "always", "env", "dependencies", "generates"}
 }
 
 func (f *function) Project() *Project {

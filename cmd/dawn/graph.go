@@ -63,7 +63,7 @@ func (g graph) sources(t dawn.Target, root string) ([]string, error) {
 	for _, d := range n.dependencies {
 		if dawn.IsSource(&d.label) {
 			components := label.Split(d.label.Package)[1:]
-			paths = append(paths, filepath.Join(root, filepath.Join(components...), d.label.Target))
+			paths = append(paths, filepath.Join(root, filepath.Join(components...), d.label.Name))
 		}
 	}
 	return paths, nil

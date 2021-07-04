@@ -24,6 +24,7 @@ behind dawn.
    :caption: API Reference
 
    modules/globals
+   modules/cli
    modules/json
    modules/os
    modules/path

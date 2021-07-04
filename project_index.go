@@ -130,7 +130,7 @@ func (proj *Project) loadIndex() error {
 		var target Target
 		if IsSource(l) {
 			components := label.Split(l.Package)[1:]
-			path := filepath.Join(proj.root, filepath.Join(components...), l.Target)
+			path := filepath.Join(proj.root, filepath.Join(components...), l.Name)
 
 			target = &sourceFile{
 				proj:  proj,

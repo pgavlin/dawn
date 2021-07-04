@@ -31,6 +31,15 @@ dawn_gen_builtins = go_binary(
     docs="Builds the dawn-gen-builtins tool for generating Starlark builtin wrappers.",
 )
 
+@target(deps=[dawn_gen_builtins], sources=["./cmd/dawn/repl_builtins.go"], generates=["./cmd/dawn/builtins.go"])
+def dawn_cli_builtins():
+    """
+    Generates wrappers + documentation for CLI-only builtin functions.
+    """
+
+    sh.exec("dawn-gen-builtins ./cmd/dawn ./cmd/dawn/builtins.go ./docs/source/modules")
+
+
 @target(deps=[dawn_gen_builtins], sources=["project.go", "project_builtins.go"], generates=["builtins.go", "docs/source/modules"])
 def dawn_builtins():
     """

@@ -12,16 +12,16 @@ import (
 //
 // The general form represented is:
 //
-//    [kind:][[module[+version]@][//]package][:target]
+//    [kind:][[module[+version]@][//]package][:name]
 //
-// If the package is omitted and the target is present, the label is relative to the
+// If the package is omitted and the name is present, the label is relative to the
 // current package.
 type Label struct {
 	Kind    string
 	Module  string
 	Version *semver.Version
 	Package string
-	Target  string
+	Name    string
 }
 
 var _ encoding.TextMarshaler = (*Label)(nil)
@@ -29,12 +29,12 @@ var _ encoding.TextUnmarshaler = (*Label)(nil)
 
 // Parse parses rawlabel into a Label structure.
 func Parse(rawlabel string) (*Label, error) {
-	targetColon := strings.LastIndexByte(rawlabel, ':')
-	if targetColon == -1 {
-		targetColon = len(rawlabel)
+	nameColon := strings.LastIndexByte(rawlabel, ':')
+	if nameColon == -1 {
+		nameColon = len(rawlabel)
 	}
 
-	kindModuleAndPkg := rawlabel[:targetColon]
+	kindModuleAndPkg := rawlabel[:nameColon]
 
 	kind, moduleAndPkg := "", ""
 	if kindColon := strings.IndexByte(kindModuleAndPkg, ':'); kindColon != -1 {
@@ -62,11 +62,11 @@ func Parse(rawlabel string) (*Label, error) {
 		return nil, err
 	}
 
-	target := ""
-	if targetColon < len(rawlabel) {
-		target = rawlabel[targetColon+1:]
-		if strings.ContainsRune(target, '/') {
-			return nil, errors.New("targets may not contain ':' or '/'")
+	name := ""
+	if nameColon < len(rawlabel) {
+		name = rawlabel[nameColon+1:]
+		if strings.ContainsRune(name, '/') {
+			return nil, errors.New("names may not contain ':' or '/'")
 		}
 	}
 
@@ -75,7 +75,7 @@ func Parse(rawlabel string) (*Label, error) {
 		Module:  module,
 		Version: version,
 		Package: pkg,
-		Target:  target,
+		Name:    name,
 	}
 	if module != "" && !l.IsAbs() {
 		return nil, errors.New("labels with modules must be absolute")
@@ -83,7 +83,7 @@ func Parse(rawlabel string) (*Label, error) {
 	return l, nil
 }
 
-func New(kind, module, pkg, target string) (*Label, error) {
+func New(kind, module, pkg, name string) (*Label, error) {
 	if strings.ContainsAny(kind, ":/") {
 		return nil, errors.New("kind may not contain ':' or '/'")
 	}
@@ -91,10 +91,10 @@ func New(kind, module, pkg, target string) (*Label, error) {
 	if err != nil {
 		return nil, err
 	}
-	if strings.ContainsAny(target, ":/") {
-		return nil, errors.New("target may not contain ':' or '/'")
+	if strings.ContainsAny(name, ":/") {
+		return nil, errors.New("name may not contain ':' or '/'")
 	}
-	return &Label{Kind: kind, Module: module, Package: pkg, Target: target}, nil
+	return &Label{Kind: kind, Module: module, Package: pkg, Name: name}, nil
 }
 
 func (l *Label) MarshalText() ([]byte, error) {
@@ -124,7 +124,7 @@ func (l *Label) RelativeTo(pkg string) (*Label, error) {
 	}
 	return &Label{
 		Package: pkg,
-		Target:  l.Target,
+		Name:    l.Name,
 	}, nil
 }
 
@@ -143,9 +143,9 @@ func (l *Label) String() string {
 		b.WriteRune('@')
 	}
 	b.WriteString(l.Package)
-	if l.Target != "" {
+	if l.Name != "" {
 		b.WriteRune(':')
-		b.WriteString(l.Target)
+		b.WriteString(l.Name)
 	}
 	return b.String()
 }

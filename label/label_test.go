@@ -26,15 +26,15 @@ func TestParseLabel(t *testing.T) {
 		},
 		{
 			":target",
-			&Label{Target: "target"},
+			&Label{Name: "target"},
 		},
 		{
 			"pkg:target",
-			&Label{Package: "pkg", Target: "target"},
+			&Label{Package: "pkg", Name: "target"},
 		},
 		{
 			"kind:pkg:target",
-			&Label{Kind: "kind", Package: "pkg", Target: "target"},
+			&Label{Kind: "kind", Package: "pkg", Name: "target"},
 		},
 		{
 			"pkg",
@@ -46,11 +46,11 @@ func TestParseLabel(t *testing.T) {
 		},
 		{
 			"//abs-pkg:target",
-			&Label{Package: "//abs-pkg", Target: "target"},
+			&Label{Package: "//abs-pkg", Name: "target"},
 		},
 		{
 			"kind://abs-pkg:target",
-			&Label{Kind: "kind", Package: "//abs-pkg", Target: "target"},
+			&Label{Kind: "kind", Package: "//abs-pkg", Name: "target"},
 		},
 		{
 			"//abs-pkg/with/@symbol",
@@ -58,11 +58,11 @@ func TestParseLabel(t *testing.T) {
 		},
 		{
 			"//abs-pkg/with/@symbol:target",
-			&Label{Package: "//abs-pkg/with/@symbol", Target: "target"},
+			&Label{Package: "//abs-pkg/with/@symbol", Name: "target"},
 		},
 		{
 			"kind://abs-pkg/with/@symbol:target",
-			&Label{Kind: "kind", Package: "//abs-pkg/with/@symbol", Target: "target"},
+			&Label{Kind: "kind", Package: "//abs-pkg/with/@symbol", Name: "target"},
 		},
 		{
 			"rel-pkg/path",
@@ -70,11 +70,11 @@ func TestParseLabel(t *testing.T) {
 		},
 		{
 			"rel-pkg/path:target",
-			&Label{Package: "rel-pkg/path", Target: "target"},
+			&Label{Package: "rel-pkg/path", Name: "target"},
 		},
 		{
 			"kind:rel-pkg/path:target",
-			&Label{Kind: "kind", Package: "rel-pkg/path", Target: "target"},
+			&Label{Kind: "kind", Package: "rel-pkg/path", Name: "target"},
 		},
 		{
 			"module@//pkg/path",
@@ -82,15 +82,15 @@ func TestParseLabel(t *testing.T) {
 		},
 		{
 			"module@//pkg/path:target",
-			&Label{Module: "module", Package: "//pkg/path", Target: "target"},
+			&Label{Module: "module", Package: "//pkg/path", Name: "target"},
 		},
 		{
 			"kind:module@//pkg/path:target",
-			&Label{Kind: "kind", Module: "module", Package: "//pkg/path", Target: "target"},
+			&Label{Kind: "kind", Module: "module", Package: "//pkg/path", Name: "target"},
 		},
 		{
 			"kind:module+1.2.3@//pkg/path:target",
-			&Label{Kind: "kind", Module: "module", Version: version("1.2.3"), Package: "//pkg/path", Target: "target"},
+			&Label{Kind: "kind", Module: "module", Version: version("1.2.3"), Package: "//pkg/path", Name: "target"},
 		},
 		{
 			"kind:pkg:with:colons:target",

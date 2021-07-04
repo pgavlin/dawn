@@ -17,6 +17,14 @@ import (
 	"go.starlark.net/starlarkstruct"
 )
 
+func CurrentModule(thread *starlark.Thread) (*label.Label, bool) {
+	m, ok := thread.Local("module").(*module)
+	if !ok {
+		return nil, false
+	}
+	return m.label, true
+}
+
 // flagValue implements pflag.Value for project flags.
 type flagValue struct {
 	v      starlark.Value
@@ -64,7 +72,7 @@ func (proj *Project) builtin_path(thread *starlark.Thread, fn *starlark.Builtin,
 	}
 
 	components := label.Split(l.Package)[1:]
-	return starlark.String(filepath.Join(proj.root, filepath.Join(components...), l.Target)), nil
+	return starlark.String(filepath.Join(proj.root, filepath.Join(components...), l.Name)), nil
 }
 
 // def label(path):
@@ -83,8 +91,8 @@ func (proj *Project) builtin_label(thread *starlark.Thread, fn *starlark.Builtin
 	l.Kind = ""
 
 	components := label.Split(l.Package)[1:]
-	if info, err := os.Stat(filepath.Join(proj.root, filepath.Join(components...), l.Target)); err == nil && info.IsDir() {
-		l.Package, l.Target = l.Package+"/"+l.Target, ""
+	if info, err := os.Stat(filepath.Join(proj.root, filepath.Join(components...), l.Name)); err == nil && info.IsDir() {
+		l.Package, l.Name = l.Package+"/"+l.Name, ""
 	}
 
 	return starlark.String(l.String()), nil
@@ -346,7 +354,7 @@ func (proj *Project) builtin_target(
 
 	l := &label.Label{
 		Package: m.label.Package,
-		Target:  name,
+		Name:    name,
 	}
 	f, err := proj.loadFunction(l, dependencies, gens, function, always, docs)
 	if err != nil {
@@ -356,7 +364,7 @@ func (proj *Project) builtin_target(
 	if default_ {
 		defaultLabel := &label.Label{
 			Package: m.label.Package,
-			Target:  "default",
+			Name:    "default",
 		}
 		if _, err = proj.loadFunction(defaultLabel, []string{l.String()}, nil, builtin_default(function.Doc()), false, ""); err != nil {
 			return nil, err

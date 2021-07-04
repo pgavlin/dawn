@@ -250,7 +250,7 @@ func (proj *Project) Watch(label *label.Label) error {
 }
 
 func (proj *Project) REPLEnv(stdout io.Writer, pkg *label.Label) (thread *starlark.Thread, globals starlark.StringDict) {
-	m := &module{label: &label.Label{Kind: "module", Package: pkg.Package, Target: "<stdin>"}}
+	m := &module{label: &label.Label{Kind: "module", Package: pkg.Package, Name: "<stdin>"}}
 	thread, globals, _ = m.env(proj)
 	thread.Print = func(_ *starlark.Thread, msg string) {
 		fmt.Fprintln(stdout, msg)
@@ -341,7 +341,7 @@ func (proj *Project) Targets() []Target {
 
 	var targets []Target
 	for _, target := range proj.targets {
-		if IsTarget(target.target.Label()) {
+		if IsTarget(target.target.Label()) || len(target.target.dependencies()) != 0 {
 			targets = append(targets, target.target)
 		}
 	}
@@ -398,7 +398,7 @@ func (proj *Project) targetInfoPath(l *label.Label) string {
 	if kind == "" {
 		kind = "target"
 	}
-	target := l.Target
+	target := l.Name
 	if target == "" {
 		target = "BUILD.dawn"
 	}
@@ -477,7 +477,7 @@ func (proj *Project) loadPackage(wg *sync.WaitGroup, path string) error {
 		case e.Name() == "BUILD.dawn":
 			wg.Add(1)
 			go func() {
-				proj.loadModule(nil, &label.Label{Kind: "module", Package: path, Target: "BUILD.dawn"})
+				proj.loadModule(nil, &label.Label{Kind: "module", Package: path, Name: "BUILD.dawn"})
 				wg.Done()
 			}()
 		}
@@ -546,7 +546,7 @@ func (proj *Project) loadFunction(l *label.Label, dependencies, generates []stri
 
 func (proj *Project) loadSourceFile(l *label.Label) (*sourceFile, error) {
 	components := label.Split(l.Package)[1:]
-	path := filepath.Join(proj.root, filepath.Join(components...), l.Target)
+	path := filepath.Join(proj.root, filepath.Join(components...), l.Name)
 
 	rawlabel := l.String()
 	proj.m.Lock()
