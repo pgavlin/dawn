@@ -41,3 +41,48 @@ func exists(thread *starlark.Thread, fn *starlark.Builtin, path string) (starlar
 func getcwd(thread *starlark.Thread, fn *starlark.Builtin) (starlark.Value, error) {
 	return starlark.String(util.Getwd(thread)), nil
 }
+
+// def mkdir(path, mode=None):
+//     """
+//     Create a directory named path with numeric mode mode.
+//     """
+//
+//starlark:builtin factory=NewMkdir,function=Mkdir
+func mkdir(thread *starlark.Thread, fn *starlark.Builtin, path string, mode int) (starlark.Value, error) {
+	cwd := util.Getwd(thread)
+	if !filepath.IsAbs(path) {
+		path = filepath.Join(cwd, path)
+	}
+
+	if mode == 0 {
+		mode = 0777
+	}
+
+	if err := os.Mkdir(path, os.FileMode(mode)); err != nil {
+		return nil, err
+	}
+	return starlark.None, nil
+}
+
+// def makedirs(path, mode=None):
+//     """
+//     Recursive directory creation function. Like mkdir(), but makes all
+//     intermediate-level directories needed to contain the leaf directory.
+//     """
+//
+//starlark:builtin factory=NewMakedirs,function=Makedirs
+func makedirs(thread *starlark.Thread, fn *starlark.Builtin, path string, mode int) (starlark.Value, error) {
+	cwd := util.Getwd(thread)
+	if !filepath.IsAbs(path) {
+		path = filepath.Join(cwd, path)
+	}
+
+	if mode == 0 {
+		mode = 0777
+	}
+
+	if err := os.MkdirAll(path, os.FileMode(mode)); err != nil {
+		return nil, err
+	}
+	return starlark.None, nil
+}

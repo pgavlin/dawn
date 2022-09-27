@@ -13,6 +13,25 @@ import (
 
 
 
+func NewEnviron() *starlark.Builtin {
+	const doc = `
+   Returns a mapping object where keys and values are strings that represent
+   the process environment. This mapping is captured at startup time.
+   `
+	return starlark.NewBuiltin("environ", Environ).WithDoc(doc)
+}
+
+
+func Environ(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	
+	if err := starlark.UnpackPositionalArgs(fn.Name(), args, kwargs, 0); err != nil {
+		return nil, err
+	}
+	
+	return environ(thread, fn)
+}
+
+
 func NewExec() *starlark.Builtin {
 	const doc = `
    Run an executable. If the process fails, the calling module will
@@ -138,6 +157,57 @@ func Getcwd(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, 
 	}
 	
 	return getcwd(thread, fn)
+}
+
+
+func NewMkdir() *starlark.Builtin {
+	const doc = `
+   Create a directory named path with numeric mode mode.
+   `
+	return starlark.NewBuiltin("mkdir", Mkdir).WithDoc(doc)
+}
+
+
+func Mkdir(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	
+	var (
+		
+		path string
+		
+		mode int
+		
+	)
+	if err := starlark.UnpackArgs(fn.Name(), args, kwargs, "path", &path, "mode??", &mode); err != nil {
+		return nil, err
+	}
+	
+	return mkdir(thread, fn, path, mode)
+}
+
+
+func NewMakedirs() *starlark.Builtin {
+	const doc = `
+   Recursive directory creation function. Like mkdir(), but makes all
+   intermediate-level directories needed to contain the leaf directory.
+   `
+	return starlark.NewBuiltin("makedirs", Makedirs).WithDoc(doc)
+}
+
+
+func Makedirs(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	
+	var (
+		
+		path string
+		
+		mode int
+		
+	)
+	if err := starlark.UnpackArgs(fn.Name(), args, kwargs, "path", &path, "mode??", &mode); err != nil {
+		return nil, err
+	}
+	
+	return makedirs(thread, fn, path, mode)
 }
 
 

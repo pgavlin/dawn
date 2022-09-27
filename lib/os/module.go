@@ -46,10 +46,13 @@ var Module = &starlarkstruct.Module{
 	Members: starlark.StringDict{
 		"path": path.Module,
 
-		"exec":   NewExec(),
-		"output": NewOutput(),
-		"exists": NewExists(),
-		"getcwd": NewGetcwd(),
-		"glob":   NewGlob(),
+		"environ":  NewEnviron(),
+		"exec":     NewExec(),
+		"output":   NewOutput(),
+		"exists":   NewExists(),
+		"getcwd":   NewGetcwd(),
+		"glob":     NewGlob(),
+		"mkdir":    NewMkdir(),
+		"makedirs": NewMakedirs(),
 	},
 }
