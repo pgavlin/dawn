@@ -4,7 +4,7 @@ version = "0.1.0"
 
 debug = parse_flag("debug", type=bool, help="True to run a debug build")
 
-def go_binary(name, ldflags=None, output=None, docs=None, deps=None, goos=None, goarch=None):
+def go_binary(name, ldflags=None, output=None, docs=None, deps=None, goos=None, goarch=None, disable_cgo=None):
     (suffix, env) = ("", {})
     if goos:
         suffix = f"{suffix}_{goos}"
@@ -12,6 +12,9 @@ def go_binary(name, ldflags=None, output=None, docs=None, deps=None, goos=None, 
     if goarch:
         suffix = f"{suffix}_{goarch}"
         env["GOARCH"] = goarch
+
+    if disable_cgo:
+        env["CGO_ENABLED"] = 0
 
     gcflags = "-gcflags=\"all=-N -l\"" if debug else ""
     cmd = "install"
@@ -58,9 +61,9 @@ dawn = go_binary(
 
 all_dawn_deps = []
 for goos in ["darwin", "linux", "windows"]:
-    for goarch in ["amd64"]:
+    for goarch in ["amd64", "arm64"]:
         output = os.path.join("dist", f"dawn_{goos}_{goarch}", "dawn")
-        bin = go_binary(name="dawn", ldflags=ldflags, output=output, docs=f"Builds the dawn CLI for {goos}/{goarch}.", goos=goos, goarch=goarch)
+        bin = go_binary(name="dawn", ldflags=ldflags, output=output, docs=f"Builds the dawn CLI for {goos}/{goarch}.", goos=goos, goarch=goarch, disable_cgo=True)
         all_dawn_deps.append(bin)
 
 @target(deps=all_dawn_deps)

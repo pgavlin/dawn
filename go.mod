@@ -9,7 +9,7 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/otiai10/copy v1.6.0
 	github.com/pelletier/go-toml/v2 v2.0.5
-	github.com/rjeczalik/notify v0.9.2
+	github.com/rjeczalik/notify v0.9.3-0.20210809113154-3472d85e95cd
 	github.com/shirou/gopsutil/v3 v3.22.8
 	github.com/spf13/cobra v1.1.3
 	github.com/spf13/pflag v1.0.5
