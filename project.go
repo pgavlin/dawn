@@ -220,7 +220,13 @@ func (proj *Project) Watch(label *label.Label) error {
 					close(eventsDone)
 					return
 				}
-				if !strings.HasPrefix(event.Path(), proj.work) {
+
+				rel, err := filepath.Rel(proj.root, event.Path())
+				if err != nil {
+					continue
+				}
+
+				if !strings.HasPrefix(event.Path(), proj.work) && !proj.ignored(rel) {
 					dirty = true
 				}
 
@@ -449,8 +455,12 @@ func (proj *Project) saveTargetInfo(label *label.Label, info targetInfo) error {
 	return os.Rename(tempName, path)
 }
 
+func (proj *Project) ignored(path string) bool {
+	return proj.ignore != nil && proj.ignore.MatchString(path)
+}
+
 func (proj *Project) loadPackage(wg *sync.WaitGroup, path string) error {
-	if proj.ignore != nil && proj.ignore.MatchString(path[2:]) {
+	if proj.ignored(path[2:]) {
 		return nil
 	}
 

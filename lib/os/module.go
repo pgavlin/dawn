@@ -20,6 +20,10 @@ import (
 //         The path module provides functions to manipulate host paths.
 //         """
 //
+//     @function("environ")
+//     def environ():
+//         pass
+//
 //     @function("execf")
 //     def exec():
 //         pass
@@ -38,6 +42,14 @@ import (
 //
 //     @function("glob")
 //     def glob():
+//         pass
+//
+//     @function("mkdir")
+//     def mkdir():
+//         pass
+//
+//     @function("makedirs")
+//     def makedirs():
 //         pass
 //
 //starlark:module
