@@ -17,7 +17,7 @@
 {{end}}
 {{end}}
 {{range .Attributes}}
-.. py:attribute:: {{.Name}}
+.. py:attribute:: {{$qualifier}}{{.Name}}
 {{.Docstring}}
 {{end}}
 {{range .Methods}}

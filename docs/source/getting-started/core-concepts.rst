@@ -151,7 +151,7 @@ The Target Object
 
 The *target object* is passed as the first argument to the target function.
 Canonically, the first parameter is named `self`. The target object is described
-by :py:class:`globals.Target`.
+by :py:class:`the Target class <globals.Target>`.
 
 .. _Starlark language: https://github.com/bazelbuild/starlark
 .. _Bazel: https://bazel.build
