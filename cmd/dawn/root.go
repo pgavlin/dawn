@@ -13,12 +13,13 @@ var version = "development"
 var termWidth int
 
 var rootCmd = &cobra.Command{
-	Version:      version,
-	Use:          "dawn",
-	Short:        "dawn is a pragmatic polyglot build system.",
-	Long:         `A pragmatic polyglot build system.`,
-	Args:         cobra.ArbitraryArgs,
-	SilenceUsage: true,
+	Version:       version,
+	Use:           "dawn",
+	Short:         "dawn is a pragmatic polyglot build system.",
+	Long:          `A pragmatic polyglot build system.`,
+	Args:          cobra.ArbitraryArgs,
+	SilenceUsage:  true,
+	SilenceErrors: true,
 	PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 		termWidth, _, _ = term.GetSize(os.Stdout)
 
