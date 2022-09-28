@@ -192,6 +192,13 @@ func (f *function) load() error {
 		f.targetInfo.Rerun = true
 	}
 
+	// refresh the target info
+	//
+	// TODO: move this into saveIndex
+	if err = f.proj.saveTargetInfo(f.label, info); err != nil {
+		return fmt.Errorf("refreshing target info: %w", err)
+	}
+
 	if len(info.Data) == 0 {
 		f.oldEnv = starlark.None
 	} else {

@@ -119,6 +119,10 @@ func (proj *Project) load(index bool) (err error) {
 		}
 	}
 
+	if err := os.MkdirAll(proj.temp, 0755); err != nil {
+		return err
+	}
+
 	if err = proj.loadPackage(nil, "//"); err != nil {
 		return err
 	}
@@ -160,10 +164,6 @@ func (opts *RunOptions) apply(proj *Project) {
 }
 
 func (proj *Project) Run(label *label.Label, options *RunOptions) error {
-	if err := os.MkdirAll(proj.temp, 0755); err != nil {
-		return err
-	}
-
 	options.apply(proj)
 
 	err := runner.Run(proj, label.String())
