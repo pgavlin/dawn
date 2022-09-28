@@ -329,15 +329,18 @@ func (proj *Project) builtin_target(
 			dependencies = append(dependencies, deplabel.String())
 		}
 	}
+
+	var sourcePaths []string
 	for _, s := range sources {
 		label, err := sourceLabel(m.label.Package, s)
 		if err != nil {
 			return nil, err
 		}
-		if _, err = proj.loadSourceFile(label); err != nil {
+		f, err := proj.loadSourceFile(label)
+		if err != nil {
 			return nil, err
 		}
-		dependencies = append(dependencies, label.String())
+		sourcePaths, dependencies = append(sourcePaths, f.path), append(dependencies, label.String())
 	}
 
 	// Process gens.
@@ -356,7 +359,7 @@ func (proj *Project) builtin_target(
 		Package: m.label.Package,
 		Name:    name,
 	}
-	f, err := proj.loadFunction(l, dependencies, gens, function, always, docs)
+	f, err := proj.loadFunction(l, dependencies, sourcePaths, gens, function, always, docs)
 	if err != nil {
 		return nil, fmt.Errorf("%v: %w", fn.Name(), err)
 	}
@@ -366,7 +369,7 @@ func (proj *Project) builtin_target(
 			Package: m.label.Package,
 			Name:    "default",
 		}
-		if _, err = proj.loadFunction(defaultLabel, []string{l.String()}, nil, builtin_default(function.Doc()), false, ""); err != nil {
+		if _, err = proj.loadFunction(defaultLabel, []string{l.String()}, nil, nil, builtin_default(function.Doc()), false, ""); err != nil {
 			return nil, err
 		}
 	}

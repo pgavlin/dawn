@@ -18,6 +18,12 @@
 
 
 
+.. py:function:: environ()
+
+   Returns a mapping object where keys and values are strings that represent
+   the process environment. This mapping is captured at startup time.
+   
+
 .. py:function:: exec(command, cwd=None, env=None, try_=None)
 
    Run an executable. If the process fails, the calling module will
@@ -80,6 +86,17 @@
    :param exclude: the patterns to exclude.
 
    :returns: the matched paths
+   
+
+.. py:function:: mkdir(path, mode=None)
+
+   Create a directory named path with numeric mode mode.
+   
+
+.. py:function:: makedirs(path, mode=None)
+
+   Recursive directory creation function. Like mkdir(), but makes all
+   intermediate-level directories needed to contain the leaf directory.
    
 
 

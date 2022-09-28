@@ -146,6 +146,13 @@ list of generated files, that :ref:`target <Targets>` is automatically added
 as a dependency of the source. It is an error for multiple :ref:`targets <Targets>`
 to generate the same source.
 
+The Target Object
+^^^^^^^^^^^^^^^^^
+
+The *target object* is passed as the first argument to the target function.
+Canonically, the first parameter is named `self`. The target object is described
+by :py:class:`globals.Target`.
+
 .. _Starlark language: https://github.com/bazelbuild/starlark
 .. _Bazel: https://bazel.build
 .. _Starlark specification: https://github.com/bazelbuild/starlark/blob/master/spec.md

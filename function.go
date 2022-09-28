@@ -27,6 +27,7 @@ type function struct {
 	always     bool
 	targetInfo targetInfo
 	deps       []string
+	sources    []string
 	gens       []string
 	docs       string
 	function   starlark.HasEnv
@@ -61,6 +62,8 @@ func (f *function) Attr(name string) (starlark.Value, error) {
 		return starlark.Tuple{globals, defaults, freevars}, nil
 	case "dependencies":
 		return util.StringList(f.deps).List(), nil
+	case "sources":
+		return util.StringList(f.sources).List(), nil
 	case "generates":
 		return util.StringList(f.gens).List(), nil
 	default:
@@ -69,7 +72,7 @@ func (f *function) Attr(name string) (starlark.Value, error) {
 }
 
 func (f *function) AttrNames() []string {
-	return []string{"label", "always", "env", "dependencies", "generates"}
+	return []string{"label", "always", "env", "dependencies", "generates", "sources"}
 }
 
 func (f *function) Project() *Project {
@@ -153,7 +156,17 @@ func (f *function) newThread() *starlark.Thread {
 func (f *function) evaluate() (data string, changed bool, err error) {
 	defer f.out.Flush()
 
-	_, err = starlark.Call(f.newThread(), f.function, nil, nil)
+	passTarget := true
+	if fn, ok := f.function.(*starlark.Function); ok {
+		passTarget = fn.NumParams() > 0
+	}
+
+	var args starlark.Tuple
+	if passTarget {
+		args = starlark.Tuple{f}
+	}
+
+	_, err = starlark.Call(f.newThread(), f.function, args, nil)
 	if err != nil {
 		return "", false, err
 	}
