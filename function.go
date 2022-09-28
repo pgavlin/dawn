@@ -156,13 +156,8 @@ func (f *function) newThread() *starlark.Thread {
 func (f *function) evaluate() (data string, changed bool, err error) {
 	defer f.out.Flush()
 
-	passTarget := true
-	if fn, ok := f.function.(*starlark.Function); ok {
-		passTarget = fn.NumParams() > 0
-	}
-
 	var args starlark.Tuple
-	if passTarget {
+	if fn, ok := f.function.(*starlark.Function); ok && fn.NumParams() > 0 {
 		args = starlark.Tuple{f}
 	}
 
