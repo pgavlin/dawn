@@ -1,10 +1,12 @@
 package main
 
 import (
+	"os"
 	"path/filepath"
 
 	"github.com/pgavlin/dawn"
 	"github.com/pgavlin/dawn/label"
+	"github.com/spf13/cobra"
 )
 
 type node struct {
@@ -97,4 +99,19 @@ func buildGraph(proj *dawn.Project) graph {
 	}
 
 	return g
+}
+
+var graphCmd = &cobra.Command{
+	Use:          "graph",
+	Short:        "Write the project's dependency graph to stdout in DOT format",
+	Args:         cobra.NoArgs,
+	SilenceUsage: true,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if err := work.loadProject(args, true, true); err != nil {
+			return err
+		}
+		work.renderer.Close()
+
+		return work.graph.dot(os.Stdout)
+	},
 }

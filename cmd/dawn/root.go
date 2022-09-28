@@ -60,6 +60,7 @@ func init() {
 	rootCmd.AddCommand(listCmd)
 	rootCmd.AddCommand(gcCmd)
 	rootCmd.AddCommand(completionCmd)
+	rootCmd.AddCommand(graphCmd)
 
 	rootCmd.SetHelpCommand(helpCmd)
 }

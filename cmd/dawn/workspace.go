@@ -131,6 +131,7 @@ func (w *workspace) loadProject(args []string, index, quiet bool) error {
 
 	events := dawn.Events(w.renderer)
 	if quiet {
+		close(rendered)
 		events = dawn.DiscardEvents
 	}
 
