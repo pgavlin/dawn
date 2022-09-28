@@ -21,8 +21,9 @@ import (
 // values, and free variables references by the function--has changed with respect to its
 // last execution.
 type function struct {
-	proj  *Project
-	label *label.Label
+	proj   *Project
+	module *module
+	label  *label.Label
 
 	always     bool
 	targetInfo targetInfo
@@ -149,6 +150,9 @@ func (f *function) newThread() *starlark.Thread {
 	util.Chdir(thread, wd)
 
 	util.SetStdio(thread, f.out, f.out)
+
+	thread.SetLocal("root", f.proj.root)
+	thread.SetLocal("module", f.module)
 
 	return thread
 }

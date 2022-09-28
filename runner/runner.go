@@ -83,15 +83,17 @@ func (t *target) wait() error {
 }
 
 func (t *target) run(r *runner) {
-	defer func() {
+	unlock := func() {
 		t.m.Unlock()
 		t.c.Broadcast()
-	}()
+	}
 
 	// Load the target.
 	tt, err := r.targetLoader.LoadTarget(t.label)
 	if err != nil {
 		t.m.Lock()
+		defer unlock()
+
 		t.status, t.err = statusFailed, err
 		return
 	}
@@ -104,6 +106,7 @@ func (t *target) run(r *runner) {
 	}
 
 	t.m.Lock()
+	defer unlock()
 	t.status, t.err = status, err
 }
 

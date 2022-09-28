@@ -522,7 +522,7 @@ func (proj *Project) loadModule(waiter *module, label *label.Label) (starlark.St
 	return m.load(proj)
 }
 
-func (proj *Project) loadFunction(l *label.Label, dependencies, sources, generates []string, fn starlark.HasEnv, always bool, docs string) (*function, error) {
+func (proj *Project) loadFunction(m *module, l *label.Label, dependencies, sources, generates []string, fn starlark.HasEnv, always bool, docs string) (*function, error) {
 	if docs == "" {
 		if hasdoc, ok := fn.(starlark.HasDoc); ok {
 			docs = hasdoc.Doc()
@@ -537,6 +537,7 @@ func (proj *Project) loadFunction(l *label.Label, dependencies, sources, generat
 	}
 	f := &function{
 		proj:     proj,
+		module:   m,
 		label:    l,
 		deps:     dependencies,
 		sources:  sources,

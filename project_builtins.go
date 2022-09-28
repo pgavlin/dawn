@@ -359,7 +359,7 @@ func (proj *Project) builtin_target(
 		Package: m.label.Package,
 		Name:    name,
 	}
-	f, err := proj.loadFunction(l, dependencies, sourcePaths, gens, function, always, docs)
+	f, err := proj.loadFunction(m, l, dependencies, sourcePaths, gens, function, always, docs)
 	if err != nil {
 		return nil, fmt.Errorf("%v: %w", fn.Name(), err)
 	}
@@ -369,7 +369,7 @@ func (proj *Project) builtin_target(
 			Package: m.label.Package,
 			Name:    "default",
 		}
-		if _, err = proj.loadFunction(defaultLabel, []string{l.String()}, nil, nil, builtin_default(function.Doc()), false, ""); err != nil {
+		if _, err = proj.loadFunction(m, defaultLabel, []string{l.String()}, nil, nil, builtin_default(function.Doc()), false, ""); err != nil {
 			return nil, err
 		}
 	}
