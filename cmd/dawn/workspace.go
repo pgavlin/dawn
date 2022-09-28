@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -65,6 +66,24 @@ func (w *workspace) labelArg(args []string) (*label.Label, []string, error) {
 	default:
 		if !strings.HasPrefix(args[0], "--") {
 			rawlabel, args = args[0], args[1:]
+
+			// Unless it is obviously a label, see if the arg is interpretable as a path to a source file.
+			if !strings.HasPrefix(rawlabel, "//") && !strings.ContainsRune(rawlabel, ':') {
+				p, err := filepath.Abs(rawlabel)
+				if err != nil {
+					return nil, nil, fmt.Errorf("computing path: %w", err)
+				}
+				stat, err := os.Lstat(p)
+				if !os.IsNotExist(err) {
+					if err != nil {
+						return nil, nil, fmt.Errorf("stating file: %w", err)
+					}
+					if !stat.IsDir() {
+						modulePath, sourceFile := path.Split(filepath.ToSlash(rawlabel))
+						rawlabel = fmt.Sprintf("source:%v:%v", modulePath, sourceFile)
+					}
+				}
+			}
 		}
 	}
 

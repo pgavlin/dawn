@@ -14,28 +14,32 @@ type node struct {
 	dependents   []*node
 }
 
-func (n *node) depends(visited map[string]struct{}, acc *[]string) {
+func (n *node) depends(visited map[string]struct{}, acc *[]string) bool {
 	if _, ok := visited[n.label.String()]; ok {
-		return
+		return false
 	}
 	visited[n.label.String()] = struct{}{}
 
 	for _, d := range n.dependencies {
-		d.depends(visited, acc)
-		*acc = append(*acc, d.label.String())
+		if d.depends(visited, acc) {
+			*acc = append(*acc, d.label.String())
+		}
 	}
+	return true
 }
 
-func (n *node) whatDepends(visited map[string]struct{}, acc *[]string) {
+func (n *node) whatDepends(visited map[string]struct{}, acc *[]string) bool {
 	if _, ok := visited[n.label.String()]; ok {
-		return
+		return false
 	}
 	visited[n.label.String()] = struct{}{}
 
 	for _, d := range n.dependents {
-		d.whatDepends(visited, acc)
-		*acc = append(*acc, d.label.String())
+		if d.whatDepends(visited, acc) {
+			*acc = append(*acc, d.label.String())
+		}
 	}
+	return true
 }
 
 type graph map[string]*node

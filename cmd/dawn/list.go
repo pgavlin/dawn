@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sort"
 	"text/tabwriter"
 
 	"github.com/pgavlin/dawn"
@@ -72,6 +73,7 @@ func printTargetList(list []dawn.Target) error {
 }
 
 func printStringList(list []string) error {
+	sort.Strings(list)
 	if !listJSON {
 		for _, l := range list {
 			fmt.Println(l)

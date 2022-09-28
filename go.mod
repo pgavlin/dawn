@@ -16,7 +16,7 @@ require (
 	github.com/stretchr/testify v1.8.0
 	go.starlark.net v0.0.0-20220926145019-14b050677505
 	golang.org/x/sys v0.0.0-20220926163933-8cfa568d3c25
-	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
+	golang.org/x/term v0.0.0-20220526004731-065cf7ba2467
 	golang.org/x/tools v0.1.12
 	mvdan.cc/sh/v3 v3.3.0
 )
@@ -39,4 +39,4 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace go.starlark.net => github.com/pgavlin/starlark-go v0.0.0-20210619021655-f74f6ce4d501
+replace go.starlark.net => github.com/pgavlin/starlark-go v0.0.0-20220928151244-7f018528dd5d

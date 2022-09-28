@@ -123,6 +123,9 @@ func (l *Label) RelativeTo(pkg string) (*Label, error) {
 		return nil, err
 	}
 	return &Label{
+		Kind:    l.Kind,
+		Module:  l.Module,
+		Version: l.Version,
 		Package: pkg,
 		Name:    l.Name,
 	}, nil
