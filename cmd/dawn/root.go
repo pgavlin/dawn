@@ -45,6 +45,7 @@ func init() {
 	rootCmd.PersistentFlags().MarkHidden("trace")
 
 	rootCmd.PersistentFlags().BoolVarP(&work.reindex, "reindex", "r", false, "refresh the project's index")
+	rootCmd.PersistentFlags().BoolVarP(&work.verbose, "verbose", "V", false, "print verbose build output (incl. target stdout)")
 
 	rootCmd.Flags().BoolVarP(&buildOptions.Always, "always", "B", false, "consider all targets out-of-date")
 	rootCmd.Flags().BoolVarP(&buildOptions.DryRun, "dry-run", "n", false, "print the targets that would be built, but do not build them")

@@ -185,12 +185,12 @@ func (e *jsonRenderer) event(kind string, label *label.Label, pairs ...interface
 }
 
 // default renderer:
-// +-----------------------------+
-// | completed targets...        |
-// | evaluating targets...       |
-// | status line                 |
-// | system stats                |
-// +-----------------------------+
+// +--------------------------------------------+
+// | completed targets/verbose output...        |
+// | evaluating targets...                      |
+// | status line                                |
+// | system stats                               |
+// +--------------------------------------------+
 
 type target struct {
 	label  *label.Label
@@ -259,6 +259,9 @@ type statusRenderer struct {
 
 	maxWidth int
 
+	verbose bool
+	lines   []string
+
 	lastUpdate time.Time
 	dirty      bool
 	rewind     int
@@ -295,6 +298,12 @@ func (e *statusRenderer) render(now time.Time, closed bool) {
 		term.CursorUp(e.stdout)
 		term.ClearLine(e.stdout, e.maxWidth)
 	}
+
+	// Write any verbose output that has come in since the last frame.
+	for _, l := range e.lines {
+		fmt.Fprintln(e.stdout, l)
+	}
+	e.lines = e.lines[:0]
 
 	// Write any targets that have finished since the last frame.
 	for t := e.done.head; t != nil; t = t.next {
@@ -339,6 +348,10 @@ func (e *statusRenderer) Print(label *label.Label, line string) {
 
 	t := e.targets[label.String()]
 	t.lines = append(t.lines, line)
+
+	if e.verbose {
+		e.lines = append(e.lines, fmt.Sprintf("[%v] %v", label, line))
+	}
 }
 
 func (e *statusRenderer) ModuleLoading(label *label.Label) {
@@ -427,7 +440,7 @@ func (e *statusRenderer) Close() error {
 	return nil
 }
 
-func newRenderer(onLoaded func()) (renderer, error) {
+func newRenderer(verbose bool, onLoaded func()) (renderer, error) {
 	new := func() renderer {
 		if !term.IsTerminal(os.Stdout) {
 			return &lineRenderer{stdout: os.Stdout, stderr: os.Stderr, onLoaded: onLoaded}
@@ -442,6 +455,7 @@ func newRenderer(onLoaded func()) (renderer, error) {
 			ticker:     time.NewTicker(16 * time.Millisecond),
 			targets:    map[string]*target{},
 			maxWidth:   width,
+			verbose:    verbose,
 			stdout:     os.Stdout,
 			lastUpdate: time.Now(),
 			onLoaded:   onLoaded,
