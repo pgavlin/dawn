@@ -152,6 +152,11 @@
    :returns: the matched paths
    
 
+.. py:function:: fail(message)
+
+   Fails the calling target with the given message.
+   
+
 .. py:function:: get_target(label)
 
    Gets the target with the given label, if it exists.

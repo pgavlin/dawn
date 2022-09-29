@@ -363,3 +363,26 @@ func (proj *Project) starlark_builtin_sources(thread *starlark.Thread, fn *starl
 }
 
 
+func (proj *Project) newBuiltin_fail() *starlark.Builtin {
+	const doc = `
+   Fails the calling target with the given message.
+   `
+	return starlark.NewBuiltin("fail", proj.starlark_builtin_fail).WithDoc(doc)
+}
+
+
+func (proj *Project) starlark_builtin_fail(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	
+	var (
+		
+		message string
+		
+	)
+	if err := starlark.UnpackArgs(fn.Name(), args, kwargs, "message", &message); err != nil {
+		return nil, err
+	}
+	
+	return proj.builtin_fail(thread, fn, message)
+}
+
+

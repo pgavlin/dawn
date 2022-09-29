@@ -723,6 +723,10 @@ func IsSource(l *label.Label) bool {
 //     def glob():
 //         pass
 //
+//     @function("*Project.builtin_fail")
+//     def fail():
+//         pass
+//
 //     # REPL methods
 //
 //     @function("*Project.builtin_get_target")

@@ -125,6 +125,7 @@ func (m *module) env(proj *Project) (*starlark.Thread, starlark.StringDict, erro
 	builtins["parse_flag"] = proj.newBuiltin_parse_flag()
 	builtins["target"] = proj.newBuiltin_target()
 	builtins["glob"] = proj.newBuiltin_glob()
+	builtins["fail"] = proj.newBuiltin_fail()
 
 	builtins["package"] = starlark.String(m.label.Package)
 

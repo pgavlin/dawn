@@ -606,6 +606,22 @@ func builtin_default(doc string) *starlark.Builtin {
 	}).WithDoc(doc)
 }
 
+type failError string
+
+func (err failError) Error() string {
+	return string(err)
+}
+
+// def fail(message):
+//     """
+//     Fails the calling target with the given message.
+//     """
+//
+//starlark:builtin
+func (proj *Project) builtin_fail(thread *starlark.Thread, fn *starlark.Builtin, message string) (starlark.Value, error) {
+	return starlark.None, failError(message)
+}
+
 var builtin_host = starlarkstruct.FromStringDict(starlarkstruct.Default, starlark.StringDict{
 	"arch": starlark.String(runtime.GOARCH),
 	"os":   starlark.String(runtime.GOOS),
