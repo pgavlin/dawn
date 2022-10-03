@@ -95,8 +95,8 @@ func (t *indexTarget) info() targetInfo {
 	}
 }
 
-func (t *indexTarget) upToDate() (bool, error) {
-	return true, nil
+func (t *indexTarget) upToDate() (bool, string, error) {
+	return true, "", nil
 }
 
 func (*indexTarget) evaluate() (data string, changed bool, err error) {

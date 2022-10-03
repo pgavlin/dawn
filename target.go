@@ -26,7 +26,7 @@ type Target interface {
 	dependencies() []string
 	generates() []string
 	info() targetInfo
-	upToDate() (bool, error)
+	upToDate() (bool, string, error)
 	evaluate() (data string, changed bool, err error)
 }
 
@@ -47,6 +47,7 @@ func (t *runTarget) Evaluate(engine runner.Engine) error {
 	depsUpToDate := true
 	deps := t.target.dependencies()
 	depData := map[string]string{}
+	var outOfDateDeps []string
 	for i, dep := range engine.EvaluateTargets(deps...) {
 		if dep.Error != nil {
 			switch err := dep.Error.(type) {
@@ -65,12 +66,13 @@ func (t *runTarget) Evaluate(engine runner.Engine) error {
 
 		prevData, ok := info.Dependencies[label]
 		if !ok || dep.Target.(*runTarget).changed || newData != prevData {
+			outOfDateDeps = append(outOfDateDeps, label)
 			depsUpToDate = false
 		}
 	}
 
 	// Check whether the target is up-to-date.
-	upToDate, err := t.target.upToDate()
+	upToDate, reason, err := t.target.upToDate()
 	if err != nil {
 		proj.events.TargetFailed(label, err)
 		return err
@@ -82,9 +84,23 @@ func (t *runTarget) Evaluate(engine runner.Engine) error {
 		return nil
 	}
 
-	proj.events.TargetEvaluating(label, "")
+	switch {
+	case !upToDate:
+		// OK
+	case proj.always:
+		reason = "always"
+	case !depsUpToDate:
+		reason = fmt.Sprintf("out-of-date dependencies: %v", strings.Join(outOfDateDeps, ", "))
+	case info.Rerun:
+		reason = "failed during last run"
+	}
+
+	proj.events.TargetEvaluating(label, reason)
 
 	if proj.dryrun {
+		// For dry runs, conservatively assume that the target changed.
+		t.changed = true
+
 		proj.events.TargetSucceeded(label, true)
 		return nil
 	}

@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/pgavlin/dawn/diff"
 	"github.com/pgavlin/dawn/label"
 	"github.com/pgavlin/dawn/pickle"
 	"github.com/pgavlin/dawn/util"
@@ -100,38 +101,97 @@ func (f *function) info() targetInfo {
 	return f.targetInfo
 }
 
-func (f *function) upToDate() (bool, error) {
+func (f *function) diffEnv() (bool, string, error) {
+	eq, err := starlark.EqualDepth(f.oldEnv, f.newEnv, 1000)
+	if err != nil {
+		return false, "", fmt.Errorf("comparing function environments: %w", err)
+	}
+	if eq {
+		return true, "", nil
+	}
+
+	oldEnv, ok := f.oldEnv.(starlark.Tuple)
+	if !ok {
+		return false, "target has never been run", nil
+	}
+
+	newEnv := f.newEnv.(starlark.Tuple)
+
+	oldGlobals, oldDefaults, oldFreeVars, oldCode := oldEnv[0], oldEnv[1], oldEnv[2], oldEnv[3]
+	newGlobals, newDefaults, newFreeVars, newCode := newEnv[0], newEnv[1], newEnv[2], newEnv[3]
+
+	var reasons []string
+	if eq, _ := starlark.Equal(oldCode, newCode); !eq {
+		reasons = append(reasons, "code")
+	}
+
+	d, err := diff.DiffDepth(oldGlobals, newGlobals, 1000)
+	if err != nil {
+		return false, "", fmt.Errorf("comparing globals: %w", err)
+	}
+	if d != nil {
+		reasons = append(reasons, "globals")
+	}
+
+	d, err = diff.DiffDepth(oldDefaults, newDefaults, 1000)
+	if err != nil {
+		return false, "", fmt.Errorf("comparing defaults: %w", err)
+	}
+	if d != nil {
+		reasons = append(reasons, "defaults")
+	}
+
+	d, err = diff.DiffDepth(oldFreeVars, newFreeVars, 1000)
+	if err != nil {
+		return false, "", fmt.Errorf("comparing free variables: %w", err)
+	}
+	if d != nil {
+		reasons = append(reasons, "free variables")
+	}
+
+	var reason string
+	switch len(reasons) {
+	case 1:
+		reason = reasons[0]
+	case 2:
+		reason = reasons[0] + " and " + reasons[1]
+	default:
+		reason = strings.Join(reasons[:len(reasons)-1], ", ") + ", and " + reasons[len(reasons)-1]
+	}
+	return false, reason + " changed", nil
+}
+
+func (f *function) upToDate() (bool, string, error) {
 	// check env
 	newEnv, err := functionEnv(f.function)
 	if err != nil {
-		return false, fmt.Errorf("computing function environment: %w", err)
+		return false, "", fmt.Errorf("computing function environment: %w", err)
 	}
 	f.newEnv = newEnv
 
 	// if this target always runs, skip the equality check
 	if f.always {
 		f.targetInfo.Rerun = true
-		return true, nil
+		return true, "", nil
 	}
 
-	eq, err := starlark.EqualDepth(f.oldEnv, f.newEnv, 1000)
-	if err != nil {
-		return false, fmt.Errorf("comparing function environments: %w", err)
-	}
-	if !eq {
-		return false, nil
+	eq, reason, err := f.diffEnv()
+	if err != nil || !eq {
+		return false, reason, err
 	}
 
 	// if this target generates files, check to see that they exist
 	for _, out := range f.gens {
 		if _, err = os.Stat(out); err != nil {
 			if os.IsNotExist(err) {
-				return false, nil
+				// TODO: make this path relative to the project root
+				reason := fmt.Sprintf("generated file %v does not exist", out)
+				return false, reason, nil
 			}
-			return false, fmt.Errorf("checking generated files: %w", err)
+			return false, "", fmt.Errorf("checking generated files: %w", err)
 		}
 	}
-	return true, nil
+	return true, "", nil
 }
 
 func (f *function) newThread() *starlark.Thread {

@@ -99,14 +99,18 @@ func (f *sourceFile) info() targetInfo {
 	return f.targetInfo
 }
 
-func (f *sourceFile) upToDate() (bool, error) {
+func (f *sourceFile) upToDate() (bool, string, error) {
 	sum, err := fileSum(f.path)
 	if err != nil && !os.IsNotExist(err) {
-		return false, err
+		return false, "", err
 	}
 	f.sum = sum
 
-	return f.oldSum == f.sum, nil
+	if f.oldSum == f.sum {
+		return true, "", nil
+	}
+
+	return false, "file contents changed", nil
 }
 
 func (f *sourceFile) evaluate() (data string, changed bool, err error) {
