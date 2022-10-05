@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/pgavlin/dawn/diff"
 	"github.com/pgavlin/dawn/label"
 	"github.com/pgavlin/dawn/util"
 	"go.starlark.net/starlark"
@@ -99,18 +100,18 @@ func (f *sourceFile) info() targetInfo {
 	return f.targetInfo
 }
 
-func (f *sourceFile) upToDate() (bool, string, error) {
+func (f *sourceFile) upToDate() (bool, string, diff.ValueDiff, error) {
 	sum, err := fileSum(f.path)
 	if err != nil && !os.IsNotExist(err) {
-		return false, "", err
+		return false, "", nil, err
 	}
 	f.sum = sum
 
 	if f.oldSum == f.sum {
-		return true, "", nil
+		return true, "", nil, nil
 	}
 
-	return false, "file contents changed", nil
+	return false, "file contents changed", nil, nil
 }
 
 func (f *sourceFile) evaluate() (data string, changed bool, err error) {

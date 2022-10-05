@@ -5,19 +5,34 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/fatih/color"
 	"github.com/pgavlin/dawn"
 	"github.com/pgavlin/dawn/cmd/dawn/internal/term"
+	"github.com/pgavlin/dawn/diff"
 	"github.com/pgavlin/dawn/label"
+	starlarkjson "go.starlark.net/lib/json"
+	starlark "go.starlark.net/starlark"
 )
 
 type renderer interface {
 	io.Closer
 	dawn.Events
 }
+
+type discardRendererT struct {
+	dawn.Events
+}
+
+func (discardRendererT) Close() error {
+	return nil
+}
+
+var discardRenderer = discardRendererT{dawn.DiscardEvents}
 
 // simple renderer
 type lineRenderer struct {
@@ -66,7 +81,7 @@ func (e *lineRenderer) TargetUpToDate(label *label.Label) {
 	e.print(label, "up-to-date")
 }
 
-func (e *lineRenderer) TargetEvaluating(label *label.Label, reason string) {
+func (e *lineRenderer) TargetEvaluating(label *label.Label, reason string, diff diff.ValueDiff) {
 	e.print(label, "evaluating...")
 }
 
@@ -104,12 +119,93 @@ func (e *lineRenderer) fprint(w io.Writer, label *label.Label, message string) {
 	fmt.Fprintf(w, "[%v] %v\n", label, message)
 }
 
+// DOT renderer
+type dotRenderer struct {
+	m    sync.Mutex
+	next renderer
+	dest io.WriteCloser
+	work *workspace
+}
+
+func newDOTRenderer(dest io.WriteCloser, work *workspace, next renderer) renderer {
+	return &dotRenderer{next: next, dest: dest, work: work}
+}
+
+func (e *dotRenderer) Close() error {
+	e.dest.Close()
+	return e.next.Close()
+}
+
+func (e *dotRenderer) Print(label *label.Label, line string) {
+	e.next.Print(label, line)
+}
+
+func (e *dotRenderer) ModuleLoading(label *label.Label) {
+	e.next.ModuleLoading(label)
+}
+
+func (e *dotRenderer) ModuleLoaded(label *label.Label) {
+	e.next.ModuleLoaded(label)
+}
+
+func (e *dotRenderer) ModuleLoadFailed(label *label.Label, err error) {
+	e.next.ModuleLoadFailed(label, err)
+}
+
+func (e *dotRenderer) LoadDone(err error) {
+	e.next.LoadDone(err)
+}
+
+func (e *dotRenderer) TargetUpToDate(label *label.Label) {
+	e.decorateNode(label, func(n *node) { n.status = "up-to-date" })
+	e.next.TargetUpToDate(label)
+}
+
+func (e *dotRenderer) TargetEvaluating(label *label.Label, reason string, diff diff.ValueDiff) {
+	e.decorateNode(label, func(n *node) {
+		n.status = "evaluated"
+		n.reason = reason
+		n.diff = diff
+	})
+	e.next.TargetEvaluating(label, reason, diff)
+}
+
+func (e *dotRenderer) TargetFailed(label *label.Label, err error) {
+	e.decorateNode(label, func(n *node) { n.status = "failed" })
+	e.next.TargetFailed(label, err)
+}
+
+func (e *dotRenderer) TargetSucceeded(label *label.Label, changed bool) {
+	e.decorateNode(label, func(n *node) { n.status = "succeeded" })
+	e.next.TargetSucceeded(label, changed)
+}
+
+func (e *dotRenderer) RunDone(err error) {
+	e.work.graph.dot(e.dest, func(n *node) bool { return n.status != "" && n.status != "up-to-date" })
+	e.next.RunDone(err)
+}
+
+func (e *dotRenderer) decorateNode(label *label.Label, decorator func(n *node)) {
+	e.m.Lock()
+	defer e.m.Unlock()
+
+	if node, ok := e.work.graph[label.String()]; ok {
+		decorator(node)
+	}
+}
+
 // JSON renderer
 type jsonRenderer struct {
 	m      sync.Mutex
 	next   renderer
 	enc    *json.Encoder
 	closer io.Closer
+}
+
+func newJSONRenderer(dest io.WriteCloser, next renderer) renderer {
+	enc := json.NewEncoder(dest)
+	enc.SetIndent("", "    ")
+	return &jsonRenderer{next: next, enc: enc, closer: dest}
 }
 
 func (e *jsonRenderer) Close() error {
@@ -147,9 +243,17 @@ func (e *jsonRenderer) TargetUpToDate(label *label.Label) {
 	e.next.TargetUpToDate(label)
 }
 
-func (e *jsonRenderer) TargetEvaluating(label *label.Label, reason string) {
-	e.event("TargetEvaluating", label, "reason", reason)
-	e.next.TargetEvaluating(label, reason)
+var starlarkJSONEncode = starlarkjson.Module.Members["encode"]
+
+func (e *jsonRenderer) TargetEvaluating(label *label.Label, reason string, diff diff.ValueDiff) {
+	var diffJSON starlark.Value = starlark.String("null")
+	if diff != nil {
+		thread := starlark.Thread{Name: "json.encode"}
+		diffJSON, _ = starlark.Call(&thread, starlarkJSONEncode, starlark.Tuple{diff}, nil)
+	}
+
+	e.event("TargetEvaluating", label, "reason", reason, "diff", json.RawMessage(diffJSON.(starlark.String)))
+	e.next.TargetEvaluating(label, reason, diff)
 }
 
 func (e *jsonRenderer) TargetFailed(label *label.Label, err error) {
@@ -186,7 +290,7 @@ func (e *jsonRenderer) event(kind string, label *label.Label, pairs ...interface
 
 // default renderer:
 // +--------------------------------------------+
-// | completed targets/verbose output...        |
+// | completed targets/diffs/verbose output...  |
 // | evaluating targets...                      |
 // | status line                                |
 // | system stats                               |
@@ -195,6 +299,10 @@ func (e *jsonRenderer) event(kind string, label *label.Label, pairs ...interface
 type target struct {
 	label  *label.Label
 	reason string
+
+	diff      diff.ValueDiff
+	diffShown bool
+
 	status string
 	failed bool
 	start  time.Time
@@ -260,6 +368,7 @@ type statusRenderer struct {
 	maxWidth int
 
 	verbose bool
+	diff    bool
 	lines   []string
 
 	lastUpdate time.Time
@@ -305,6 +414,22 @@ func (e *statusRenderer) render(now time.Time, closed bool) {
 	}
 	e.lines = e.lines[:0]
 
+	// Render diffs.
+	if e.diff {
+		for t := e.evaluating.head; t != nil; t = t.next {
+			if !t.diffShown && t.label.Kind != "module" {
+				e.renderDiff(t)
+				t.diffShown = true
+			}
+		}
+		for t := e.done.head; t != nil; t = t.next {
+			if !t.diffShown && t.label.Kind != "module" {
+				e.renderDiff(t)
+				t.diffShown = true
+			}
+		}
+	}
+
 	// Write any targets that have finished since the last frame.
 	for t := e.done.head; t != nil; t = t.next {
 		fmt.Fprintf(e.stdout, "%s\n", t.status)
@@ -342,6 +467,194 @@ func (e *statusRenderer) render(now time.Time, closed bool) {
 	e.dirty = false
 }
 
+var (
+	colorRed    = color.New(color.FgRed)
+	colorGreen  = color.New(color.FgGreen)
+	colorYellow = color.New(color.FgYellow)
+)
+
+func (e *statusRenderer) renderDiff(t *target) {
+	reason := t.reason
+	if reason == "" {
+		reason = "out-of-date"
+	}
+
+	// print the diff header
+	fmt.Fprintf(e.stdout, "[%v] %s\n", t.label, colorYellow.Sprint(reason))
+
+	// print the diff
+	if t.diff != nil {
+		printDiff(e.stdout, "", t.diff)
+		fmt.Fprintln(e.stdout, "")
+	}
+}
+
+func printDiff(w io.Writer, indent string, d diff.ValueDiff) {
+	switch d := d.(type) {
+	case *diff.LiteralDiff:
+		fmt.Fprintf(w, "%v => %v", colorRed.Sprint(d.Old()), colorGreen.Sprint(d.New()))
+	case *diff.MappingDiff:
+		printMappingDiff(w, indent, d)
+	case *diff.SetDiff:
+		printSetDiff(w, indent, d)
+	case *diff.SliceableDiff:
+		printSliceDiff(w, indent, d)
+	default:
+		return
+	}
+}
+
+var starlarkSorted = starlark.Universe["sorted"]
+
+func tryStarlarkSorted(v starlark.Iterable) starlark.Iterable {
+	thread := starlark.Thread{Name: "sorted"}
+	sortedKeys, err := starlark.Call(&thread, starlarkSorted, starlark.Tuple{v}, nil)
+	if err != nil {
+		return v
+	}
+	return sortedKeys.(starlark.Iterable)
+}
+
+func printMappingDiff(w io.Writer, indent string, d *diff.MappingDiff) {
+	fmt.Fprintf(w, "{\n")
+	indent += "  "
+
+	it := tryStarlarkSorted(d.Edits()).Iterate()
+	defer it.Done()
+
+	var key starlark.Value
+	for it.Next(&key) {
+		if val, ok, _ := d.Edits().Get(key); ok {
+			edit := val.(*diff.Edit)
+			switch edit.Kind() {
+			case diff.EditKindDelete:
+				fmt.Fprintf(w, "%s%s,\n", indent, colorRed.Sprintf("%v: %v", key, edit.Index(0)))
+			case diff.EditKindAdd:
+				fmt.Fprintf(w, "%s%s,\n", indent, colorGreen.Sprintf("%v: %v", key, edit.Index(0)))
+			case diff.EditKindReplace:
+				fmt.Fprintf(w, "%s%s", indent, colorYellow.Sprintf("%v: ", key))
+				printDiff(w, indent, edit.Sliceable.Index(0).(diff.ValueDiff))
+				fmt.Fprint(w, ",\n")
+			}
+		}
+	}
+
+	indent = indent[:len(indent)-2]
+	fmt.Fprintf(w, "%s}", indent)
+}
+
+func printSetDiff(w io.Writer, indent string, d *diff.SetDiff) {
+	fmt.Fprintf(w, "set(\n")
+	indent += "  "
+
+	it := d.Edits().Iterate()
+	defer it.Done()
+
+	var val starlark.Value
+	for it.Next(&val) {
+		edit := val.(*diff.Edit)
+		switch edit.Kind() {
+		case diff.EditKindDelete:
+			fmt.Fprintf(w, "%s%s,\n", indent, colorRed.Sprintf("%v", val))
+		case diff.EditKindAdd:
+			fmt.Fprintf(w, "%s%s,\n", indent, colorGreen.Sprintf("%v", val))
+		}
+	}
+
+	indent = indent[:len(indent)-2]
+	fmt.Fprintf(w, "%s)", indent)
+}
+
+func quote(s string) string {
+	q := strconv.Quote(s)
+	return q[1 : len(q)-1]
+}
+
+func printStringDiff(w io.Writer, indent string, d *diff.SliceableDiff) {
+	var old, new strings.Builder
+
+	it := d.Edits().Iterate()
+	defer it.Done()
+
+	var val starlark.Value
+	for it.Next(&val) {
+		edit := val.(*diff.Edit)
+		switch edit.Kind() {
+		case diff.EditKindDelete:
+			colorRed.Fprint(&old, quote(string(edit.Sliceable.(starlark.String))))
+		case diff.EditKindCommon:
+			old.WriteString("...")
+			new.WriteString("...")
+		case diff.EditKindAdd:
+			colorGreen.Fprint(&new, quote(string(edit.Sliceable.(starlark.String))))
+		case diff.EditKindReplace:
+			lit := edit.Index(0).(*diff.LiteralDiff)
+			colorRed.Fprint(&old, quote(string(lit.Old().(starlark.String))))
+			colorGreen.Fprint(&new, quote(string(lit.New().(starlark.String))))
+		}
+	}
+
+	fmt.Fprintf(w, "\"%s\" => \"%s\"", old.String(), new.String())
+}
+
+func printBytesDiff(w io.Writer, indent string, d *diff.SliceableDiff) {
+	colorYellow.Fprint(w, "<binary data differs>")
+}
+
+func printSliceDiff(w io.Writer, indent string, d *diff.SliceableDiff) {
+	switch d.Old().(type) {
+	case starlark.String:
+		if _, ok := d.New().(starlark.String); ok {
+			printStringDiff(w, indent, d)
+			return
+		}
+	case starlark.Bytes:
+		if _, ok := d.New().(starlark.Bytes); ok {
+			printBytesDiff(w, indent, d)
+			return
+		}
+	}
+
+	fmt.Fprintf(w, "[\n")
+	indent += "  "
+
+	it := d.Edits().Iterate()
+	defer it.Done()
+
+	var val starlark.Value
+	for it.Next(&val) {
+		edit := val.(*diff.Edit)
+		values := edit.Sliceable.(starlark.Iterable)
+
+		switch edit.Kind() {
+		case diff.EditKindDelete:
+			printSliceDiffElements(w, indent, values, color.Set(color.FgRed))
+		case diff.EditKindCommon:
+			fmt.Fprint(w, "...\n")
+		case diff.EditKindAdd:
+			printSliceDiffElements(w, indent, values, color.Set(color.FgGreen))
+		case diff.EditKindReplace:
+			printSliceDiffElements(w, indent, values, nil)
+		}
+	}
+}
+
+func printSliceDiffElements(w io.Writer, indent string, values starlark.Iterable, c *color.Color) {
+	it := values.Iterate()
+	defer it.Done()
+
+	var v starlark.Value
+	for it.Next(&v) {
+		fmt.Fprint(w, indent)
+		if d, ok := v.(diff.ValueDiff); ok {
+			printDiff(w, indent, d)
+		} else {
+			fmt.Fprint(w, c.Sprint(v))
+		}
+		fmt.Fprint(w, ",\n")
+	}
+}
+
 func (e *statusRenderer) Print(label *label.Label, line string) {
 	e.m.Lock()
 	defer e.m.Unlock()
@@ -355,7 +668,7 @@ func (e *statusRenderer) Print(label *label.Label, line string) {
 }
 
 func (e *statusRenderer) ModuleLoading(label *label.Label) {
-	e.targetStarted(label, "", "loading...")
+	e.targetStarted(label, "", nil, "loading...")
 }
 
 func (e *statusRenderer) ModuleLoaded(label *label.Label) {
@@ -381,15 +694,15 @@ func (e *statusRenderer) TargetUpToDate(label *label.Label) {
 	e.dirty = true
 }
 
-func (e *statusRenderer) TargetEvaluating(label *label.Label, reason string) {
-	e.targetStarted(label, reason, "running...")
+func (e *statusRenderer) TargetEvaluating(label *label.Label, reason string, diff diff.ValueDiff) {
+	e.targetStarted(label, reason, diff, "running...")
 }
 
-func (e *statusRenderer) targetStarted(label *label.Label, reason, message string) {
+func (e *statusRenderer) targetStarted(label *label.Label, reason string, diff diff.ValueDiff, message string) {
 	e.m.Lock()
 	defer e.m.Unlock()
 
-	t := &target{label: label, reason: reason, start: time.Now()}
+	t := &target{label: label, reason: reason, diff: diff, start: time.Now()}
 	e.targets[label.String()] = t
 
 	t.setStatus(message)
@@ -440,8 +753,8 @@ func (e *statusRenderer) Close() error {
 	return nil
 }
 
-func newRenderer(verbose bool, onLoaded func()) (renderer, error) {
-	new := func() renderer {
+func newRenderer(verbose, diff bool, onLoaded func()) (renderer, error) {
+	new := func(_ renderer) renderer {
 		if !term.IsTerminal(os.Stdout) {
 			return &lineRenderer{stdout: os.Stdout, stderr: os.Stderr, onLoaded: onLoaded}
 		}
@@ -456,6 +769,7 @@ func newRenderer(verbose bool, onLoaded func()) (renderer, error) {
 			targets:    map[string]*target{},
 			maxWidth:   width,
 			verbose:    verbose,
+			diff:       diff,
 			stdout:     os.Stdout,
 			lastUpdate: time.Now(),
 			onLoaded:   onLoaded,
@@ -478,21 +792,40 @@ func newRenderer(verbose bool, onLoaded func()) (renderer, error) {
 		return events
 	}
 
+	type rendererFunc func(next renderer) renderer
+	pipeline := []rendererFunc{new}
+
 	if buildJSON != "" {
-		var next renderer
-		dest := os.Stdout
-		if buildJSON != "-" {
-			f, err := os.Create(buildJSON)
-			if err != nil {
-				return nil, err
-			}
-			dest, next = f, new()
+		if buildJSON == "-" {
+			return newJSONRenderer(os.Stdout, discardRenderer), nil
 		}
 
-		r := &jsonRenderer{next: next, enc: json.NewEncoder(dest), closer: dest}
-		r.enc.SetIndent("", "    ")
-		return r, nil
+		f, err := os.Create(buildJSON)
+		if err != nil {
+			return nil, err
+		}
+		pipeline = append(pipeline, func(next renderer) renderer {
+			return newJSONRenderer(f, next)
+		})
 	}
 
-	return new(), nil
+	if buildDOT != "" {
+		if buildDOT == "-" {
+			return newDOTRenderer(os.Stdout, work, discardRenderer), nil
+		}
+
+		f, err := os.Create(buildDOT)
+		if err != nil {
+			return nil, err
+		}
+		pipeline = append(pipeline, func(next renderer) renderer {
+			return newDOTRenderer(f, work, next)
+		})
+	}
+
+	var r renderer
+	for _, p := range pipeline {
+		r = p(r)
+	}
+	return r, nil
 }

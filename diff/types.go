@@ -8,7 +8,7 @@ import (
 )
 
 type ValueDiff interface {
-	starlark.Value
+	starlark.HasAttrs
 
 	Old() starlark.Value
 	New() starlark.Value
@@ -70,62 +70,6 @@ func (d *LiteralDiff) AttrNames() []string {
 	return []string{"old", "new"}
 }
 
-type MappingDiff struct {
-	valueDiff
-
-	add    *starlark.Dict
-	edit   *starlark.Dict
-	remove *starlark.Dict
-}
-
-func (d *MappingDiff) String() string {
-	return fmt.Sprintf("{+%v, ~%v, -%v}", d.Add(), d.Edit(), d.Remove())
-}
-
-func (d *MappingDiff) Type() string {
-	return "MappingDiff"
-}
-
-func (d *MappingDiff) Freeze() {
-	d.freeze()
-	d.add.Freeze()
-	d.edit.Freeze()
-	d.remove.Freeze()
-}
-
-func (d *MappingDiff) Attr(name string) (starlark.Value, error) {
-	switch name {
-	case "old":
-		return d.old, nil
-	case "new":
-		return d.new, nil
-	case "add":
-		return d.add, nil
-	case "edit":
-		return d.edit, nil
-	case "remove":
-		return d.remove, nil
-	default:
-		return nil, nil
-	}
-}
-
-func (d *MappingDiff) AttrNames() []string {
-	return []string{"old", "new", "add", "edit", "remove"}
-}
-
-func (d *MappingDiff) Add() starlark.IterableMapping {
-	return d.add
-}
-
-func (d *MappingDiff) Edit() starlark.IterableMapping {
-	return d.edit
-}
-
-func (d *MappingDiff) Remove() starlark.IterableMapping {
-	return d.remove
-}
-
 type EditKind = starlark.String
 
 var (
@@ -159,18 +103,66 @@ func (e *Edit) Type() string {
 }
 
 func (e *Edit) Attr(name string) (starlark.Value, error) {
-	if name == "kind" {
+	switch name {
+	case "kind":
 		return e.kind, nil
+	case "values":
+		return e.Sliceable, nil
 	}
 	return nil, nil
 }
 
 func (d *Edit) AttrNames() []string {
-	return []string{"kind"}
+	return []string{"kind", "values"}
 }
 
 func (e *Edit) Kind() EditKind {
 	return e.kind
+}
+
+type MappingDiff struct {
+	valueDiff
+
+	edits *starlark.Dict
+}
+
+func (d *MappingDiff) String() string {
+	return fmt.Sprintf("{%v}", d.Edits())
+}
+
+func (d *MappingDiff) Type() string {
+	return "MappingDiff"
+}
+
+func (d *MappingDiff) Freeze() {
+	d.freeze()
+	d.edits.Freeze()
+}
+
+func (d *MappingDiff) Attr(name string) (starlark.Value, error) {
+	switch name {
+	case "old":
+		return d.old, nil
+	case "new":
+		return d.new, nil
+	case "edits":
+		return d.edits, nil
+	default:
+		return nil, nil
+	}
+}
+
+func (d *MappingDiff) AttrNames() []string {
+	return []string{"old", "new", "edits"}
+}
+
+func (d *MappingDiff) Has(k starlark.Value) starlark.Bool {
+	_, has, _ := d.edits.Get(k)
+	return starlark.Bool(has)
+}
+
+func (d *MappingDiff) Edits() starlark.IterableMapping {
+	return d.edits
 }
 
 type SliceableDiff struct {
@@ -218,15 +210,14 @@ func (d *SliceableDiff) AttrNames() []string {
 	return []string{"old", "new", "edits"}
 }
 
-func (d *SliceableDiff) Edits() starlark.Sliceable {
+func (d *SliceableDiff) Edits() starlark.Iterable {
 	return d.edits
 }
 
 type SetDiff struct {
 	valueDiff
 
-	add    *starlark.Set
-	remove *starlark.Set
+	edits *starlark.Dict
 }
 
 func (d *SetDiff) String() string {
@@ -239,8 +230,7 @@ func (d *SetDiff) Type() string {
 
 func (d *SetDiff) Freeze() {
 	d.freeze()
-	d.add.Freeze()
-	d.remove.Freeze()
+	d.edits.Freeze()
 }
 
 func (d *SetDiff) Attr(name string) (starlark.Value, error) {
@@ -249,23 +239,17 @@ func (d *SetDiff) Attr(name string) (starlark.Value, error) {
 		return d.old, nil
 	case "new":
 		return d.new, nil
-	case "add":
-		return d.add, nil
-	case "remove":
-		return d.remove, nil
+	case "edits":
+		return d.edits, nil
 	default:
 		return nil, nil
 	}
 }
 
 func (d *SetDiff) AttrNames() []string {
-	return []string{"old", "new", "add", "remove"}
+	return []string{"old", "new", "edits"}
 }
 
-func (d *SetDiff) Add() *starlark.Set {
-	return d.add
-}
-
-func (d *SetDiff) Remove() *starlark.Set {
-	return d.remove
+func (d *SetDiff) Edits() starlark.Iterable {
+	return d.edits
 }

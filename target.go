@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/pgavlin/dawn/diff"
 	"github.com/pgavlin/dawn/label"
 	"github.com/pgavlin/dawn/runner"
 	"go.starlark.net/starlark"
@@ -26,7 +27,7 @@ type Target interface {
 	dependencies() []string
 	generates() []string
 	info() targetInfo
-	upToDate() (bool, string, error)
+	upToDate() (bool, string, diff.ValueDiff, error)
 	evaluate() (data string, changed bool, err error)
 }
 
@@ -72,7 +73,7 @@ func (t *runTarget) Evaluate(engine runner.Engine) error {
 	}
 
 	// Check whether the target is up-to-date.
-	upToDate, reason, err := t.target.upToDate()
+	upToDate, reason, diff, err := t.target.upToDate()
 	if err != nil {
 		proj.events.TargetFailed(label, err)
 		return err
@@ -95,7 +96,7 @@ func (t *runTarget) Evaluate(engine runner.Engine) error {
 		reason = "failed during last run"
 	}
 
-	proj.events.TargetEvaluating(label, reason)
+	proj.events.TargetEvaluating(label, reason, diff)
 
 	if proj.dryrun {
 		// For dry runs, conservatively assume that the target changed.

@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/pgavlin/dawn"
+	"github.com/pgavlin/dawn/diff"
 	"github.com/pgavlin/dawn/label"
 	"github.com/spf13/cobra"
 )
@@ -14,6 +15,10 @@ type node struct {
 
 	dependencies []*node
 	dependents   []*node
+
+	status string
+	reason string
+	diff   diff.ValueDiff
 }
 
 func (n *node) depends(visited map[string]struct{}, acc *[]string) bool {
@@ -112,6 +117,6 @@ var graphCmd = &cobra.Command{
 		}
 		work.renderer.Close()
 
-		return work.graph.dot(os.Stdout)
+		return work.graph.dot(os.Stdout, func(_ *node) bool { return true })
 	},
 }

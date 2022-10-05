@@ -1,6 +1,7 @@
 package dawn
 
 import (
+	"github.com/pgavlin/dawn/diff"
 	"github.com/pgavlin/dawn/label"
 	"go.starlark.net/starlark"
 	"go.starlark.net/starlarkstruct"
@@ -23,7 +24,7 @@ type Events interface {
 	// TargetUpToDate is called when a target is found to be up-to-date.
 	TargetUpToDate(label *label.Label)
 	// TargetEvaluating is called when a target begins executing.
-	TargetEvaluating(label *label.Label, reason string)
+	TargetEvaluating(label *label.Label, reason string, diff diff.ValueDiff)
 	// TargetFailed is called when a target fails.
 	TargetFailed(label *label.Label, err error)
 	// TargetSucceeded is called when a target succeeds.
@@ -37,16 +38,16 @@ type discardEventsT int
 // DiscardEvents is an implementation of Events that discards all events.
 var DiscardEvents = discardEventsT(0)
 
-func (discardEventsT) Print(label *label.Label, line string)              {}
-func (discardEventsT) ModuleLoading(label *label.Label)                   {}
-func (discardEventsT) ModuleLoaded(label *label.Label)                    {}
-func (discardEventsT) ModuleLoadFailed(label *label.Label, err error)     {}
-func (discardEventsT) LoadDone(err error)                                 {}
-func (discardEventsT) TargetUpToDate(label *label.Label)                  {}
-func (discardEventsT) TargetEvaluating(label *label.Label, reason string) {}
-func (discardEventsT) TargetFailed(label *label.Label, err error)         {}
-func (discardEventsT) TargetSucceeded(label *label.Label, changed bool)   {}
-func (discardEventsT) RunDone(err error)                                  {}
+func (discardEventsT) Print(label *label.Label, line string)                                   {}
+func (discardEventsT) ModuleLoading(label *label.Label)                                        {}
+func (discardEventsT) ModuleLoaded(label *label.Label)                                         {}
+func (discardEventsT) ModuleLoadFailed(label *label.Label, err error)                          {}
+func (discardEventsT) LoadDone(err error)                                                      {}
+func (discardEventsT) TargetUpToDate(label *label.Label)                                       {}
+func (discardEventsT) TargetEvaluating(label *label.Label, reason string, diff diff.ValueDiff) {}
+func (discardEventsT) TargetFailed(label *label.Label, err error)                              {}
+func (discardEventsT) TargetSucceeded(label *label.Label, changed bool)                        {}
+func (discardEventsT) RunDone(err error)                                                       {}
 
 type runEvents struct {
 	c        chan starlark.Value
@@ -88,11 +89,12 @@ func (e *runEvents) TargetUpToDate(label *label.Label) {
 	})
 }
 
-func (e *runEvents) TargetEvaluating(label *label.Label, reason string) {
+func (e *runEvents) TargetEvaluating(label *label.Label, reason string, diff diff.ValueDiff) {
 	e.c <- starlarkstruct.FromStringDict(starlarkstruct.Default, starlark.StringDict{
 		"kind":   starlark.String("TargetEvaluating"),
 		"label":  starlark.String(label.String()),
 		"reason": starlark.String(reason),
+		"diff":   diff,
 	})
 
 }

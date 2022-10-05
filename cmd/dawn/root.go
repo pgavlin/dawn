@@ -46,9 +46,11 @@ func init() {
 
 	rootCmd.PersistentFlags().BoolVarP(&work.reindex, "reindex", "r", false, "refresh the project's index")
 	rootCmd.PersistentFlags().BoolVarP(&work.verbose, "verbose", "V", false, "print verbose build output (incl. target stdout)")
+	rootCmd.PersistentFlags().BoolVarP(&work.diff, "diff", "d", false, "print the reasons that targets are built")
 
 	rootCmd.Flags().BoolVarP(&buildOptions.Always, "always", "B", false, "consider all targets out-of-date")
 	rootCmd.Flags().BoolVarP(&buildOptions.DryRun, "dry-run", "n", false, "print the targets that would be built, but do not build them")
+	rootCmd.Flags().StringVar(&buildDOT, "dot", "", "write a DOT graph of out-of-date targets to the given path")
 	rootCmd.Flags().StringVar(&buildJSON, "json", "", "write JSON build events to the given path")
 
 	rootCmd.PersistentFlags().SetInterspersed(false)

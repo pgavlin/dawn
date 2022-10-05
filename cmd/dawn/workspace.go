@@ -23,6 +23,7 @@ type workspace struct {
 	package_ string
 	reindex  bool
 	verbose  bool
+	diff     bool
 
 	project  *dawn.Project
 	graph    graph
@@ -118,7 +119,7 @@ func (w *workspace) loadProject(args []string, index, quiet bool) error {
 	rendered := make(chan bool)
 	firstLoad := true
 
-	renderer, err := newRenderer(w.verbose, func() {
+	renderer, err := newRenderer(w.verbose, w.diff, func() {
 		// We only care about the first onload event.
 		if firstLoad {
 			close(rendered)

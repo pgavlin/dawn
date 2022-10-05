@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"sort"
 
+	"github.com/pgavlin/dawn/diff"
 	"github.com/pgavlin/dawn/label"
 	"go.starlark.net/starlark"
 )
@@ -95,8 +96,8 @@ func (t *indexTarget) info() targetInfo {
 	}
 }
 
-func (t *indexTarget) upToDate() (bool, string, error) {
-	return true, "", nil
+func (t *indexTarget) upToDate() (bool, string, diff.ValueDiff, error) {
+	return true, "", nil, nil
 }
 
 func (*indexTarget) evaluate() (data string, changed bool, err error) {

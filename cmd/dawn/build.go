@@ -6,6 +6,7 @@ import (
 )
 
 var buildJSON string
+var buildDOT string
 var buildOptions dawn.RunOptions
 
 var buildCmd = newTargetCommand(&targetCommand{
@@ -23,4 +24,5 @@ func init() {
 	buildCmd.Flags().BoolVarP(&buildOptions.Always, "always", "B", false, "consider all targets out-of-date")
 	buildCmd.Flags().BoolVarP(&buildOptions.DryRun, "dry-run", "n", false, "print the targets that would be built, but do not build them")
 	buildCmd.Flags().StringVar(&buildJSON, "json", "", "write JSON build events to the given path")
+	buildCmd.Flags().StringVar(&buildDOT, "dot", "", "write a DOT graph of out-of-date targets to the given path")
 }

@@ -33,9 +33,7 @@ func DiffDepth(old, new starlark.Value, depth int) (ValueDiff, error) {
 }
 
 func diffMapping(old, new starlark.IterableMapping, depth int) (*MappingDiff, error) {
-	add := starlark.NewDict(0)
-	edit := starlark.NewDict(0)
-	remove := starlark.NewDict(0)
+	edits := starlark.NewDict(0)
 
 	oldKeys := old.Iterate()
 	defer oldKeys.Done()
@@ -45,7 +43,7 @@ func diffMapping(old, new starlark.IterableMapping, depth int) (*MappingDiff, er
 		oldV, _, _ := old.Get(key)
 		newV, has, _ := new.Get(key)
 		if !has {
-			remove.SetKey(key, oldV)
+			edits.SetKey(key, &Edit{Sliceable: starlark.Tuple{oldV}, kind: EditKindDelete})
 			continue
 		}
 
@@ -54,7 +52,7 @@ func diffMapping(old, new starlark.IterableMapping, depth int) (*MappingDiff, er
 			return nil, err
 		}
 		if diff != nil {
-			edit.SetKey(key, diff)
+			edits.SetKey(key, &Edit{Sliceable: starlark.Tuple{diff}, kind: EditKindReplace})
 		}
 	}
 
@@ -64,14 +62,12 @@ func diffMapping(old, new starlark.IterableMapping, depth int) (*MappingDiff, er
 	for newKeys.Next(&key) {
 		if _, has, _ := old.Get(key); !has {
 			newV, _, _ := new.Get(key)
-			add.SetKey(key, newV)
+			edits.SetKey(key, &Edit{Sliceable: starlark.Tuple{newV}, kind: EditKindAdd})
 		}
 	}
 
 	return &MappingDiff{
 		valueDiff: valueDiff{old: old, new: new},
-		add:       add,
-		edit:      edit,
-		remove:    remove,
+		edits:     edits,
 	}, nil
 }

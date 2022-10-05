@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func (g graph) dot(w io.Writer) error {
+func (g graph) dot(w io.Writer, filter func(n *node) bool) error {
 	builder := &dotBuilder{w}
 
 	// Begin constructing DOT by adding a title and legend.
@@ -16,15 +16,19 @@ func (g graph) dot(w io.Writer) error {
 	// Add nodes to DOT builder.
 	nodeIDMap := make(map[*node]int, len(g))
 	for _, n := range g {
-		id := len(nodeIDMap) + 1
-		builder.addNode(n, id)
-		nodeIDMap[n] = id
+		if filter(n) {
+			id := len(nodeIDMap) + 1
+			builder.addNode(n, id)
+			nodeIDMap[n] = id
+		}
 	}
 
 	// Add edges to DOT builder.
 	for _, n := range g {
 		for _, d := range n.dependencies {
-			builder.addEdge(nodeIDMap[n], nodeIDMap[d])
+			if filter(n) && filter(d) {
+				builder.addEdge(nodeIDMap[n], nodeIDMap[d])
+			}
 		}
 	}
 

@@ -39,4 +39,4 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace go.starlark.net => github.com/pgavlin/starlark-go v0.0.0-20220928151244-7f018528dd5d
+replace go.starlark.net => github.com/pgavlin/starlark-go v0.0.0-20221004164035-0991266ad3c7

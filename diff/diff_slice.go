@@ -78,8 +78,17 @@ func slice(s starlark.Sliceable, start, len int) starlark.Sliceable {
 	return s.Slice(start, len, 1).(starlark.Sliceable)
 }
 
+func indexReturnsSlice(v starlark.Sliceable) bool {
+	switch v.(type) {
+	case starlark.String, starlark.Bytes:
+		return true
+	default:
+		return false
+	}
+}
+
 func copySliceable(s starlark.Sliceable) starlark.Sliceable {
-	if _, ok := s.(starlark.String); ok {
+	if indexReturnsSlice(s) {
 		return s
 	}
 
@@ -91,10 +100,8 @@ func copySliceable(s starlark.Sliceable) starlark.Sliceable {
 }
 
 func diffReplacements(old, new starlark.Sliceable, depth int) (starlark.Tuple, error) {
-	// Attempting to diff string elements will infinitely recur, as String.Index returns a String.
-	_, oldIsString := old.(starlark.String)
-	_, newIsString := new.(starlark.String)
-	if oldIsString && newIsString {
+	// Attempting to diff some elements will infinitely recur.
+	if indexReturnsSlice(old) && indexReturnsSlice(new) {
 		return starlark.Tuple{&LiteralDiff{valueDiff: valueDiff{old: old, new: new}}}, nil
 	}
 
