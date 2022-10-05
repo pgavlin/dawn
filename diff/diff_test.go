@@ -55,7 +55,7 @@ func TestDiff(t *testing.T) {
 		{
 			a:    D(T(S("foo"), S("bar")), T(I(42), I(24)), T(S("baz"), S("qux"))),
 			b:    D(T(S("foo"), S("baz")), T(I(42), I(24)), T(S("qux"), S("baz"))),
-			want: `{+{"qux": "baz"}, ~{"foo": [="ba", ~(("r" -> "z"),)]}, -{"baz": "qux"}}`,
+			want: `{{"foo": ~([="ba", ~(("r" -> "z"),)],), "baz": -("qux",), "qux": +("baz",)}}`,
 		},
 		{
 			a:    I(42),
