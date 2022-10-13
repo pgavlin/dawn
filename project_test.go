@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 
 	"github.com/otiai10/copy"
+	"github.com/pgavlin/dawn/diff"
 	"github.com/pgavlin/dawn/label"
 	starlark_os "github.com/pgavlin/dawn/lib/os"
 	starlark_sh "github.com/pgavlin/dawn/lib/sh"
@@ -22,10 +24,74 @@ func readFile(t *testing.T, path string) []byte {
 	return bytes.ReplaceAll(contents, []byte{'\r', '\n'}, []byte{'\n'})
 }
 
+type testEvent = map[string]interface{}
+
+type testEvents struct {
+	m      sync.Mutex
+	events []testEvent
+}
+
+func (e *testEvents) Print(label *label.Label, line string) {
+	e.event("Print", label, "line", line)
+}
+
+func (e *testEvents) ModuleLoading(label *label.Label) {
+	e.event("ModuleLoading", label)
+}
+
+func (e *testEvents) ModuleLoaded(label *label.Label) {
+	e.event("ModuleLoaded", label)
+}
+
+func (e *testEvents) ModuleLoadFailed(label *label.Label, err error) {
+	e.event("ModuleLoadFailed", label, "err", err)
+}
+
+func (e *testEvents) LoadDone(err error) {
+	e.event("LoadDone", nil, "err", err)
+}
+
+func (e *testEvents) TargetUpToDate(label *label.Label) {
+	e.event("TargetUpToDate", label)
+}
+
+func (e *testEvents) TargetEvaluating(label *label.Label, reason string, diff diff.ValueDiff) {
+	e.event("TargetEvaluating", label, "reason", reason, "diff", diff)
+}
+
+func (e *testEvents) TargetFailed(label *label.Label, err error) {
+	e.event("TargetFailed", label, "err", err)
+}
+
+func (e *testEvents) TargetSucceeded(label *label.Label, changed bool) {
+	e.event("TargetSucceeded", label, "changed", changed)
+}
+
+func (e *testEvents) RunDone(err error) {
+	e.event("RunDone", nil, "err", err)
+}
+
+func (e *testEvents) event(kind string, label *label.Label, pairs ...interface{}) {
+	e.m.Lock()
+	defer e.m.Unlock()
+
+	event := testEvent{"kind": kind}
+	if label != nil {
+		event["label"] = label
+	}
+	if len(pairs)%2 != 0 {
+		panic("oddly-sized pairs")
+	}
+	for i := 0; i < len(pairs); i += 2 {
+		event[pairs[i].(string)] = pairs[i+1]
+	}
+	e.events = append(e.events, event)
+}
+
 type projectTest struct {
 	path     string
 	edits    []string
-	validate func(t *testing.T, dir string)
+	validate func(t *testing.T, dir string, events []testEvent)
 }
 
 func (pt *projectTest) run(t *testing.T) {
@@ -45,8 +111,9 @@ func (pt *projectTest) run(t *testing.T) {
 		paths = append(paths, filepath.Join(path, edit))
 	}
 
+	events := &testEvents{}
 	options := &LoadOptions{
-		Events: DiscardEvents,
+		Events: events,
 		Builtins: starlark.StringDict{
 			"json": starlark_json.Module,
 			"os":   starlark_os.Module,
@@ -66,7 +133,7 @@ func (pt *projectTest) run(t *testing.T) {
 		err = proj.Run(def, nil)
 		require.NoError(t, err)
 
-		pt.validate(t, temp)
+		pt.validate(t, temp, events.events)
 	}
 }
 
@@ -74,7 +141,7 @@ func TestSimpleFiles(t *testing.T) {
 	pt := projectTest{
 		path:  "testdata/simple-files",
 		edits: []string{"edit1", "edit2", "edit3"},
-		validate: func(t *testing.T, dir string) {
+		validate: func(t *testing.T, dir string, _ []testEvent) {
 			expected := readFile(t, filepath.Join(dir, "expected.md"))
 			actual := readFile(t, filepath.Join(dir, "out.md"))
 			assert.Equal(t, expected, actual)
@@ -87,11 +154,32 @@ func TestSimpleTargets(t *testing.T) {
 	pt := projectTest{
 		path:  "testdata/simple-targets",
 		edits: []string{"edit1", "edit2"},
-		validate: func(t *testing.T, dir string) {
+		validate: func(t *testing.T, dir string, _ []testEvent) {
 			expected := readFile(t, filepath.Join(dir, "expected.md"))
 			actual := readFile(t, filepath.Join(dir, "out.md"))
 			assert.Equal(t, expected, actual)
 		},
 	}
 	pt.run(t)
+}
+
+func TestTargetDiffs(t *testing.T) {
+	dirs := []string{"constants", "functions", "names", "predeclared", "universal"}
+	for _, dir := range dirs {
+		pt := projectTest{
+			path:  "testdata/target-diffs/" + dir,
+			edits: []string{"edit1"},
+			validate: func(t *testing.T, _ string, events []testEvent) {
+				evaluated := false
+				for _, e := range events {
+					if e["kind"].(string) == "TargetEvaluating" {
+						evaluated = true
+						break
+					}
+				}
+				assert.True(t, evaluated)
+			},
+		}
+		pt.run(t)
+	}
 }

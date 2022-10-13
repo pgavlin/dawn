@@ -570,21 +570,48 @@ func quote(s string) string {
 	return q[1 : len(q)-1]
 }
 
+func contextSize(edits starlark.Tuple, index, contextLen int) (headContext, tailContext bool, totalContext int) {
+	headContext, tailContext = index > 0, index < len(edits)-1
+
+	totalContext = 0
+	if headContext {
+		totalContext += contextLen
+	}
+	if tailContext {
+		totalContext += contextLen
+	}
+
+	return
+}
+
 func printStringDiff(w io.Writer, indent string, d *diff.SliceableDiff) {
+	const contextLen = 10
+
 	var old, new strings.Builder
-
-	it := d.Edits().Iterate()
-	defer it.Done()
-
-	var val starlark.Value
-	for it.Next(&val) {
+	for i, val := range d.Edits() {
 		edit := val.(*diff.Edit)
 		switch edit.Kind() {
 		case diff.EditKindDelete:
 			colorRed.Fprint(&old, quote(string(edit.Sliceable.(starlark.String))))
 		case diff.EditKindCommon:
-			old.WriteString("...")
-			new.WriteString("...")
+			s := string(edit.Sliceable.(starlark.String))
+
+			headContext, tailContext, totalContext := contextSize(d.Edits(), i, contextLen)
+			if len(s) <= totalContext+3 {
+				old.WriteString(quote(s))
+				new.WriteString(quote(s))
+			} else {
+				if headContext {
+					old.WriteString(quote(s[:contextLen]))
+					new.WriteString(quote(s[:contextLen]))
+				}
+				old.WriteString("...")
+				new.WriteString("...")
+				if tailContext {
+					old.WriteString(quote(s[len(s)-contextLen:]))
+					new.WriteString(quote(s[len(s)-contextLen:]))
+				}
+			}
 		case diff.EditKindAdd:
 			colorGreen.Fprint(&new, quote(string(edit.Sliceable.(starlark.String))))
 		case diff.EditKindReplace:
@@ -602,6 +629,8 @@ func printBytesDiff(w io.Writer, indent string, d *diff.SliceableDiff) {
 }
 
 func printSliceDiff(w io.Writer, indent string, d *diff.SliceableDiff) {
+	const contextLen = 2
+
 	switch d.Old().(type) {
 	case starlark.String:
 		if _, ok := d.New().(starlark.String); ok {
@@ -618,33 +647,41 @@ func printSliceDiff(w io.Writer, indent string, d *diff.SliceableDiff) {
 	fmt.Fprintf(w, "[\n")
 	indent += "  "
 
-	it := d.Edits().Iterate()
-	defer it.Done()
-
-	var val starlark.Value
-	for it.Next(&val) {
+	for i, val := range d.Edits() {
 		edit := val.(*diff.Edit)
-		values := edit.Sliceable.(starlark.Iterable)
+		values := edit.Sliceable
 
 		switch edit.Kind() {
 		case diff.EditKindDelete:
 			printSliceDiffElements(w, indent, values, color.Set(color.FgRed))
 		case diff.EditKindCommon:
-			fmt.Fprint(w, "...\n")
+			headContext, tailContext, totalContext := contextSize(d.Edits(), i, contextLen)
+			if values.Len() <= totalContext+contextLen {
+				printSliceDiffElements(w, indent, values, color.Set())
+			} else {
+				if headContext {
+					printSliceDiffElements(w, indent, values.Slice(0, contextLen, 1).(starlark.Sliceable), color.Set())
+				}
+				fmt.Fprintf(w, "%s...\n", indent)
+				if tailContext {
+					printSliceDiffElements(w, indent, values.Slice(values.Len()-contextLen, values.Len(), 1).(starlark.Sliceable), color.Set())
+				}
+			}
 		case diff.EditKindAdd:
 			printSliceDiffElements(w, indent, values, color.Set(color.FgGreen))
 		case diff.EditKindReplace:
-			printSliceDiffElements(w, indent, values, nil)
+			printSliceDiffElements(w, indent, values, color.Set())
 		}
 	}
+
+	indent = indent[:len(indent)-2]
+	fmt.Fprintf(w, "%s]", indent)
 }
 
-func printSliceDiffElements(w io.Writer, indent string, values starlark.Iterable, c *color.Color) {
-	it := values.Iterate()
-	defer it.Done()
+func printSliceDiffElements(w io.Writer, indent string, values starlark.Sliceable, c *color.Color) {
+	for i, len := 0, values.Len(); i < len; i++ {
+		v := values.Index(i)
 
-	var v starlark.Value
-	for it.Next(&v) {
 		fmt.Fprint(w, indent)
 		if d, ok := v.(diff.ValueDiff); ok {
 			printDiff(w, indent, d)

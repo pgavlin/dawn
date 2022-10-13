@@ -8,13 +8,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type testEvents struct {
+type lwTestEvents struct {
 	discardEventsT
 
 	lines strings.Builder
 }
 
-func (e *testEvents) Print(_ *label.Label, line string) {
+func (e *lwTestEvents) Print(_ *label.Label, line string) {
 	e.lines.WriteString(line)
 	e.lines.WriteByte('\n')
 }
@@ -47,7 +47,7 @@ func TestLineWriter(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.expected, func(t *testing.T) {
-			var events testEvents
+			var events lwTestEvents
 
 			w := newLineWriter(nil, &events)
 			for _, t := range c.writes {

@@ -32,7 +32,7 @@ type function struct {
 	sources    []string
 	gens       []string
 	docs       string
-	function   starlark.HasEnv
+	function   starlark.Callable
 	oldEnv     starlark.Value
 	newEnv     starlark.Value
 
@@ -59,9 +59,8 @@ func (f *function) Attr(name string) (starlark.Value, error) {
 		return f.label, nil
 	case "always":
 		return starlark.Bool(f.always), nil
-	case "env":
-		globals, defaults, freevars := f.function.Env()
-		return starlark.Tuple{globals, defaults, freevars}, nil
+	case "function":
+		return f.function, nil
 	case "dependencies":
 		return util.StringList(f.deps).List(), nil
 	case "sources":
@@ -74,7 +73,7 @@ func (f *function) Attr(name string) (starlark.Value, error) {
 }
 
 func (f *function) AttrNames() []string {
-	return []string{"label", "always", "env", "dependencies", "generates", "sources"}
+	return []string{"label", "always", "function", "dependencies", "generates", "sources"}
 }
 
 func (f *function) Project() *Project {
@@ -115,13 +114,33 @@ func makeDictFromAssociationList(al starlark.Value) starlark.Value {
 	return dict
 }
 
+var functionEnvKeys = []starlark.String{
+	"names",
+	"constant values",
+	"predeclared values",
+	"universal values",
+	"function values",
+	"global values",
+	"default parameter values",
+	"free variables",
+	"code",
+}
+
 func functionEnvDict(env starlark.Tuple) starlark.Value {
-	globals, defaults, freeVars, code := env[0], env[1], env[2], env[3]
-	dict := starlark.NewDict(4)
-	dict.SetKey(starlark.String("global variables"), makeDictFromAssociationList(globals))
+	defaults, freeVars, funcode := env[0], env[1], env[2].(starlark.Tuple)
+	module, globals, bytecode := funcode[0].(starlark.Tuple), funcode[1], funcode[2]
+	names, constants, predeclared, universals, functions := module[0], module[1], module[2], module[3], module[4]
+
+	dict := starlark.NewDict(9)
+	dict.SetKey(starlark.String("names"), names)
+	dict.SetKey(starlark.String("constant values"), constants)
+	dict.SetKey(starlark.String("predeclared values"), makeDictFromAssociationList(predeclared))
+	dict.SetKey(starlark.String("universal values"), makeDictFromAssociationList(universals))
+	dict.SetKey(starlark.String("function values"), functions)
+	dict.SetKey(starlark.String("global values"), makeDictFromAssociationList(globals))
 	dict.SetKey(starlark.String("default parameter values"), makeDictFromAssociationList(defaults))
 	dict.SetKey(starlark.String("free variables"), makeDictFromAssociationList(freeVars))
-	dict.SetKey(starlark.String("code"), code)
+	dict.SetKey(starlark.String("code"), bytecode)
 	return dict
 }
 
@@ -153,7 +172,8 @@ func (f *function) diffEnv() (bool, string, diff.ValueDiff, error) {
 	}
 
 	var reasons []string
-	for _, k := range []starlark.String{"code", "global variables", "default parameter values", "free variables"} {
+
+	for _, k := range functionEnvKeys {
 		if md.Has(k) {
 			reasons = append(reasons, string(k))
 		}
@@ -284,7 +304,7 @@ func (f *function) load() error {
 
 // functionEnv returns the given function's environment by round-tripping it through the
 // pickler.
-func functionEnv(f starlark.HasEnv) (starlark.Value, error) {
+func functionEnv(f starlark.Callable) (starlark.Value, error) {
 	var buf bytes.Buffer
 	if err := pickle.NewEncoder(&buf, pickle.PicklerFunc(envPickler)).Encode(f); err != nil {
 		return nil, err
@@ -292,31 +312,35 @@ func functionEnv(f starlark.HasEnv) (starlark.Value, error) {
 	return pickle.NewDecoder(&buf, pickle.UnpicklerFunc(envUnpickler)).Decode()
 }
 
-// envPickler provides support for pickling functions.
+// envPickler provides support for pickling functions and modules.
 //
-// Functions are pickled as (NEWOBJ "dawn" "Function" (globals, defaults, freevars, code)).
+// - Builtins are pickled as (NEWOBJ "dawn" "Builtin" ())
+// - Function code is pickled as (NEWOBJ "dawn" "FunctionCode" (module, globals, bytecode))
+// - Functions are pickled as (NEWOBJ "dawn" "Function" (defaults, freevars, code)).
 func envPickler(x starlark.Value) (module, name string, args starlark.Tuple, err error) {
 	switch x := x.(type) {
 	case *function:
 		return "dawn", "Target", starlark.Tuple{starlark.String(x.label.String())}, nil
-	case starlark.HasEnv:
-		globals, defaults, freevars := x.Env()
-
-		var code []byte
-		if fn, ok := x.(*starlark.Function); ok {
-			code = fn.Code()
-		}
-
-		return "dawn", "Function", starlark.Tuple{globals, defaults, freevars, starlark.Bytes(code)}, nil
+	case *starlark.Builtin:
+		return "dawn", "Builtin", starlark.Tuple{}, nil
+	case *starlark.FunctionCode:
+		module, globals := x.ModuleEnv()
+		return "dawn", "FunctionCode", starlark.Tuple{module, globals, starlark.Bytes(x.Bytecode())}, nil
+	case *starlark.Function:
+		defaults, freevars := x.Env()
+		return "dawn", "Function", starlark.Tuple{defaults, freevars, x.Code()}, nil
 	default:
-		return "", "", nil, fmt.Errorf("cannot pickle value of type %s", x.Type())
+		return "", "", nil, pickle.ErrCannotPickle
 	}
 }
 
-// envUnpickler provides support for unpickling functions.
+// envUnpickler provides support for unpickling functions and modules.
 //
-// Functions are unpickled from (NEWOBJ "dawn" "Function" (globals, defaults, freevars, code))
-// into (globals, defaults, freevars, code).
+// - Builtins are unpickled from (NEWOBJ "dawn" "Builtin" ()) into ()
+// - Function code is unpickled from (NEWOBJ "dawn" "FunctionCode" (module, globals, bytecode))
+//   into (module, globals, bytecode)
+// - Functions are unpickled from (NEWOBJ "dawn" "Function" (defaults, freevars, code))
+//   into (defaults, freevars, code).
 func envUnpickler(module, name string, args starlark.Tuple) (starlark.Value, error) {
 	if module != "dawn" {
 		return nil, fmt.Errorf("cannot unpickle value of type %s.%s", module, name)
@@ -328,9 +352,24 @@ func envUnpickler(module, name string, args starlark.Tuple) (starlark.Value, err
 			return nil, fmt.Errorf("expcted 1 arg, got %v", len(args))
 		}
 		return args[0], nil
+	case "Module":
+		if len(args) != 2 {
+			return nil, fmt.Errorf("expected 2 args, got %v", len(args))
+		}
+		return args, nil
+	case "Builtin":
+		if len(args) != 0 {
+			return nil, fmt.Errorf("expected 0 args, got %v", len(args))
+		}
+		return args, nil
+	case "FunctionCode":
+		if len(args) != 3 {
+			return nil, fmt.Errorf("expcted 3 args, got %v", len(args))
+		}
+		return args, nil
 	case "Function":
-		if len(args) != 4 {
-			return nil, fmt.Errorf("expcted 4 args, got %v", len(args))
+		if len(args) != 3 {
+			return nil, fmt.Errorf("expcted 3 args, got %v", len(args))
 		}
 		return args, nil
 	default:

@@ -1,0 +1,3 @@
+@target(default=True)
+def build():
+    print(len)

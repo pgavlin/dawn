@@ -210,7 +210,7 @@ func (d *SliceableDiff) AttrNames() []string {
 	return []string{"old", "new", "edits"}
 }
 
-func (d *SliceableDiff) Edits() starlark.Iterable {
+func (d *SliceableDiff) Edits() starlark.Tuple {
 	return d.edits
 }
 

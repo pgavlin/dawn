@@ -1,0 +1,5 @@
+@target(default=True)
+def build():
+    def fn():
+        print("hello")
+    fn()

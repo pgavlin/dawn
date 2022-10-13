@@ -1,6 +1,7 @@
 package pickle
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -31,6 +32,10 @@ func (w writer) WriteByte(b byte) error {
 func (w writer) WriteString(s string) (int, error) {
 	return w.Write([]byte(s))
 }
+
+// A Pickler can return ErrCannotPickle to indicate that it does not support pickling a particular
+// value.
+var ErrCannotPickle = errors.New("cannot pickle")
 
 // Pickler may be implemented to provide support for pickling non-primitive values.
 type Pickler interface {
@@ -160,37 +165,6 @@ func (e *Encoder) encode(x starlark.Value) {
 	case starlark.Bytes:
 		e.encodeString(opSHORT_BINBYTES, opBINBYTES, string(x))
 
-	case *starlark.List:
-		e.w.WriteByte(opEMPTY_LIST)
-		e.memoize(x)
-
-		switch len := x.Len(); len {
-		case 0:
-			// done
-		case 1:
-			e.encode(x.Index(0))
-			e.w.WriteByte(opAPPEND)
-		default:
-			first := true
-			for i := 0; i < len; {
-				batch := len - i
-				if batch > 1000 {
-					batch = 1000
-				}
-
-				if !first {
-					e.encode(x)
-				}
-				first = false
-
-				e.w.WriteByte(opMARK)
-				for ; batch > 0; i, batch = i+1, batch-1 {
-					e.encode(x.Index(i))
-				}
-				e.w.WriteByte(opAPPENDS)
-			}
-		}
-
 	case starlark.Tuple:
 		// TODO: recursive tuples
 
@@ -218,31 +192,6 @@ func (e *Encoder) encode(x starlark.Value) {
 		}
 		e.memoize(x)
 
-	case *starlark.Dict:
-		e.w.WriteByte(opEMPTY_DICT)
-		e.memoize(x)
-
-		items, first := x.Items(), true
-		for len(items) > 0 {
-			batch := items
-			if len(batch) > 1000 {
-				batch = batch[:1000]
-			}
-			items = items[len(batch):]
-
-			if !first {
-				e.encode(x)
-			}
-			first = false
-
-			e.w.WriteByte(opMARK)
-			for _, kvp := range batch {
-				e.encode(kvp[0])
-				e.encode(kvp[1])
-			}
-			e.w.WriteByte(opSETITEMS)
-		}
-
 	case *starlark.Set:
 		e.w.WriteByte(opEMPTY_SET)
 		e.memoize(x)
@@ -268,22 +217,124 @@ func (e *Encoder) encode(x starlark.Value) {
 		}
 
 	default:
-		if e.pickler == nil {
-			panic(failure(fmt.Errorf("cannot pickle value of type %T", x)))
-		}
+		e.encodeComplex(x)
+	}
+}
 
+func (e *Encoder) encodeComplex(x starlark.Value) {
+	if e.pickler != nil {
 		module, name, args, err := e.pickler.Pickle(x)
-		if err != nil {
+		switch err {
+		case nil:
+			e.encodeString(opSHORT_BINUNICODE, opBINUNICODE, module)
+			e.encodeString(opSHORT_BINUNICODE, opBINUNICODE, name)
+			e.w.WriteByte(opSTACK_GLOBAL)
+			e.encode(args)
+			e.w.WriteByte(opNEWOBJ)
+
+			e.memoize(x)
+			return
+		case ErrCannotPickle:
+			// OK
+		default:
 			panic(failure(err))
 		}
+	}
 
-		e.encodeString(opSHORT_BINUNICODE, opBINUNICODE, module)
-		e.encodeString(opSHORT_BINUNICODE, opBINUNICODE, name)
-		e.w.WriteByte(opSTACK_GLOBAL)
-		e.encode(args)
-		e.w.WriteByte(opNEWOBJ)
-
+	switch x := x.(type) {
+	case starlark.IterableMapping:
+		e.w.WriteByte(opEMPTY_DICT)
 		e.memoize(x)
+
+		items, first := x.Items(), true
+		for len(items) > 0 {
+			batch := items
+			if len(batch) > 1000 {
+				batch = batch[:1000]
+			}
+			items = items[len(batch):]
+
+			if !first {
+				e.encode(x)
+			}
+			first = false
+
+			e.w.WriteByte(opMARK)
+			for _, kvp := range batch {
+				e.encode(kvp[0])
+				e.encode(kvp[1])
+			}
+			e.w.WriteByte(opSETITEMS)
+		}
+
+	case starlark.Sequence:
+		e.w.WriteByte(opEMPTY_LIST)
+		e.memoize(x)
+
+		it := x.Iterate()
+		defer it.Done()
+
+		var el starlark.Value
+		switch len := x.Len(); len {
+		case 0:
+			// done
+		case 1:
+			it.Next(&el)
+			e.encode(el)
+			e.w.WriteByte(opAPPEND)
+		default:
+			first := true
+			for i := 0; i < len; {
+				batch := len - i
+				if batch > 1000 {
+					batch = 1000
+				}
+
+				if !first {
+					e.encode(x)
+				}
+				first = false
+
+				e.w.WriteByte(opMARK)
+				for ; batch > 0; i, batch = i+1, batch-1 {
+					it.Next(&el)
+					e.encode(el)
+				}
+				e.w.WriteByte(opAPPENDS)
+			}
+		}
+
+	case starlark.HasAttrs:
+		e.w.WriteByte(opEMPTY_DICT)
+		e.memoize(x)
+
+		attrs, first := x.AttrNames(), true
+		for len(attrs) > 0 {
+			batch := attrs
+			if len(batch) > 1000 {
+				batch = batch[:1000]
+			}
+			attrs = attrs[len(batch):]
+
+			if !first {
+				e.encode(x)
+			}
+			first = false
+
+			e.w.WriteByte(opMARK)
+			for _, attr := range batch {
+				e.encode(starlark.String(attr))
+				v, err := x.Attr(attr)
+				if err != nil {
+					panic(failure(err))
+				}
+				e.encode(v)
+			}
+			e.w.WriteByte(opSETITEMS)
+		}
+
+	default:
+		panic(failure(fmt.Errorf("cannot pickle value of type %T", x)))
 	}
 }
 
