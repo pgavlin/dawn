@@ -164,7 +164,7 @@ func TestSimpleTargets(t *testing.T) {
 }
 
 func TestTargetDiffs(t *testing.T) {
-	dirs := []string{"constants", "functions", "names", "predeclared", "universal"}
+	dirs := []string{"constants", "functions", "names", "predeclared", "universal", "globals", "freevars"}
 	for _, dir := range dirs {
 		pt := projectTest{
 			path:  "testdata/target-diffs/" + dir,
