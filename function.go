@@ -100,20 +100,6 @@ func (f *function) info() targetInfo {
 	return f.targetInfo
 }
 
-func makeDictFromAssociationList(al starlark.Value) starlark.Value {
-	pairs, ok := al.(starlark.Tuple)
-	if !ok {
-		return starlark.None
-	}
-
-	dict := starlark.NewDict(len(pairs))
-	for _, pv := range pairs {
-		pair := pv.(starlark.Tuple)
-		dict.SetKey(pair[0].(starlark.String), pair[1])
-	}
-	return dict
-}
-
 var functionEnvKeys = []starlark.String{
 	"names",
 	"constant values",
@@ -126,25 +112,11 @@ var functionEnvKeys = []starlark.String{
 	"code",
 }
 
-func functionEnvDict(env starlark.Tuple) starlark.Value {
-	defaults, freeVars, funcode := env[0], env[1], env[2].(starlark.Tuple)
-	module, globals, bytecode := funcode[0].(starlark.Tuple), funcode[1], funcode[2]
-	names, constants, predeclared, universals, functions := module[0], module[1], module[2], module[3], module[4]
-
-	dict := starlark.NewDict(9)
-	dict.SetKey(starlark.String("names"), names)
-	dict.SetKey(starlark.String("constant values"), constants)
-	dict.SetKey(starlark.String("predeclared values"), makeDictFromAssociationList(predeclared))
-	dict.SetKey(starlark.String("universal values"), makeDictFromAssociationList(universals))
-	dict.SetKey(starlark.String("function values"), functions)
-	dict.SetKey(starlark.String("global values"), makeDictFromAssociationList(globals))
-	dict.SetKey(starlark.String("default parameter values"), makeDictFromAssociationList(defaults))
-	dict.SetKey(starlark.String("free variables"), makeDictFromAssociationList(freeVars))
-	dict.SetKey(starlark.String("code"), bytecode)
-	return dict
-}
-
 func (f *function) diffEnv() (bool, string, diff.ValueDiff, error) {
+	if f.oldEnv == starlark.None {
+		return false, "target has never been run", nil, nil
+	}
+
 	eq, err := starlark.EqualDepth(f.oldEnv, f.newEnv, 1000)
 	if err != nil {
 		return false, "", nil, fmt.Errorf("comparing function environments: %w", err)
@@ -153,16 +125,16 @@ func (f *function) diffEnv() (bool, string, diff.ValueDiff, error) {
 		return true, "", nil, nil
 	}
 
-	oldEnv, ok := f.oldEnv.(starlark.Tuple)
+	oldEnv, ok := f.oldEnv.(*starlark.Dict)
 	if !ok {
-		return false, "target has never been run", nil, nil
+		return false, "", nil, fmt.Errorf("old environment is not a dict (%v)", oldEnv.Type())
+	}
+	newEnv, ok := f.newEnv.(*starlark.Dict)
+	if !ok {
+		return false, "", nil, fmt.Errorf("new environment is not a dict (%v)", newEnv.Type())
 	}
 
-	newEnv := f.newEnv.(starlark.Tuple)
-
-	oldEnvDict, newEnvDict := functionEnvDict(oldEnv), functionEnvDict(newEnv)
-
-	d, err := diff.DiffDepth(oldEnvDict, newEnvDict, 1000)
+	d, err := diff.DiffDepth(f.oldEnv, f.newEnv, 1000)
 	if err != nil {
 		return false, "", nil, fmt.Errorf("diffing environments: %w", err)
 	}
@@ -336,11 +308,11 @@ func envPickler(x starlark.Value) (module, name string, args starlark.Tuple, err
 
 // envUnpickler provides support for unpickling functions and modules.
 //
-// - Builtins are unpickled from (NEWOBJ "dawn" "Builtin" ()) into ()
-// - Function code is unpickled from (NEWOBJ "dawn" "FunctionCode" (module, globals, bytecode))
-//   into (module, globals, bytecode)
-// - Functions are unpickled from (NEWOBJ "dawn" "Function" (defaults, freevars, code))
-//   into (defaults, freevars, code).
+//   - Builtins are unpickled from (NEWOBJ "dawn" "Builtin" ()) into ()
+//   - Function code is unpickled from (NEWOBJ "dawn" "FunctionCode" (module, globals, bytecode))
+//     into a dictionary.
+//   - Functions are unpickled from (NEWOBJ "dawn" "Function" (defaults, freevars, code))
+//     into a dictionary.
 func envUnpickler(module, name string, args starlark.Tuple) (starlark.Value, error) {
 	if module != "dawn" {
 		return nil, fmt.Errorf("cannot unpickle value of type %s.%s", module, name)
@@ -352,11 +324,6 @@ func envUnpickler(module, name string, args starlark.Tuple) (starlark.Value, err
 			return nil, fmt.Errorf("expcted 1 arg, got %v", len(args))
 		}
 		return args[0], nil
-	case "Module":
-		if len(args) != 2 {
-			return nil, fmt.Errorf("expected 2 args, got %v", len(args))
-		}
-		return args, nil
 	case "Builtin":
 		if len(args) != 0 {
 			return nil, fmt.Errorf("expected 0 args, got %v", len(args))
@@ -366,13 +333,42 @@ func envUnpickler(module, name string, args starlark.Tuple) (starlark.Value, err
 		if len(args) != 3 {
 			return nil, fmt.Errorf("expcted 3 args, got %v", len(args))
 		}
-		return args, nil
+		module, globals, bytecode := args[0].(starlark.Tuple), args[1], args[2]
+		names, constants, predeclared, universals, functions := module[0], module[1], module[2], module[3], module[4]
+
+		dict := starlark.NewDict(7)
+		dict.SetKey(starlark.String("names"), names)
+		dict.SetKey(starlark.String("constant values"), constants)
+		dict.SetKey(starlark.String("predeclared values"), makeDictFromAssociationList(predeclared))
+		dict.SetKey(starlark.String("universal values"), makeDictFromAssociationList(universals))
+		dict.SetKey(starlark.String("function values"), functions)
+		dict.SetKey(starlark.String("global values"), makeDictFromAssociationList(globals))
+		dict.SetKey(starlark.String("code"), bytecode)
+		return dict, nil
 	case "Function":
 		if len(args) != 3 {
 			return nil, fmt.Errorf("expcted 3 args, got %v", len(args))
 		}
-		return args, nil
+		defaults, freeVars, funcode := args[0], args[1], args[2].(*starlark.Dict)
+
+		funcode.SetKey(starlark.String("default parameter values"), makeDictFromAssociationList(defaults))
+		funcode.SetKey(starlark.String("free variables"), makeDictFromAssociationList(freeVars))
+		return funcode, nil
 	default:
 		return nil, fmt.Errorf("cannot unpickle value of type %s.%s", module, name)
 	}
+}
+
+func makeDictFromAssociationList(al starlark.Value) starlark.Value {
+	pairs, ok := al.(starlark.Tuple)
+	if !ok {
+		return starlark.None
+	}
+
+	dict := starlark.NewDict(len(pairs))
+	for _, pv := range pairs {
+		pair := pv.(starlark.Tuple)
+		dict.SetKey(pair[0].(starlark.String), pair[1])
+	}
+	return dict
 }
