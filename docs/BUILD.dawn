@@ -1,7 +1,16 @@
-@target(sources=os.glob(["../README.rst", "source/**", "conf.py"]), generates=["build"])
+@target(sources=["requirements.txt"])
+def venv():
+    """
+    Creates a venv for the docs build.
+    """
+
+    sh.exec("python3 -m venv venv")
+    sh.exec(". venv/bin/activate && python3 -m pip install -r requirements.txt")
+
+@target(deps=[venv], sources=os.glob(["../README.rst", "source/**", "conf.py"]), generates=["build"])
 def site():
     """
     Builds the dawn docs site using sphinx.
     """
 
-    sh.exec("sphinx-build -W -b html source build")
+    sh.exec(". venv/bin/activate && sphinx-build -W -b html source build")
