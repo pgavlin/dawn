@@ -24,6 +24,10 @@ import (
 //     def environ():
 //         pass
 //
+//     @function("lookPath")
+//     def look_path():
+//         pass
+//
 //     @function("execf")
 //     def exec():
 //         pass
@@ -58,13 +62,14 @@ var Module = &starlarkstruct.Module{
 	Members: starlark.StringDict{
 		"path": path.Module,
 
-		"environ":  NewEnviron(),
-		"exec":     NewExec(),
-		"output":   NewOutput(),
-		"exists":   NewExists(),
-		"getcwd":   NewGetcwd(),
-		"glob":     NewGlob(),
-		"mkdir":    NewMkdir(),
-		"makedirs": NewMakedirs(),
+		"environ":   NewEnviron(),
+		"look_path": NewLookPath(),
+		"exec":      NewExec(),
+		"output":    NewOutput(),
+		"exists":    NewExists(),
+		"getcwd":    NewGetcwd(),
+		"glob":      NewGlob(),
+		"mkdir":     NewMkdir(),
+		"makedirs":  NewMakedirs(),
 	},
 }

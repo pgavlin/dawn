@@ -4,8 +4,9 @@ def venv():
     Creates a venv for the docs build.
     """
 
-    sh.exec("python3 -m venv venv")
-    sh.exec(". venv/bin/activate && python3 -m pip install -r requirements.txt")
+    python = "python3" if os.look_path("python3") != None else "python"
+    sh.exec(f"{python} -m venv venv")
+    sh.exec(f". venv/bin/activate && {python} -m pip install -r requirements.txt")
 
 @target(deps=[venv], sources=os.glob(["../README.rst", "source/**", "conf.py"]), generates=["build"])
 def site():

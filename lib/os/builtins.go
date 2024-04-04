@@ -32,6 +32,36 @@ func Environ(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple,
 }
 
 
+func NewLookPath() *starlark.Builtin {
+	const doc = `
+   Search for an executable named file in the directories named by
+   the PATH environment variable. If file contains a slash, it is
+   tried directly and the PATH is not consulted. Otherwise, on
+   success, the result is an absolute path.
+
+   :param file: the name of the executable to find
+
+   :returns: the absolute path to file if found or None if not found.
+   `
+	return starlark.NewBuiltin("look_path", LookPath).WithDoc(doc)
+}
+
+
+func LookPath(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	
+	var (
+		
+		file string
+		
+	)
+	if err := starlark.UnpackArgs(fn.Name(), args, kwargs, "file", &file); err != nil {
+		return nil, err
+	}
+	
+	return lookPath(thread, fn, file)
+}
+
+
 func NewExec() *starlark.Builtin {
 	const doc = `
    Run an executable. If the process fails, the calling module will

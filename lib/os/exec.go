@@ -10,6 +10,31 @@ import (
 	"go.starlark.net/starlark"
 )
 
+// def look_path(file):
+//     """
+//     Search for an executable named file in the directories named by
+//     the PATH environment variable. If file contains a slash, it is
+//     tried directly and the PATH is not consulted. Otherwise, on
+//     success, the result is an absolute path.
+//
+//     :param file: the name of the executable to find
+//
+//     :returns: the absolute path to file if found or None if not found.
+//     """
+//
+//starlark:builtin factory=NewLookPath,function=LookPath
+func lookPath(
+	thread *starlark.Thread,
+	fn *starlark.Builtin,
+	file string,
+) (starlark.Value, error) {
+	path, err := exec.LookPath(file)
+	if err != nil {
+		return starlark.None, nil
+	}
+	return starlark.String(path), nil
+}
+
 // def exec(command, cwd=None, env=None, try_=None):
 //     """
 //     Run an executable. If the process fails, the calling module will
