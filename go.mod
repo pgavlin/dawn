@@ -17,7 +17,7 @@ require (
 	go.starlark.net v0.0.0-20240329153429-e6e8e7ce1b7a
 	golang.org/x/sys v0.18.0
 	golang.org/x/term v0.0.0-20220526004731-065cf7ba2467
-	golang.org/x/tools v0.1.12
+	golang.org/x/tools v0.19.0
 	mvdan.cc/sh/v3 v3.3.0
 )
 
@@ -34,8 +34,8 @@ require (
 	github.com/tklauser/go-sysconf v0.3.10 // indirect
 	github.com/tklauser/numcpus v0.4.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
-	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4 // indirect
-	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4 // indirect
+	golang.org/x/mod v0.16.0 // indirect
+	golang.org/x/sync v0.6.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
