@@ -17,7 +17,7 @@ type reader struct {
 }
 
 func (r reader) Read(b []byte) (int, error) {
-	n, err := r.r.Read(b)
+	n, err := io.ReadFull(r.r, b)
 	if err != nil {
 		panic(failure(err))
 	}
