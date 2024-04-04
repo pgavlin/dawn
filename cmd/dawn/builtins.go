@@ -35,7 +35,11 @@ func (w *workspace) starlark_builtin_depends(thread *starlark.Thread, fn *starla
 		return nil, err
 	}
 	
-	return w.builtin_depends(thread, fn, labelOrTarget)
+	val, err := w.builtin_depends(thread, fn, labelOrTarget)
+	if err != nil {
+		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
+	}
+	return val, nil
 }
 
 
@@ -62,7 +66,11 @@ func (w *workspace) starlark_builtin_whatDepends(thread *starlark.Thread, fn *st
 		return nil, err
 	}
 	
-	return w.builtin_whatDepends(thread, fn, labelOrTarget)
+	val, err := w.builtin_whatDepends(thread, fn, labelOrTarget)
+	if err != nil {
+		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
+	}
+	return val, nil
 }
 
 

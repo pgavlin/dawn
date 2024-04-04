@@ -50,7 +50,11 @@ func Exec(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kw
 		return nil, err
 	}
 	
-	return exec(thread, fn, cmd, cwd, env, try)
+	val, err := exec(thread, fn, cmd, cwd, env, try)
+	if err != nil {
+		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
+	}
+	return val, nil
 }
 
 
@@ -95,7 +99,11 @@ func Output(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, 
 		return nil, err
 	}
 	
-	return output(thread, fn, cmd, cwd, env, try)
+	val, err := output(thread, fn, cmd, cwd, env, try)
+	if err != nil {
+		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
+	}
+	return val, nil
 }
 
 

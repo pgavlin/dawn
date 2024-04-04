@@ -32,7 +32,11 @@ func {{with .Receiver}}({{.Name}} {{.Type}}) {{end}}{{.FunctionName}}(thread *st
 		return nil, err
 	}
 	{{end}}
-	return {{with .Receiver}}{{.Name}}.{{end}}{{.Name}}(thread, fn{{range .Params}}, {{.Name}}{{end}})
+	val, err := {{with .Receiver}}{{.Name}}.{{end}}{{.Name}}(thread, fn{{range .Params}}, {{.Name}}{{end}})
+	if err != nil {
+		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
+	}
+	return val, nil
 }
 {{end}}
 {{end}}
