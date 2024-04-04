@@ -1,12 +1,20 @@
+def run_in_posix_venv(cmd):
+    sh.exec(f". venv/bin/activate && {cmd}")
+
+def run_in_windows_venv(cmd):
+    os.exec(["powershell", "-Command", f"& {{./venv/scripts/activate.ps1; {cmd}}}"])
+
+run_in_venv = run_in_windows_venv if host.os == "windows" else run_in_posix_venv
+
 @target(sources=["requirements.txt"])
 def venv():
     """
     Creates a venv for the docs build.
     """
 
-    python = "python3" if os.look_path("python3") != None else "python"
+    python = "python" if os.look_path("python") != None else "python3"
     sh.exec(f"{python} -m venv venv")
-    sh.exec(f". venv/bin/activate && {python} -m pip install -r requirements.txt")
+    run_in_venv(f"{python} -m pip install -r requirements.txt")
 
 @target(deps=[venv], sources=os.glob(["../README.rst", "source/**", "conf.py"]), generates=["build"])
 def site():
@@ -14,4 +22,4 @@ def site():
     Builds the dawn docs site using sphinx.
     """
 
-    sh.exec(". venv/bin/activate && sphinx-build -W -b html source build")
+    run_in_venv("sphinx-build -W -b html source build")
