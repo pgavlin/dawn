@@ -59,7 +59,7 @@ func (e *lineRenderer) ModuleLoaded(label *label.Label) {
 }
 
 func (e *lineRenderer) ModuleLoadFailed(label *label.Label, err error) {
-	e.printe(label, fmt.Sprintf("failed: %v", err))
+	e.printe(label, fmt.Sprintf("failed: %v", errMessage(err)))
 }
 
 func (e *lineRenderer) LoadDone(err error) {
@@ -67,7 +67,7 @@ func (e *lineRenderer) LoadDone(err error) {
 	defer e.m.Unlock()
 
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to load project: %v", err)
+		fmt.Fprintf(os.Stderr, "failed to load project: %v", errMessage(err))
 	} else {
 		fmt.Fprintf(os.Stdout, "project loaded")
 	}
@@ -86,7 +86,7 @@ func (e *lineRenderer) TargetEvaluating(label *label.Label, reason string, diff 
 }
 
 func (e *lineRenderer) TargetFailed(label *label.Label, err error) {
-	e.printe(label, fmt.Sprintf("failed: %v", err))
+	e.printe(label, fmt.Sprintf("failed: %v", errMessage(err)))
 }
 
 func (e *lineRenderer) TargetSucceeded(label *label.Label, changed bool) {
@@ -98,7 +98,7 @@ func (e *lineRenderer) RunDone(err error) {
 	defer e.m.Unlock()
 
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "build failed: %v", err)
+		fmt.Fprintf(os.Stderr, "build failed: %v", errMessage(err))
 	} else {
 		fmt.Fprintf(os.Stdout, "build succeeded")
 	}
@@ -229,12 +229,12 @@ func (e *jsonRenderer) ModuleLoaded(label *label.Label) {
 }
 
 func (e *jsonRenderer) ModuleLoadFailed(label *label.Label, err error) {
-	e.event("ModuleLoadFailed", label, "err", err)
+	e.event("ModuleLoadFailed", label, "err", errMessage(err))
 	e.next.ModuleLoadFailed(label, err)
 }
 
 func (e *jsonRenderer) LoadDone(err error) {
-	e.event("LoadDone", nil, "err", err)
+	e.event("LoadDone", nil, "err", errMessage(err))
 	e.next.LoadDone(err)
 }
 
@@ -257,7 +257,7 @@ func (e *jsonRenderer) TargetEvaluating(label *label.Label, reason string, diff 
 }
 
 func (e *jsonRenderer) TargetFailed(label *label.Label, err error) {
-	e.event("TargetFailed", label, "err", err)
+	e.event("TargetFailed", label, "err", errMessage(err))
 	e.next.TargetFailed(label, err)
 }
 
@@ -267,7 +267,7 @@ func (e *jsonRenderer) TargetSucceeded(label *label.Label, changed bool) {
 }
 
 func (e *jsonRenderer) RunDone(err error) {
-	e.event("RunDone", nil, "err", err)
+	e.event("RunDone", nil, "err", errMessage(err))
 	e.next.RunDone(err)
 }
 
@@ -713,7 +713,7 @@ func (e *statusRenderer) ModuleLoaded(label *label.Label) {
 }
 
 func (e *statusRenderer) ModuleLoadFailed(label *label.Label, err error) {
-	e.targetDone(label, color.RedString("failed: %v", err), true, true)
+	e.targetDone(label, color.RedString("failed: %v", errMessage(err)), true, true)
 }
 
 func (e *statusRenderer) LoadDone(err error) {
@@ -774,7 +774,7 @@ func (e *statusRenderer) targetDone(label *label.Label, message string, changed,
 }
 
 func (e *statusRenderer) TargetFailed(label *label.Label, err error) {
-	e.targetDone(label, color.RedString("failed: %v", err), true, true)
+	e.targetDone(label, color.RedString("failed: %v", errMessage(err)), true, true)
 }
 
 func (e *statusRenderer) TargetSucceeded(label *label.Label, changed bool) {
@@ -865,4 +865,11 @@ func newRenderer(verbose, diff bool, onLoaded func()) (renderer, error) {
 		r = p(r)
 	}
 	return r, nil
+}
+
+func errMessage(err error) string {
+	if evalErr, ok := err.(*starlark.EvalError); ok {
+		return evalErr.Backtrace()
+	}
+	return err.Error()
 }

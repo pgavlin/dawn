@@ -28,7 +28,11 @@ func Environ(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple,
 		return nil, err
 	}
 	
-	return environ(thread, fn)
+	val, err := environ(thread, fn)
+	if err != nil {
+		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
+	}
+	return val, nil
 }
 
 
@@ -58,7 +62,11 @@ func LookPath(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple
 		return nil, err
 	}
 	
-	return lookPath(thread, fn, file)
+	val, err := lookPath(thread, fn, file)
+	if err != nil {
+		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
+	}
+	return val, nil
 }
 
 
@@ -100,7 +108,11 @@ func Exec(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kw
 		return nil, err
 	}
 	
-	return execf(thread, fn, cmdV, cwd, envV, try)
+	val, err := execf(thread, fn, cmdV, cwd, envV, try)
+	if err != nil {
+		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
+	}
+	return val, nil
 }
 
 
@@ -144,7 +156,11 @@ func Output(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, 
 		return nil, err
 	}
 	
-	return output(thread, fn, cmdV, cwd, envV, try)
+	val, err := output(thread, fn, cmdV, cwd, envV, try)
+	if err != nil {
+		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
+	}
+	return val, nil
 }
 
 
@@ -167,7 +183,11 @@ func Exists(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, 
 		return nil, err
 	}
 	
-	return exists(thread, fn, path)
+	val, err := exists(thread, fn, path)
+	if err != nil {
+		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
+	}
+	return val, nil
 }
 
 
@@ -186,7 +206,11 @@ func Getcwd(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, 
 		return nil, err
 	}
 	
-	return getcwd(thread, fn)
+	val, err := getcwd(thread, fn)
+	if err != nil {
+		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
+	}
+	return val, nil
 }
 
 
@@ -211,7 +235,11 @@ func Mkdir(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, k
 		return nil, err
 	}
 	
-	return mkdir(thread, fn, path, mode)
+	val, err := mkdir(thread, fn, path, mode)
+	if err != nil {
+		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
+	}
+	return val, nil
 }
 
 
@@ -237,7 +265,11 @@ func Makedirs(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple
 		return nil, err
 	}
 	
-	return makedirs(thread, fn, path, mode)
+	val, err := makedirs(thread, fn, path, mode)
+	if err != nil {
+		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
+	}
+	return val, nil
 }
 
 
@@ -272,7 +304,11 @@ func Glob(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kw
 		return nil, err
 	}
 	
-	return glob(thread, fn, include, exclude)
+	val, err := glob(thread, fn, include, exclude)
+	if err != nil {
+		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
+	}
+	return val, nil
 }
 
 

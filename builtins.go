@@ -36,7 +36,11 @@ func (c *cache) starlark_once(thread *starlark.Thread, fn *starlark.Builtin, arg
 		return nil, err
 	}
 	
-	return c.once(thread, fn, key, function)
+	val, err := c.once(thread, fn, key, function)
+	if err != nil {
+		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
+	}
+	return val, nil
 }
 
 
@@ -59,7 +63,11 @@ func (proj *Project) starlark_builtin_path(thread *starlark.Thread, fn *starlark
 		return nil, err
 	}
 	
-	return proj.builtin_path(thread, fn, rawlabel)
+	val, err := proj.builtin_path(thread, fn, rawlabel)
+	if err != nil {
+		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
+	}
+	return val, nil
 }
 
 
@@ -82,7 +90,11 @@ func (proj *Project) starlark_builtin_label(thread *starlark.Thread, fn *starlar
 		return nil, err
 	}
 	
-	return proj.builtin_label(thread, fn, path)
+	val, err := proj.builtin_label(thread, fn, path)
+	if err != nil {
+		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
+	}
+	return val, nil
 }
 
 
@@ -107,7 +119,11 @@ func (proj *Project) starlark_builtin_contains(thread *starlark.Thread, fn *star
 		return nil, err
 	}
 	
-	return proj.builtin_contains(thread, fn, path)
+	val, err := proj.builtin_contains(thread, fn, path)
+	if err != nil {
+		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
+	}
+	return val, nil
 }
 
 
@@ -149,7 +165,11 @@ func (proj *Project) starlark_builtin_parse_flag(thread *starlark.Thread, fn *st
 		return nil, err
 	}
 	
-	return proj.builtin_parse_flag(thread, fn, name, default_, type_, choices, required, help)
+	val, err := proj.builtin_parse_flag(thread, fn, name, default_, type_, choices, required, help)
+	if err != nil {
+		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
+	}
+	return val, nil
 }
 
 
@@ -207,7 +227,11 @@ func (proj *Project) starlark_builtin_target(thread *starlark.Thread, fn *starla
 		return nil, err
 	}
 	
-	return proj.builtin_target(thread, fn, name, deps, sources, generates, function, default_, always, docs)
+	val, err := proj.builtin_target(thread, fn, name, deps, sources, generates, function, default_, always, docs)
+	if err != nil {
+		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
+	}
+	return val, nil
 }
 
 
@@ -243,7 +267,11 @@ func (proj *Project) starlark_builtin_glob(thread *starlark.Thread, fn *starlark
 		return nil, err
 	}
 	
-	return proj.builtin_glob(thread, fn, include, exclude)
+	val, err := proj.builtin_glob(thread, fn, include, exclude)
+	if err != nil {
+		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
+	}
+	return val, nil
 }
 
 
@@ -278,7 +306,11 @@ func (proj *Project) starlark_builtin_run(thread *starlark.Thread, fn *starlark.
 		return nil, err
 	}
 	
-	return proj.builtin_run(thread, fn, labelOrTarget, always, dryRun, callback)
+	val, err := proj.builtin_run(thread, fn, labelOrTarget, always, dryRun, callback)
+	if err != nil {
+		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
+	}
+	return val, nil
 }
 
 
@@ -305,7 +337,11 @@ func (proj *Project) starlark_builtin_get_target(thread *starlark.Thread, fn *st
 		return nil, err
 	}
 	
-	return proj.builtin_get_target(thread, fn, rawlabel)
+	val, err := proj.builtin_get_target(thread, fn, rawlabel)
+	if err != nil {
+		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
+	}
+	return val, nil
 }
 
 
@@ -323,7 +359,11 @@ func (proj *Project) starlark_builtin_flags(thread *starlark.Thread, fn *starlar
 		return nil, err
 	}
 	
-	return proj.builtin_flags(thread, fn)
+	val, err := proj.builtin_flags(thread, fn)
+	if err != nil {
+		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
+	}
+	return val, nil
 }
 
 
@@ -341,7 +381,11 @@ func (proj *Project) starlark_builtin_targets(thread *starlark.Thread, fn *starl
 		return nil, err
 	}
 	
-	return proj.builtin_targets(thread, fn)
+	val, err := proj.builtin_targets(thread, fn)
+	if err != nil {
+		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
+	}
+	return val, nil
 }
 
 
@@ -359,7 +403,11 @@ func (proj *Project) starlark_builtin_sources(thread *starlark.Thread, fn *starl
 		return nil, err
 	}
 	
-	return proj.builtin_sources(thread, fn)
+	val, err := proj.builtin_sources(thread, fn)
+	if err != nil {
+		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
+	}
+	return val, nil
 }
 
 
@@ -382,7 +430,11 @@ func (proj *Project) starlark_builtin_fail(thread *starlark.Thread, fn *starlark
 		return nil, err
 	}
 	
-	return proj.builtin_fail(thread, fn, message)
+	val, err := proj.builtin_fail(thread, fn, message)
+	if err != nil {
+		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
+	}
+	return val, nil
 }
 
 

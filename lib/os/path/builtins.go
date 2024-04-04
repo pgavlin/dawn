@@ -33,7 +33,11 @@ func Abs(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwa
 		return nil, err
 	}
 	
-	return abs(thread, fn, path)
+	val, err := abs(thread, fn, path)
+	if err != nil {
+		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
+	}
+	return val, nil
 }
 
 
@@ -56,7 +60,11 @@ func IsAbs(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, k
 		return nil, err
 	}
 	
-	return isAbs(thread, fn, path)
+	val, err := isAbs(thread, fn, path)
+	if err != nil {
+		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
+	}
+	return val, nil
 }
 
 
@@ -82,7 +90,11 @@ func Base(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kw
 		return nil, err
 	}
 	
-	return base(thread, fn, path)
+	val, err := base(thread, fn, path)
+	if err != nil {
+		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
+	}
+	return val, nil
 }
 
 
@@ -108,7 +120,11 @@ func Dir(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwa
 		return nil, err
 	}
 	
-	return dir(thread, fn, path)
+	val, err := dir(thread, fn, path)
+	if err != nil {
+		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
+	}
+	return val, nil
 }
 
 
@@ -143,7 +159,11 @@ func Split(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, k
 		return nil, err
 	}
 	
-	return split(thread, fn, path)
+	val, err := split(thread, fn, path)
+	if err != nil {
+		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
+	}
+	return val, nil
 }
 
 
@@ -169,7 +189,11 @@ func Splitext(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple
 		return nil, err
 	}
 	
-	return splitext(thread, fn, path)
+	val, err := splitext(thread, fn, path)
+	if err != nil {
+		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
+	}
+	return val, nil
 }
 
 
