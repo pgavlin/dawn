@@ -6,7 +6,7 @@ def run_in_windows_venv(cmd):
 
 run_in_venv = run_in_windows_venv if host.os == "windows" else run_in_posix_venv
 
-@target(sources=["requirements.txt"])
+@target(sources=["requirements.txt"], generates=["venv"])
 def venv():
     """
     Creates a venv for the docs build.
