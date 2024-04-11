@@ -1,4 +1,8 @@
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - main
+  pull_request:
 name: Test
 jobs:
   test:
@@ -22,8 +26,18 @@ jobs:
       uses: actions/checkout@v4
     - name: Bootstrap
       run: go install ./cmd/dawn
+    - name: Restore cache
+      uses: actions/cache/restore@v3
+      with:
+        path: .dawn/build
+        key: dawn-build-${{ github.ref }}
     - name: Build
       run: dawn
+    - name: Save cache
+      uses: actions/cache/save@v3
+      with:
+        path: .dawn/build
+        key: dawn-build-${{ github.ref }}
     - name: Test
       run: go test ./... -coverprofile=coverage.out
     - name: Upload coverage data
