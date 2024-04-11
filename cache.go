@@ -34,6 +34,8 @@ func (c *cache) get(key string) (starlark.Value, bool) {
 //     once calls the given callable if and only if key is not present in the cache.
 //
 //     The result is stored in the cache under the given key.
+//
+//     Returns the result of the call or the cached value.
 //     """
 //
 //starlark:builtin
