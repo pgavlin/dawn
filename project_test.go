@@ -71,6 +71,10 @@ func (e *testEvents) RunDone(err error) {
 	e.event("RunDone", nil, "err", err)
 }
 
+func (e *testEvents) FileChanged(label *label.Label) {
+	e.event("FileChanged", label)
+}
+
 func (e *testEvents) event(kind string, label *label.Label, pairs ...interface{}) {
 	e.m.Lock()
 	defer e.m.Unlock()
