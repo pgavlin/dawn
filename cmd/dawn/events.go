@@ -104,6 +104,10 @@ func (e *lineRenderer) RunDone(err error) {
 	}
 }
 
+func (e *lineRenderer) FileChanged(label *label.Label) {
+	e.print(label, "changed")
+}
+
 func (e *lineRenderer) print(label *label.Label, message string) {
 	e.fprint(e.stdout, label, message)
 }
@@ -183,6 +187,10 @@ func (e *dotRenderer) TargetSucceeded(label *label.Label, changed bool) {
 func (e *dotRenderer) RunDone(err error) {
 	e.work.graph.dot(e.dest, func(n *node) bool { return n.status != "" && n.status != "up-to-date" })
 	e.next.RunDone(err)
+}
+
+func (e *dotRenderer) FileChanged(label *label.Label) {
+	e.next.FileChanged(label)
 }
 
 func (e *dotRenderer) decorateNode(label *label.Label, decorator func(n *node)) {
@@ -269,6 +277,11 @@ func (e *jsonRenderer) TargetSucceeded(label *label.Label, changed bool) {
 func (e *jsonRenderer) RunDone(err error) {
 	e.event("RunDone", nil, "err", errMessage(err))
 	e.next.RunDone(err)
+}
+
+func (e *jsonRenderer) FileChanged(label *label.Label) {
+	e.event("FileChanged", label)
+	e.next.FileChanged(label)
 }
 
 func (e *jsonRenderer) event(kind string, label *label.Label, pairs ...interface{}) {
@@ -783,6 +796,15 @@ func (e *statusRenderer) TargetSucceeded(label *label.Label, changed bool) {
 
 func (e *statusRenderer) RunDone(err error) {
 }
+
+func (e *statusRenderer) FileChanged(label *label.Label) {
+	e.m.Lock()
+	defer e.m.Unlock()
+
+	e.statusLine = color.YellowString("[%s] changed", label)
+	e.dirty = true
+}
+
 
 func (e *statusRenderer) Close() error {
 	e.ticker.Stop()

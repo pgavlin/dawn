@@ -228,6 +228,12 @@ func (proj *Project) Watch(label *label.Label) error {
 
 				if !strings.HasPrefix(event.Path(), proj.work) && !proj.ignored(rel) {
 					dirty = true
+
+					label, err := sourceLabel("//", rel)
+					if err != nil {
+						continue
+					}
+					proj.events.FileChanged(label)
 				}
 
 			case <-rate.C:
