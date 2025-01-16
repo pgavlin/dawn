@@ -4,7 +4,6 @@ import (
 	"archive/zip"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
@@ -123,7 +122,7 @@ func (proj *Project) fetchModule(l *label.Label) (path string, err error) {
 		if err != nil {
 			return "", fmt.Errorf("determining latest version: %w", err)
 		}
-		vs, err := ioutil.ReadAll(contents)
+		vs, err := io.ReadAll(contents)
 		if err != nil {
 			return "", fmt.Errorf("determining latest version: %w", err)
 		}
