@@ -19,11 +19,12 @@ import (
 )
 
 type workspace struct {
-	root     string
-	package_ string
-	reindex  bool
-	verbose  bool
-	diff     bool
+	root       string
+	configFile string
+	package_   string
+	reindex    bool
+	verbose    bool
+	diff       bool
 
 	project  *dawn.Project
 	graph    graph
@@ -36,17 +37,22 @@ func (w *workspace) init() error {
 		return err
 	}
 
-	rootDir := wd
+	rootDir, file := wd, ""
 	for {
+		if _, err := os.Stat(filepath.Join(rootDir, "dawn.toml")); err == nil {
+			file = "dawn.toml"
+			break
+		}
 		if _, err := os.Stat(filepath.Join(rootDir, ".dawnconfig")); err == nil {
+			file = ".dawnconfig"
 			break
 		}
 		if rootDir == "/" || rootDir == "." {
-			return errors.New("could not find .dawnconfig")
+			return errors.New("could not find dawn.toml or .dawnconfig")
 		}
 		rootDir = filepath.Dir(rootDir)
 	}
-	w.root = rootDir
+	w.root, w.configFile = rootDir, file
 
 	pkg, err := filepath.Rel(w.root, wd)
 	if err != nil {

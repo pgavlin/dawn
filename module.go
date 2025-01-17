@@ -1,6 +1,7 @@
 package dawn
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"sync"
@@ -19,8 +20,10 @@ type module struct {
 
 	dependencies []string
 
-	label *label.Label
-	path  string
+	label        *label.Label
+	path         string
+	projectPath  string
+	requirements map[string]string
 
 	loaded bool
 	data   starlark.StringDict
@@ -80,11 +83,11 @@ func (m *module) wait(waiter *module) (starlark.StringDict, error) {
 
 // env returns a thread and builtins appropriate for running this module's code.
 func (m *module) env(proj *Project) (*starlark.Thread, starlark.StringDict, error) {
-	path, err := proj.fetchModule(m.label)
+	path, moduleReqs, err := proj.fetchModule(context.TODO(), m.label)
 	if err != nil {
 		return nil, nil, err
 	}
-	m.path = path
+	m.path, m.requirements = path, moduleReqs
 
 	t := starlark.Thread{
 		Name: m.label.String(),
@@ -92,15 +95,7 @@ func (m *module) env(proj *Project) (*starlark.Thread, starlark.StringDict, erro
 			proj.events.Print(m.label, msg)
 		},
 		Load: func(t *starlark.Thread, rawLabel string) (starlark.StringDict, error) {
-			label, err := label.Parse(rawLabel)
-			if err != nil {
-				return nil, err
-			}
-			label, _ = label.RelativeTo(m.label.Package)
-			label.Kind = "module"
-
-			m.dependencies = append(m.dependencies, label.String())
-			return proj.loadModule(m, label)
+			return m.loadModule(proj, rawLabel)
 		},
 	}
 
@@ -130,6 +125,27 @@ func (m *module) env(proj *Project) (*starlark.Thread, starlark.StringDict, erro
 	builtins["package"] = starlark.String(m.label.Package)
 
 	return &t, builtins, nil
+}
+
+func (m *module) loadModule(proj *Project, rawLabel string) (starlark.StringDict, error) {
+	label, err := label.Parse(rawLabel)
+	if err != nil {
+		return nil, err
+	}
+	if label.Project == "" {
+		label.Project = m.label.Project
+	} else if label.IsAlias() {
+		req, ok := m.requirements[label.Project]
+		if !ok {
+			return nil, fmt.Errorf("no project with alias %q", label.Project)
+		}
+		label.Project = req
+	}
+	label, _ = label.RelativeTo(m.label.Package)
+	label.Kind = "module"
+
+	m.dependencies = append(m.dependencies, label.String())
+	return proj.loadModule(m, label)
 }
 
 // load executes the module's code.

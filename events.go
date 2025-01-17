@@ -12,6 +12,13 @@ type Events interface {
 	// Print logs a line of output associated with a module or target.
 	Print(label *label.Label, line string)
 
+	// RequirementLoading is called when a referenced project is being loaded.
+	RequirementLoading(label *label.Label, version string)
+	// RequirementLoaded is called when a referenced project has finished loading.
+	RequirementLoaded(label *label.Label, version string)
+	// RequirementLoadFailed is called when a referenced project fails to load.
+	RequirementLoadFailed(label *label.Label, version string, err error)
+
 	// ModuleLoading is called when the given module begins loading.
 	ModuleLoading(label *label.Label)
 	// ModuleLoaded is called when the given module finishes loading successfully.
@@ -42,6 +49,9 @@ type discardEventsT int
 var DiscardEvents = discardEventsT(0)
 
 func (discardEventsT) Print(label *label.Label, line string)                                   {}
+func (discardEventsT) RequirementLoading(label *label.Label, version string)                   {}
+func (discardEventsT) RequirementLoaded(label *label.Label, version string)                    {}
+func (discardEventsT) RequirementLoadFailed(label *label.Label, version string, err error)     {}
 func (discardEventsT) ModuleLoading(label *label.Label)                                        {}
 func (discardEventsT) ModuleLoaded(label *label.Label)                                         {}
 func (discardEventsT) ModuleLoadFailed(label *label.Label, err error)                          {}
@@ -73,11 +83,14 @@ func (e *runEvents) Close() {
 	<-e.done
 }
 
-func (*runEvents) ModuleLoading(label *label.Label)               {}
-func (*runEvents) ModuleLoaded(label *label.Label)                {}
-func (*runEvents) ModuleLoadFailed(label *label.Label, err error) {}
-func (*runEvents) LoadDone(err error)                             {}
-func (*runEvents) FileChanged(label *label.Label)                 {}
+func (*runEvents) RequirementLoading(label *label.Label, version string)               {}
+func (*runEvents) RequirementLoaded(label *label.Label, version string)                {}
+func (*runEvents) RequirementLoadFailed(label *label.Label, version string, err error) {}
+func (*runEvents) ModuleLoading(label *label.Label)                                    {}
+func (*runEvents) ModuleLoaded(label *label.Label)                                     {}
+func (*runEvents) ModuleLoadFailed(label *label.Label, err error)                      {}
+func (*runEvents) LoadDone(err error)                                                  {}
+func (*runEvents) FileChanged(label *label.Label)                                      {}
 
 func (e *runEvents) Print(label *label.Label, line string) {
 	e.c <- starlarkstruct.FromStringDict(starlarkstruct.Default, starlark.StringDict{

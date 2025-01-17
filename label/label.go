@@ -4,22 +4,19 @@ import (
 	"encoding"
 	"errors"
 	"strings"
-
-	"github.com/blang/semver"
 )
 
 // A Label represents a parsed label.
 //
 // The general form represented is:
 //
-//    [kind:][[module[+version]@][//]package][:name]
+//	[kind:][[[project]//]package][:name]
 //
 // If the package is omitted and the name is present, the label is relative to the
 // current package.
 type Label struct {
 	Kind    string
-	Module  string
-	Version *semver.Version
+	Project string
 	Package string
 	Name    string
 }
@@ -34,27 +31,21 @@ func Parse(rawlabel string) (*Label, error) {
 		nameColon = len(rawlabel)
 	}
 
-	kindModuleAndPkg := rawlabel[:nameColon]
+	kindProjectAndPkg := rawlabel[:nameColon]
 
-	kind, moduleAndPkg := "", ""
-	if kindColon := strings.IndexByte(kindModuleAndPkg, ':'); kindColon != -1 {
-		kind, moduleAndPkg = kindModuleAndPkg[:kindColon], kindModuleAndPkg[kindColon+1:]
+	kind, projectAndPkg := "", ""
+	if kindColon := strings.IndexByte(kindProjectAndPkg, ':'); kindColon != -1 {
+		kind, projectAndPkg = kindProjectAndPkg[:kindColon], kindProjectAndPkg[kindColon+1:]
 	} else {
-		moduleAndPkg = kindModuleAndPkg
+		projectAndPkg = kindProjectAndPkg
 	}
 
-	module, version, pkg := "", (*semver.Version)(nil), ""
-	if moduleAt := strings.IndexByte(moduleAndPkg, '@'); moduleAt != -1 && !strings.HasPrefix(moduleAndPkg, "//") {
-		module, pkg = moduleAndPkg[:moduleAt], moduleAndPkg[moduleAt+1:]
-		if versionPlus := strings.IndexByte(module, '+'); versionPlus != -1 {
-			v, err := semver.ParseTolerant(module[versionPlus+1:])
-			if err != nil {
-				return nil, err
-			}
-			module, version = module[:versionPlus], &v
-		}
-	} else {
-		pkg = moduleAndPkg
+	project, pkg := "", projectAndPkg
+	if i := strings.Index(projectAndPkg, "//"); i != -1 {
+		project, pkg = projectAndPkg[:i], projectAndPkg[i:]
+	}
+	if strings.ContainsAny(project, ":") {
+		return nil, errors.New("project may not contain ':")
 	}
 
 	pkg, err := Clean(pkg)
@@ -72,29 +63,34 @@ func Parse(rawlabel string) (*Label, error) {
 
 	l := &Label{
 		Kind:    kind,
-		Module:  module,
-		Version: version,
+		Project: project,
 		Package: pkg,
 		Name:    name,
 	}
-	if module != "" && !l.IsAbs() {
-		return nil, errors.New("labels with modules must be absolute")
+	if project != "" && !l.IsAbs() {
+		return nil, errors.New("labels with projects must be absolute")
 	}
 	return l, nil
 }
 
-func New(kind, module, pkg, name string) (*Label, error) {
+func New(kind, project, pkg, name string) (*Label, error) {
 	if strings.ContainsAny(kind, ":/") {
 		return nil, errors.New("kind may not contain ':' or '/'")
+	}
+	if strings.ContainsAny(project, ":") {
+		return nil, errors.New("project may not contain ':'")
 	}
 	pkg, err := Clean(pkg)
 	if err != nil {
 		return nil, err
 	}
+	if project != "" && !strings.HasPrefix(pkg, "//") {
+		return nil, errors.New("labels with projects must use absolute package paths")
+	}
 	if strings.ContainsAny(name, ":/") {
 		return nil, errors.New("name may not contain ':' or '/'")
 	}
-	return &Label{Kind: kind, Module: module, Package: pkg, Name: name}, nil
+	return &Label{Kind: kind, Project: project, Package: pkg, Name: name}, nil
 }
 
 func (l *Label) MarshalText() ([]byte, error) {
@@ -114,6 +110,10 @@ func (l *Label) IsAbs() bool {
 	return strings.HasPrefix(l.Package, "//")
 }
 
+func (l *Label) IsAlias() bool {
+	return strings.IndexByte(l.Project, '/') == -1
+}
+
 func (l *Label) RelativeTo(pkg string) (*Label, error) {
 	if l.IsAbs() {
 		return l, nil
@@ -124,8 +124,7 @@ func (l *Label) RelativeTo(pkg string) (*Label, error) {
 	}
 	return &Label{
 		Kind:    l.Kind,
-		Module:  l.Module,
-		Version: l.Version,
+		Project: l.Project,
 		Package: pkg,
 		Name:    l.Name,
 	}, nil
@@ -137,13 +136,8 @@ func (l *Label) String() string {
 		b.WriteString(l.Kind)
 		b.WriteRune(':')
 	}
-	if l.Module != "" {
-		b.WriteString(l.Module)
-		if l.Version != nil {
-			b.WriteRune('+')
-			b.WriteString(l.Version.String())
-		}
-		b.WriteRune('@')
+	if l.Project != "" {
+		b.WriteString(l.Project)
 	}
 	b.WriteString(l.Package)
 	if l.Name != "" {

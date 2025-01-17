@@ -14,6 +14,7 @@ import (
 	"github.com/pgavlin/dawn"
 	"github.com/pgavlin/dawn/cmd/dawn/internal/term"
 	"github.com/pgavlin/dawn/diff"
+	"github.com/pgavlin/dawn/internal/project"
 	"github.com/pgavlin/dawn/label"
 	starlarkjson "go.starlark.net/lib/json"
 	starlark "go.starlark.net/starlark"
@@ -48,6 +49,18 @@ func (e *lineRenderer) Close() error {
 
 func (e *lineRenderer) Print(label *label.Label, line string) {
 	e.print(label, line)
+}
+
+func (e *lineRenderer) RequirementLoading(label *label.Label, version string) {
+	e.print(label, "loading")
+}
+
+func (e *lineRenderer) RequirementLoaded(label *label.Label, version string) {
+	e.print(label, "loaded")
+}
+
+func (e *lineRenderer) RequirementLoadFailed(label *label.Label, version string, err error) {
+	e.printe(label, fmt.Sprintf("failed: %v", errMessage(err)))
 }
 
 func (e *lineRenderer) ModuleLoading(label *label.Label) {
@@ -144,6 +157,18 @@ func (e *dotRenderer) Print(label *label.Label, line string) {
 	e.next.Print(label, line)
 }
 
+func (e *dotRenderer) RequirementLoading(label *label.Label, version string) {
+	e.next.RequirementLoading(label, version)
+}
+
+func (e *dotRenderer) RequirementLoaded(label *label.Label, version string) {
+	e.next.RequirementLoaded(label, version)
+}
+
+func (e *dotRenderer) RequirementLoadFailed(label *label.Label, version string, err error) {
+	e.next.RequirementLoadFailed(label, version, err)
+}
+
 func (e *dotRenderer) ModuleLoading(label *label.Label) {
 	e.next.ModuleLoading(label)
 }
@@ -224,6 +249,21 @@ func (e *jsonRenderer) Close() error {
 func (e *jsonRenderer) Print(label *label.Label, line string) {
 	e.event("Print", label, "line", line)
 	e.next.Print(label, line)
+}
+
+func (e *jsonRenderer) RequirementLoading(label *label.Label, version string) {
+	e.event("RequirementLoading", label, "version", version)
+	e.next.RequirementLoading(label, version)
+}
+
+func (e *jsonRenderer) RequirementLoaded(label *label.Label, version string) {
+	e.event("RequirementLoaded", label, "version", version)
+	e.next.RequirementLoaded(label, version)
+}
+
+func (e *jsonRenderer) RequirementLoadFailed(label *label.Label, version string, err error) {
+	e.event("RequirementLoadFailed", label, "version", version, "err", errMessage(err))
+	e.next.RequirementLoadFailed(label, version, err)
 }
 
 func (e *jsonRenderer) ModuleLoading(label *label.Label) {
@@ -717,6 +757,18 @@ func (e *statusRenderer) Print(label *label.Label, line string) {
 	}
 }
 
+func (e *statusRenderer) RequirementLoading(label *label.Label, version string) {
+	e.targetStarted(label, "", nil, fmt.Sprintf("downloading %v...", version))
+}
+
+func (e *statusRenderer) RequirementLoaded(label *label.Label, version string) {
+	e.targetDone(label, color.GreenString(fmt.Sprintf("downloaded %v", version)), true, false)
+}
+
+func (e *statusRenderer) RequirementLoadFailed(label *label.Label, version string, err error) {
+	e.targetDone(label, color.RedString("failed: %v", errMessage(err)), true, true)
+}
+
 func (e *statusRenderer) ModuleLoading(label *label.Label) {
 	e.targetStarted(label, "", nil, "loading...")
 }
@@ -805,7 +857,6 @@ func (e *statusRenderer) FileChanged(label *label.Label) {
 	e.dirty = true
 }
 
-
 func (e *statusRenderer) Close() error {
 	e.ticker.Stop()
 	e.render(time.Now(), true)
@@ -890,8 +941,27 @@ func newRenderer(verbose, diff bool, onLoaded func()) (renderer, error) {
 }
 
 func errMessage(err error) string {
+	if err == nil {
+		return ""
+	}
 	if evalErr, ok := err.(*starlark.EvalError); ok {
 		return evalErr.Backtrace()
 	}
 	return err.Error()
+}
+
+type resolveEvents struct {
+	events dawn.Events
+}
+
+func (r resolveEvents) ProjectLoading(req project.RequirementConfig) {
+	r.events.RequirementLoading(&label.Label{Kind: "project", Project: req.Path}, req.Version)
+}
+
+func (r resolveEvents) ProjectLoaded(req project.RequirementConfig) {
+	r.events.RequirementLoaded(&label.Label{Kind: "project", Project: req.Path}, req.Version)
+}
+
+func (r resolveEvents) ProjectLoadFailed(req project.RequirementConfig, err error) {
+	r.events.RequirementLoadFailed(&label.Label{Kind: "project", Project: req.Path}, req.Version, err)
 }

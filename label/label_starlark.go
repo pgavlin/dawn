@@ -30,13 +30,8 @@ func (l *Label) Attr(name string) (starlark.Value, error) {
 	switch name {
 	case "kind":
 		return starlark.String(l.Kind), nil
-	case "module":
-		return starlark.String(l.Module), nil
-	case "version":
-		if l.Version == nil {
-			return starlark.None, nil
-		}
-		return starlark.String(l.Version.String()), nil
+	case "project":
+		return starlark.String(l.Project), nil
 	case "package":
 		return starlark.String(l.Package), nil
 	case "name":
@@ -47,5 +42,5 @@ func (l *Label) Attr(name string) (starlark.Value, error) {
 }
 
 func (l *Label) AttrNames() []string {
-	return []string{"kind", "module", "version", "package", "name"}
+	return []string{"kind", "project", "package", "name"}
 }

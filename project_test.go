@@ -36,6 +36,18 @@ func (e *testEvents) Print(label *label.Label, line string) {
 	e.event("Print", label, "line", line)
 }
 
+func (e *testEvents) RequirementLoading(label *label.Label, version string) {
+	e.event("RequirementLoading", label, "version", version)
+}
+
+func (e *testEvents) RequirementLoaded(label *label.Label, version string) {
+	e.event("RequirementLoaded", label, "version", version)
+}
+
+func (e *testEvents) RequirementLoadFailed(label *label.Label, version string, err error) {
+	e.event("RequirementLoadFailed", label, "version", version, "err", err)
+}
+
 func (e *testEvents) ModuleLoading(label *label.Label) {
 	e.event("ModuleLoading", label)
 }

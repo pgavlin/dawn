@@ -64,6 +64,8 @@ func init() {
 	rootCmd.AddCommand(gcCmd)
 	rootCmd.AddCommand(completionCmd)
 	rootCmd.AddCommand(graphCmd)
+	rootCmd.AddCommand(newGetCommand())
+	rootCmd.AddCommand(tidyCmd)
 
 	rootCmd.SetHelpCommand(helpCmd)
 }

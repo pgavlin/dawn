@@ -1,0 +1,10 @@
+name = 'project'
+version = 'v1.2.3'
+
+ignore = ['**/testdata']
+
+[requirements]
+alpha = {path = 'reqs/alpha', version = 'v1.2.3'}
+beta = {path = 'reqs/beta', version = 'v1.2.3'}
+delta-pre = {path = 'reqs/delta-pre', version = 'v0.1.2'}
+'gamma@v2' = {path = 'reqs/gamma@v2', version = 'v2.3.4'}
