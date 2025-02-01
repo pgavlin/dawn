@@ -291,6 +291,7 @@ func (proj *Project) GC() error {
 	}
 
 	markPath(filepath.Join(proj.work, "index.json"))
+	markPath(filepath.Join(proj.work, "temp"))
 	for _, t := range proj.targets {
 		markPath(proj.targetInfoPath(t.target.Label()))
 	}
