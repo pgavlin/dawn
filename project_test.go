@@ -95,6 +95,8 @@ func (e *testEvents) event(kind string, label *label.Label, pairs ...interface{}
 type projectTest struct {
 	path     string
 	edits    []string
+	loadErr  string
+	runErr   string
 	validate func(t *testing.T, dir string, events []testEvent)
 }
 
@@ -132,9 +134,17 @@ func (pt *projectTest) run(t *testing.T) {
 		require.NoError(t, err)
 
 		proj, err := Load(temp, options)
+		if pt.loadErr != "" {
+			assert.ErrorContains(t, err, pt.loadErr)
+			return
+		}
 		require.NoError(t, err)
 
 		err = proj.Run(def, nil)
+		if pt.runErr != "" {
+			assert.ErrorContains(t, err, pt.runErr)
+			return
+		}
 		require.NoError(t, err)
 
 		pt.validate(t, temp, events.events)
@@ -186,4 +196,20 @@ func TestTargetDiffs(t *testing.T) {
 		}
 		pt.run(t)
 	}
+}
+
+func TestLocalModules(t *testing.T) {
+	pt := projectTest{
+		path:     "testdata/local-modules",
+		validate: func(t *testing.T, _ string, _ []testEvent) {},
+	}
+	pt.run(t)
+}
+
+func TestCyclicModules(t *testing.T) {
+	pt := projectTest{
+		path:    "testdata/cyclic-modules",
+		loadErr: "cyclic dependency",
+	}
+	pt.run(t)
 }

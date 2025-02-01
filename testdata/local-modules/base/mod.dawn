@@ -1,0 +1,5 @@
+load(":mod2.dawn", "mod2")
+
+def mod():
+    print("mod")
+    mod2()

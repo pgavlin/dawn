@@ -1,0 +1,4 @@
+load(":mod2.dawn", "mod2")
+
+def mod():
+    pass
