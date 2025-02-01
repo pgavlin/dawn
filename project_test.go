@@ -2,6 +2,7 @@ package dawn
 
 import (
 	"bytes"
+	"io"
 	"os"
 	"path/filepath"
 	"sync"
@@ -148,6 +149,13 @@ func (pt *projectTest) run(t *testing.T) {
 		require.NoError(t, err)
 
 		pt.validate(t, temp, events.events)
+
+		repl := filepath.Join(temp, "repl.dawn")
+		if _, err := os.Stat(repl); err == nil {
+			thread, globals := proj.REPLEnv(io.Discard, &label.Label{Package: def.Package})
+			_, err := starlark.ExecFile(thread, repl, nil, globals)
+			require.NoError(t, err)
+		}
 	}
 }
 
