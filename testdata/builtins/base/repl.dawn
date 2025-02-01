@@ -1,0 +1,14 @@
+load("//:BUILD.dawn", "assert")
+
+run("//:default")
+run("//:default", callback=lambda event: print(event))
+run(get_target("//:default"), always=True, callback=lambda event: print(event))
+
+fs = flags()
+assert(fs)
+
+ts = targets()
+assert(ts)
+
+sources = sources()
+assert(sources == [])

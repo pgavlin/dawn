@@ -8,7 +8,7 @@ def dep():
 
 @target(deps=[dep])
 def default():
-    pass
+    print("default!")
 
 assert(dir(default) == ["always", "dependencies", "function", "generates", "label", "sources"])
 assert(default.label)
@@ -29,7 +29,7 @@ foo = parse_flag("foo")
 assert(foo == None)
 
 paths = glob(["*"], exclude=[".*"])
-assert(paths == ["BUILD.dawn"])
+assert(paths == ["BUILD.dawn", "repl.dawn"])
 
 cache = Cache()
 assert(cache.once("foo", lambda: 42) == 42)

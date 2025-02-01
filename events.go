@@ -95,11 +95,15 @@ func (e *runEvents) TargetUpToDate(label *label.Label) {
 }
 
 func (e *runEvents) TargetEvaluating(label *label.Label, reason string, diff diff.ValueDiff) {
+	diffValue := starlark.Value(starlark.None)
+	if diff != nil {
+		diffValue = diff
+	}
 	e.c <- starlarkstruct.FromStringDict(starlarkstruct.Default, starlark.StringDict{
 		"kind":   starlark.String("TargetEvaluating"),
 		"label":  starlark.String(label.String()),
 		"reason": starlark.String(reason),
-		"diff":   diff,
+		"diff":   diffValue,
 	})
 
 }
