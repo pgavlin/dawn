@@ -213,3 +213,11 @@ func TestCyclicModules(t *testing.T) {
 	}
 	pt.run(t)
 }
+
+func TestBuiltins(t *testing.T) {
+	pt := projectTest{
+		path:     "testdata/builtins",
+		validate: func(t *testing.T, _ string, _ []testEvent) {},
+	}
+	pt.run(t)
+}
