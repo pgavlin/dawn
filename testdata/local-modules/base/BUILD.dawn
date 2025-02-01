@@ -1,0 +1,9 @@
+load(":mod.dawn", "mod")
+load(":mod2.dawn", "mod2")
+
+mod()
+mod2()
+
+@target()
+def default():
+    pass
