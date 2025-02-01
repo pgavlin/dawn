@@ -1,0 +1,36 @@
+def assert(cond):
+    if not cond:
+        fail("assert failed")
+
+@target()
+def dep():
+    pass
+
+@target(deps=[dep])
+def default():
+    pass
+
+assert(dir(default) == ["always", "dependencies", "function", "generates", "label", "sources"])
+assert(default.label)
+assert(not default.always)
+assert(default.function)
+assert(default.dependencies == ["//:dep"])
+assert(default.sources == [])
+assert(default.generates == [])
+
+assert(path("//:BUILD.dawn") == os.path.join(path("//"), "BUILD.dawn"))
+assert(label("./BUILD.dawn") == "//:BUILD.dawn")
+
+(l, ok) = contains("./BUILD.dawn")
+assert(ok)
+assert(l)
+
+foo = parse_flag("foo")
+assert(foo == None)
+
+paths = glob(["*"], exclude=[".*"])
+assert(paths == ["BUILD.dawn"])
+
+cache = Cache()
+assert(cache.once("foo", lambda: 42) == 42)
+assert(cache.once("foo", lambda: 64) == 42)

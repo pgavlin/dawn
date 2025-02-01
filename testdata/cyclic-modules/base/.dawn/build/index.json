@@ -1,9 +1,0 @@
-{
-    "flags": [],
-    "targets": [
-        {
-            "label": "//:default",
-            "summary": ""
-        }
-    ]
-}

@@ -109,6 +109,11 @@ var parentDir = string([]rune{'.', '.', os.PathSeparator})
 //
 //starlark:builtin
 func (proj *Project) builtin_contains(thread *starlark.Thread, fn *starlark.Builtin, path string) (starlark.Value, error) {
+	cwd := util.Getwd(thread)
+	if !filepath.IsAbs(path) {
+		path = filepath.Join(cwd, path)
+	}
+
 	path, err := filepath.Abs(path)
 	if err != nil {
 		return nil, err
@@ -433,6 +438,7 @@ func (proj *Project) builtin_glob(
 			return nil
 		}
 
+		path = path[1:]
 		if includeRE.MatchString(path) && !excludeRE.MatchString(path) {
 			sources.Append(starlark.String(path))
 		}
