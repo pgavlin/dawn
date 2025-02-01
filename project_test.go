@@ -141,6 +141,9 @@ func (pt *projectTest) run(t *testing.T) {
 		}
 		require.NoError(t, err)
 
+		err = proj.GC()
+		require.NoError(t, err)
+
 		err = proj.Run(def, nil)
 		if pt.runErr != "" {
 			assert.ErrorContains(t, err, pt.runErr)
@@ -175,7 +178,7 @@ func TestSimpleFiles(t *testing.T) {
 func TestSimpleTargets(t *testing.T) {
 	pt := projectTest{
 		path:  "testdata/simple-targets",
-		edits: []string{"edit1", "edit2"},
+		edits: []string{"edit1", "edit2", "edit3"},
 		validate: func(t *testing.T, dir string, _ []testEvent) {
 			expected := readFile(t, filepath.Join(dir, "expected.md"))
 			actual := readFile(t, filepath.Join(dir, "out.md"))
