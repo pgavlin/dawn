@@ -4,6 +4,10 @@ version = "0.1.0"
 
 debug = parse_flag("debug", type=bool, help="True to run a debug build")
 
+target_cache = Cache()
+def is_installed(pkg_path):
+    return target_cache.once(pkg_path, lambda: os.exists(sh.output("go list -f '{{.Target}}' " + pkg_path).strip()))
+
 def go_binary(name, ldflags=None, output=None, docs=None, deps=None, goos=None, goarch=None, disable_cgo=None):
     (suffix, env) = ("", {})
     if goos:
@@ -23,14 +27,12 @@ def go_binary(name, ldflags=None, output=None, docs=None, deps=None, goos=None, 
 
     ldflags = ldflags or ""
 
-    # Used to bust the cache if the binary is goinstalled but is not on the path.
-    installed = None
-    if os.exists(os.path.join(sh.output("go env GOPATH").strip(), name)):
-        installed = name
+    always = not output and not is_installed(path(f"//cmd/{name}"))
 
-    @target(name=name.replace("-", "_")+suffix, docs=docs, deps=deps, sources=go_sources(path(f"//cmd/{name}")))
+    generates = [output] if output else None
+
+    @target(name=name.replace("-", "_")+suffix, docs=docs, deps=deps, sources=go_sources(path(f"//cmd/{name}")), always=always, generates=generates)
     def binary():
-        installed
         sh.exec(f"go {cmd} {gcflags} {ldflags} github.com/pgavlin/dawn/cmd/{name}", env=env)
 
     return binary
