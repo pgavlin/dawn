@@ -25,7 +25,7 @@ def go_binary(name, ldflags=None, output=None, docs=None, deps=None, goos=None, 
 
     # Used to bust the cache if the binary is goinstalled but is not on the path.
     installed = None
-    if os.exists(os.path.join(sh.output("go env GOPATH"), name)):
+    if os.exists(os.path.join(sh.output("go env GOPATH").strip(), name)):
         installed = name
 
     @target(name=name.replace("-", "_")+suffix, docs=docs, deps=deps, sources=go_sources(path(f"//cmd/{name}")))
