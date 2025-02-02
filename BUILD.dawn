@@ -6,7 +6,7 @@ debug = parse_flag("debug", type=bool, help="True to run a debug build")
 
 target_cache = Cache()
 def is_installed(pkg_path):
-    return target_cache.once(pkg_path, lambda: os.exists(sh.output("go list -f '{{.Target}}' " + pkg_path).strip()))
+    return target_cache.once(pkg_path, lambda: os.exists(sh.output("go list -f '{{.Target}}' " + f"'{pkg_path}'").strip()))
 
 def go_binary(name, ldflags=None, output=None, docs=None, deps=None, goos=None, goarch=None, disable_cgo=None):
     (suffix, env) = ("", {})
