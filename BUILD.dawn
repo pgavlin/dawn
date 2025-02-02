@@ -23,8 +23,14 @@ def go_binary(name, ldflags=None, output=None, docs=None, deps=None, goos=None, 
 
     ldflags = ldflags or ""
 
+    # Used to bust the cache if the binary is goinstalled but is not on the path.
+    installed = None
+    if os.exists(os.path.join(sh.output("go env GOPATH").strip(), name)):
+        installed = name
+
     @target(name=name.replace("-", "_")+suffix, docs=docs, deps=deps, sources=go_sources(path(f"//cmd/{name}")))
     def binary():
+        installed
         sh.exec(f"go {cmd} {gcflags} {ldflags} github.com/pgavlin/dawn/cmd/{name}", env=env)
 
     return binary
