@@ -88,7 +88,8 @@ func TestGitRepository(t *testing.T) {
 
 				rev, err := repo.GetRevision(context.Background(), refID)
 				require.NoError(t, err)
-				assert.Equal(t, expected[:12], rev.ID())
+				assert.Equal(t, expected, rev.ID())
+				assert.Equal(t, expected[:12], rev.PseudoID())
 			})
 		}
 	})

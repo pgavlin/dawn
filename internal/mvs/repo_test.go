@@ -29,6 +29,10 @@ func (r *testRevision) ID() string {
 	return r.id
 }
 
+func (r *testRevision) PseudoID() string {
+	return r.id
+}
+
 func (r *testRevision) When() time.Time {
 	return r.when
 }

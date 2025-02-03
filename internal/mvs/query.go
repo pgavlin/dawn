@@ -196,7 +196,7 @@ func (q *querier) resolveRefQuery(ctx context.Context, repo vcs.Repository, majo
 		baseVersion = version.Version.Version
 	}
 
-	pseudoVersion := module.PseudoVersion(majorVersion, baseVersion, revision.When(), revision.ID())
+	pseudoVersion := module.PseudoVersion(majorVersion, baseVersion, revision.When(), revision.PseudoID())
 	return module.Version{Path: query.path, Version: pseudoVersion}, nil
 }
 

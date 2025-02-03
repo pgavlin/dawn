@@ -29,6 +29,10 @@ type gitCommit struct {
 }
 
 func (c *gitCommit) ID() string {
+	return c.c.Hash.String()
+}
+
+func (c *gitCommit) PseudoID() string {
 	return hex.EncodeToString(c.c.Hash[:6])
 }
 

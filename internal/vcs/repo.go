@@ -12,6 +12,7 @@ import (
 
 type Revision interface {
 	ID() string
+	PseudoID() string
 	When() time.Time
 	History() iter.Seq[Revision]
 }
