@@ -54,19 +54,19 @@ func TestGitRepository(t *testing.T) {
 		expected := []*Version{
 			{
 				Version: module.Version{
-					Path:    repo.Path(),
-					Version: "v0.1.0",
-				},
-				ProjectPath: ".",
-				RevisionID:  "b7f0897e2ca01b82e8bf1ddfaaff47f5680570f6",
-			},
-			{
-				Version: module.Version{
 					Path:    path.Join(repo.Path(), "subdir"),
 					Version: "v0.0.1",
 				},
 				ProjectPath: "subdir",
 				RevisionID:  "7c34061b3388a83d7a8bc323f4bf479b2862211f",
+			},
+			{
+				Version: module.Version{
+					Path:    repo.Path(),
+					Version: "v0.1.0",
+				},
+				ProjectPath: ".",
+				RevisionID:  "b7f0897e2ca01b82e8bf1ddfaaff47f5680570f6",
 			},
 		}
 

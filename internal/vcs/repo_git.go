@@ -180,7 +180,7 @@ func DialGitRepository(ctx context.Context, repoPath string, options *DialGitOpt
 	}
 
 	slices.SortStableFunc(versions, func(a, b *Version) int {
-		return -semver.Compare(a.Version.Version, b.Version.Version)
+		return semver.Compare(a.Version.Version, b.Version.Version)
 	})
 
 	return &gitRepository{
