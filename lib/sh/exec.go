@@ -44,6 +44,7 @@ func exec(thread *starlark.Thread, fn *starlark.Builtin, cmd, cwd string, env st
 	stdout, stderr := util.Stdio(thread)
 	options = append(options, interp.StdIO(nil, stdout, stderr))
 
+	fmt.Fprintln(stdout, cmd)
 	if err := run(context.Background(), file, options); err != nil {
 		if try {
 			return starlark.String(err.Error()), nil
@@ -82,12 +83,13 @@ func output(thread *starlark.Thread, fn *starlark.Builtin, cmd, cwd string, env 
 	}
 
 	var stdout strings.Builder
-	_, stderr := util.Stdio(thread)
+	threadStdout, stderr := util.Stdio(thread)
 	if try {
 		stderr = io.Discard
 	}
 	options = append(options, interp.StdIO(nil, &stdout, stderr))
 
+	fmt.Fprintln(threadStdout, cmd)
 	if err := run(context.Background(), file, options); err != nil {
 		if try {
 			return starlark.Tuple{starlark.None, starlark.String(err.Error())}, nil

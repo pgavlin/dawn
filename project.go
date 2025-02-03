@@ -15,6 +15,8 @@ import (
 	"time"
 
 	"github.com/mitchellh/go-homedir"
+	"github.com/pgavlin/dawn/internal/mvs"
+	"github.com/pgavlin/dawn/internal/project"
 	"github.com/pgavlin/dawn/internal/spell"
 	"github.com/pgavlin/dawn/label"
 	"github.com/pgavlin/dawn/runner"
@@ -43,8 +45,11 @@ type Project struct {
 
 	ignore *regexp.Regexp
 
-	moduleProxy string
-	moduleCache string
+	configPath   string
+	resolver     *mvs.Resolver
+	moduleCache  string
+	requirements map[string]string // maps project name to project path. local to each module.
+	buildList    map[string]string // maps project path to version
 
 	builtins starlark.StringDict
 
@@ -82,14 +87,12 @@ func Load(root string, options *LoadOptions) (proj *Project, err error) {
 	if err != nil {
 		return nil, fmt.Errorf("getting home directory: %w", err)
 	}
-	moduleProxy := "file://" + filepath.ToSlash(home) + "/.dawn/modules/proxy"
 	moduleCache := filepath.Join(home, ".dawn", "modules", "cache")
 
 	proj = &Project{
 		root:        root,
 		work:        filepath.Join(root, ".dawn", "build"),
 		temp:        filepath.Join(root, ".dawn", "build", "temp"),
-		moduleProxy: moduleProxy,
 		moduleCache: moduleCache,
 		flags:       map[string]*Flag{},
 		modules:     map[string]*module{},
@@ -98,6 +101,7 @@ func Load(root string, options *LoadOptions) (proj *Project, err error) {
 	preferIndex := false
 	options.apply(proj, &preferIndex)
 
+	proj.resolver = mvs.NewResolver(moduleCache, mvs.DefaultDialer, resolveEvents{proj.events})
 	if err := proj.loadConfig(); err != nil {
 		return nil, err
 	}
@@ -635,6 +639,22 @@ func IsTarget(l *label.Label) bool {
 
 func IsSource(l *label.Label) bool {
 	return l.Kind == "source"
+}
+
+type resolveEvents struct {
+	events Events
+}
+
+func (r resolveEvents) ProjectLoading(req project.RequirementConfig) {
+	r.events.RequirementLoading(&label.Label{Kind: "project", Project: req.Path}, req.Version)
+}
+
+func (r resolveEvents) ProjectLoaded(req project.RequirementConfig) {
+	r.events.RequirementLoaded(&label.Label{Kind: "project", Project: req.Path}, req.Version)
+}
+
+func (r resolveEvents) ProjectLoadFailed(req project.RequirementConfig, err error) {
+	r.events.RequirementLoadFailed(&label.Label{Kind: "project", Project: req.Path}, req.Version, err)
 }
 
 // def globals():

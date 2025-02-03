@@ -1,41 +1,21 @@
 package dawn
 
 import (
+	"context"
+	"errors"
 	"fmt"
-	"os"
+	"io/fs"
 	"path/filepath"
 
-	"github.com/pelletier/go-toml/v2"
+	"github.com/pgavlin/dawn/internal/mvs"
+	"github.com/pgavlin/dawn/internal/project"
 	"github.com/pgavlin/dawn/util"
 )
 
-type moduleConfig struct {
-	ModuleProxy string
-	ModuleCache string
-}
-
-type config struct {
-	Modules moduleConfig
-
-	Ignore []string
-}
-
 func (proj *Project) loadConfigFile(path string) error {
-	f, err := os.Open(path)
+	c, err := project.LoadConfigFile(path)
 	if err != nil {
 		return err
-	}
-	defer f.Close()
-
-	var c config
-	if err = toml.NewDecoder(f).Decode(&c); err != nil {
-		return err
-	}
-	if c.Modules.ModuleProxy != "" {
-		proj.moduleProxy = c.Modules.ModuleProxy
-	}
-	if c.Modules.ModuleCache != "" {
-		proj.moduleCache = c.Modules.ModuleCache
 	}
 
 	if len(c.Ignore) == 0 {
@@ -48,20 +28,31 @@ func (proj *Project) loadConfigFile(path string) error {
 		proj.ignore = ignore
 	}
 
+	reqs := make(map[string]string)
+	for name, req := range c.Requirements {
+		reqs[name] = req.Path
+	}
+	proj.requirements = reqs
+
+	buildList, err := mvs.BuildList(context.TODO(), c, proj.resolver)
+	if err != nil {
+		return fmt.Errorf("computing requirements: %w", err)
+	}
+	proj.buildList = buildList
+
 	return nil
 }
 
-func (proj *Project) loadConfig() error {
-	// load global settings first
-	globalPath := filepath.Join(proj.root, ".dawnconfig")
-	if err := proj.loadConfigFile(globalPath); err != nil {
-		return err
+func (proj *Project) loadConfig() (err error) {
+	for _, name := range []string{"dawn.toml", ".dawnconfig"} {
+		path := filepath.Join(proj.root, name)
+		if err = proj.loadConfigFile(path); err == nil {
+			proj.configPath = path
+			return nil
+		}
+		if !errors.Is(err, fs.ErrNotExist) {
+			return err
+		}
 	}
-
-	// load user settings second
-	userPath := filepath.Join(proj.root, ".dawnconfig.local")
-	if _, err := os.Stat(userPath); err == nil {
-		return proj.loadConfigFile(userPath)
-	}
-	return nil
+	return err
 }

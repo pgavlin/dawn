@@ -3,17 +3,8 @@ package label
 import (
 	"testing"
 
-	"github.com/blang/semver"
 	"github.com/stretchr/testify/assert"
 )
-
-func version(v string) *semver.Version {
-	sv, err := semver.ParseTolerant(v)
-	if err != nil {
-		panic(err)
-	}
-	return &sv
-}
 
 func TestParseLabel(t *testing.T) {
 	cases := []struct {
@@ -77,20 +68,40 @@ func TestParseLabel(t *testing.T) {
 			&Label{Kind: "kind", Package: "rel-pkg/path", Name: "target"},
 		},
 		{
-			"module@//pkg/path",
-			&Label{Module: "module", Package: "//pkg/path"},
+			"project//pkg/path",
+			&Label{Project: "project", Package: "//pkg/path"},
 		},
 		{
-			"module@//pkg/path:target",
-			&Label{Module: "module", Package: "//pkg/path", Name: "target"},
+			"project//pkg/path:target",
+			&Label{Project: "project", Package: "//pkg/path", Name: "target"},
 		},
 		{
-			"kind:module@//pkg/path:target",
-			&Label{Kind: "kind", Module: "module", Package: "//pkg/path", Name: "target"},
+			"kind:project//pkg/path:target",
+			&Label{Kind: "kind", Project: "project", Package: "//pkg/path", Name: "target"},
 		},
 		{
-			"kind:module+1.2.3@//pkg/path:target",
-			&Label{Kind: "kind", Module: "module", Version: version("1.2.3"), Package: "//pkg/path", Name: "target"},
+			"project@v2//pkg/path",
+			&Label{Project: "project@v2", Package: "//pkg/path"},
+		},
+		{
+			"project@v2//pkg/path:target",
+			&Label{Project: "project@v2", Package: "//pkg/path", Name: "target"},
+		},
+		{
+			"kind:project@v2//pkg/path:target",
+			&Label{Kind: "kind", Project: "project@v2", Package: "//pkg/path", Name: "target"},
+		},
+		{
+			"host/project@v2//pkg/path",
+			&Label{Project: "host/project@v2", Package: "//pkg/path"},
+		},
+		{
+			"host/project@v2//pkg/path:target",
+			&Label{Project: "host/project@v2", Package: "//pkg/path", Name: "target"},
+		},
+		{
+			"kind:host/project@v2//pkg/path:target",
+			&Label{Kind: "kind", Project: "host/project@v2", Package: "//pkg/path", Name: "target"},
 		},
 		{
 			"kind:pkg:with:colons:target",
@@ -121,23 +132,7 @@ func TestParseLabel(t *testing.T) {
 			nil,
 		},
 		{
-			"kind:module+1.2.3@rel-pkg/path:target",
-			nil,
-		},
-		{
-			"module@rel-pkg/path",
-			nil,
-		},
-		{
-			"module@rel-pkg/path:target",
-			nil,
-		},
-		{
-			"module+bad-version@//pkg",
-			nil,
-		},
-		{
-			"module+@//pkg",
+			"kind:invalid:project//path",
 			nil,
 		},
 	}

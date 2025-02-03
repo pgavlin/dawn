@@ -14,6 +14,8 @@ import (
 	"github.com/pgavlin/dawn/pickle"
 	"github.com/pgavlin/dawn/util"
 	"go.starlark.net/starlark"
+	"go.starlark.net/starlarkstruct"
+	"go.starlark.net/syntax"
 )
 
 // A function is the primary representation of a dawn build target.
@@ -67,13 +69,23 @@ func (f *function) Attr(name string) (starlark.Value, error) {
 		return util.StringList(f.sources).List(), nil
 	case "generates":
 		return util.StringList(f.gens).List(), nil
+	case "position":
+		if hasPosition, ok := f.function.(interface{ Position() syntax.Position }); ok {
+			pos := hasPosition.Position()
+			return starlarkstruct.FromStringDict(starlarkstruct.Default, starlark.StringDict{
+				"filename": starlark.String(pos.Filename()),
+				"line":     starlark.MakeInt(int(pos.Line)),
+				"column":   starlark.MakeInt(int(pos.Col)),
+			}), nil
+		}
+		return starlark.None, nil
 	default:
 		return nil, nil
 	}
 }
 
 func (f *function) AttrNames() []string {
-	return []string{"label", "always", "function", "dependencies", "generates", "sources"}
+	return []string{"label", "always", "function", "dependencies", "generates", "position", "sources"}
 }
 
 func (f *function) Project() *Project {

@@ -360,6 +360,10 @@ func (proj *Project) builtin_target(
 		gens = append(gens, path)
 	}
 
+	// TODO: Process the user-visible position. Basically, crawl the stack until we find the first frame in the root project's code.
+	//
+	// NOTE: this could also be extended through helper-function annotations.
+
 	l := &label.Label{
 		Package: m.label.Package,
 		Name:    name,

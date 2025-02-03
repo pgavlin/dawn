@@ -21,6 +21,8 @@ type Target interface {
 	Label() *label.Label
 	// Dependencies returns the labels of the targets the target depends upon.
 	Dependencies() []*label.Label
+	// Name returns the target's name, which is its stringified label.
+	Name() string
 	// Doc returns the target's documentation string.
 	Doc() string
 

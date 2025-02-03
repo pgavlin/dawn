@@ -10,11 +10,12 @@ def dep():
 def default():
     print("default!")
 
-assert(dir(default) == ["always", "dependencies", "function", "generates", "label", "sources"])
-assert(default.label)
+assert(dir(default) == ["always", "dependencies", "function", "generates", "label", "position", "sources"])
 assert(not default.always)
-assert(default.function)
 assert(default.dependencies == ["//:dep"])
+assert(default.function)
+assert(default.label)
+assert(default.position)
 assert(default.sources == [])
 assert(default.generates == [])
 
