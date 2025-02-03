@@ -2,9 +2,9 @@ package runner
 
 import (
 	"fmt"
+	"runtime"
 	"sync"
 	"sync/atomic"
-	"unsafe"
 )
 
 type CyclicDependencyError string
@@ -44,7 +44,7 @@ type target struct {
 	label  string
 	target Target
 
-	waiting unsafe.Pointer // *[]*target
+	waiting atomic.Pointer[[]*target]
 
 	status int
 	err    error
@@ -88,6 +88,9 @@ func (t *target) run(r *runner) {
 		t.c.Broadcast()
 	}
 
+	r.gate.enter()
+	defer r.gate.exit()
+
 	// Load the target.
 	tt, err := r.targetLoader.LoadTarget(t.label)
 	if err != nil {
@@ -120,7 +123,7 @@ func (e *engine) check(dep *target) error {
 		return CyclicDependencyError(fmt.Sprintf("cyclic dependency on %v", dep.label))
 	}
 
-	if waiting := (*[]*target)(atomic.LoadPointer(&dep.waiting)); waiting != nil {
+	if waiting := dep.waiting.Load(); waiting != nil {
 		return e.checkDeps(*waiting)
 	}
 	return nil
@@ -136,14 +139,17 @@ func (e *engine) checkDeps(deps []*target) error {
 }
 
 func (e *engine) EvaluateTargets(labels ...string) []Result {
+	e.runner.gate.exit()
+	defer e.runner.gate.enter()
+
 	targets := make([]*target, len(labels))
 	for i, label := range labels {
 		targets[i] = e.runner.getTarget(label)
 		targets[i].start(e.runner)
 	}
 
-	atomic.SwapPointer(&e.root.waiting, unsafe.Pointer(&targets))
-	defer atomic.SwapPointer(&e.root.waiting, nil)
+	e.root.waiting.Swap(&targets)
+	defer e.root.waiting.Swap(nil)
 
 	results := make([]Result, len(targets))
 	if err := e.checkDeps(targets); err != nil {
@@ -161,9 +167,40 @@ func (e *engine) EvaluateTargets(labels ...string) []Result {
 	return results
 }
 
+type gate struct {
+	m        sync.Mutex
+	cond     *sync.Cond
+	capacity int
+}
+
+func newGate(capacity int) *gate {
+	g := &gate{capacity: capacity}
+	g.cond = sync.NewCond(&g.m)
+	return g
+}
+
+func (g *gate) enter() {
+	g.m.Lock()
+	defer g.m.Unlock()
+
+	for g.capacity == 0 {
+		g.cond.Wait()
+	}
+	g.capacity--
+}
+
+func (g *gate) exit() {
+	g.m.Lock()
+	defer g.m.Unlock()
+
+	g.capacity++
+	g.cond.Signal()
+}
+
 type runner struct {
 	targetLoader Targets
 	targetMap    sync.Map // map[string]*target
+	gate         *gate
 }
 
 func (r *runner) getTarget(label string) *target {
@@ -172,7 +209,7 @@ func (r *runner) getTarget(label string) *target {
 }
 
 func Run(targets Targets, label string) error {
-	r := runner{targetLoader: targets}
+	r := runner{targetLoader: targets, gate: newGate(runtime.NumCPU())}
 	t := r.getTarget(label)
 	t.start(&r)
 	return t.wait()
