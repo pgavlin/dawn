@@ -313,6 +313,8 @@ func envPickler(x starlark.Value) (module, name string, args starlark.Tuple, err
 	switch x := x.(type) {
 	case *function:
 		return "dawn", "Target", starlark.Tuple{starlark.String(x.label.String())}, nil
+	case *volatile:
+		return "dawn", "Volatile", starlark.Tuple{}, nil
 	case *starlark.Builtin:
 		return "dawn", "Builtin", starlark.Tuple{}, nil
 	case *starlark.FunctionCode:
@@ -344,7 +346,7 @@ func envUnpickler(module, name string, args starlark.Tuple) (starlark.Value, err
 			return nil, fmt.Errorf("expcted 1 arg, got %v", len(args))
 		}
 		return args[0], nil
-	case "Builtin":
+	case "Builtin", "Volatile":
 		if len(args) != 0 {
 			return nil, fmt.Errorf("expected 0 args, got %v", len(args))
 		}

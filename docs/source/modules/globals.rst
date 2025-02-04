@@ -70,6 +70,23 @@
 
 
 
+.. py:class:: Volatile
+
+        A Volatile provides a a wrapper around an inner value that allows targets
+        to ignore irrelevant changes.
+        
+
+
+.. py:attribute:: Volatile.value
+
+            The inner value.
+            
+
+
+
+
+
+
 .. py:attribute:: host
 
         Provides information about the host on which dawn is running.

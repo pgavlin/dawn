@@ -16,13 +16,16 @@ func CompileGlobs(globs []string) (*regexp.Regexp, error) {
 	// \[ -> \?
 	// \] -> \?
 
+	if len(globs) == 0 {
+		return regexp.Compile("^$")
+	}
+
 	var pattern strings.Builder
-	pattern.WriteRune('^')
 	for i, g := range globs {
 		if i > 0 {
 			pattern.WriteRune('|')
 		}
-		pattern.WriteRune('(')
+		pattern.WriteString("(^")
 		for i := 0; i < len(g); {
 			switch b := g[i]; b {
 			case '\\':
@@ -56,9 +59,8 @@ func CompileGlobs(globs []string) (*regexp.Regexp, error) {
 			}
 			i++
 		}
-		pattern.WriteRune(')')
+		pattern.WriteString("$)")
 	}
-	pattern.WriteRune('$')
 
 	return regexp.Compile(pattern.String())
 }

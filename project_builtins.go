@@ -478,12 +478,15 @@ func (proj *Project) builtin_glob(
 		if path == "/.dawn/build" {
 			return fs.SkipDir
 		}
+		path = path[1:]
 
 		if d.IsDir() {
+			if excludeRE.MatchString(path) {
+				return fs.SkipDir
+			}
 			return nil
 		}
 
-		path = path[1:]
 		if includeRE.MatchString(path) && !excludeRE.MatchString(path) {
 			util.Must(sources.Append(starlark.String(path)))
 		}
