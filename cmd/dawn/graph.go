@@ -3,10 +3,12 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"slices"
 
 	"github.com/pgavlin/dawn"
 	"github.com/pgavlin/dawn/diff"
 	"github.com/pgavlin/dawn/label"
+	fxs "github.com/pgavlin/fx/v2/slices"
 	"github.com/spf13/cobra"
 )
 
@@ -27,11 +29,9 @@ func (n *node) depends(visited map[string]struct{}, acc *[]string) bool {
 	}
 	visited[n.label.String()] = struct{}{}
 
-	for _, d := range n.dependencies {
-		if d.depends(visited, acc) {
-			*acc = append(*acc, d.label.String())
-		}
-	}
+	*acc = slices.AppendSeq(*acc, fxs.FMap(n.dependencies, func(d *node) (string, bool) {
+		return d.label.String(), d.depends(visited, acc)
+	}))
 	return true
 }
 
@@ -41,11 +41,9 @@ func (n *node) whatDepends(visited map[string]struct{}, acc *[]string) bool {
 	}
 	visited[n.label.String()] = struct{}{}
 
-	for _, d := range n.dependents {
-		if d.whatDepends(visited, acc) {
-			*acc = append(*acc, d.label.String())
-		}
-	}
+	*acc = slices.AppendSeq(*acc, fxs.FMap(n.dependents, func(d *node) (string, bool) {
+		return d.label.String(), d.whatDepends(visited, acc)
+	}))
 	return true
 }
 
@@ -70,14 +68,13 @@ func (g graph) whatDepends(t dawn.Target) ([]string, error) {
 func (g graph) sources(t dawn.Target, root string) ([]string, error) {
 	n := g[t.Label().String()]
 
-	var paths []string
-	for _, d := range n.dependencies {
+	return slices.Collect(fxs.FMap(n.dependencies, func(d *node) (string, bool) {
 		if dawn.IsSource(&d.label) {
 			components := label.Split(d.label.Package)[1:]
-			paths = append(paths, filepath.Join(root, filepath.Join(components...), d.label.Name))
+			return filepath.Join(root, filepath.Join(components...), d.label.Name), true
 		}
-	}
-	return paths, nil
+		return "", false
+	})), nil
 }
 
 func (g graph) getOrAddNode(label *label.Label) *node {

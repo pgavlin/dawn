@@ -7,12 +7,14 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/pgavlin/dawn/diff"
 	"github.com/pgavlin/dawn/label"
 	"github.com/pgavlin/dawn/pickle"
 	"github.com/pgavlin/dawn/util"
+	fxs "github.com/pgavlin/fx/v2/slices"
 	"go.starlark.net/starlark"
 	"go.starlark.net/starlarkstruct"
 	"go.starlark.net/syntax"
@@ -155,13 +157,9 @@ func (f *function) diffEnv() (bool, string, diff.ValueDiff, error) {
 		panic(fmt.Errorf("expected a diff in unequal environments"))
 	}
 
-	var reasons []string
-
-	for _, k := range functionEnvKeys {
-		if md.Has(k) {
-			reasons = append(reasons, string(k))
-		}
-	}
+	reasons := slices.Collect(fxs.FMap(functionEnvKeys, func(k starlark.String) (string, bool) {
+		return string(k), bool(md.Has(k))
+	}))
 
 	var reason string
 	switch len(reasons) {

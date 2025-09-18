@@ -39,7 +39,7 @@ func (c *cache) get(key string) (starlark.Value, bool) {
 //     """
 //
 //starlark:builtin
-func (c *cache) once(thread *starlark.Thread, fn *starlark.Builtin, key string, function starlark.Callable) (starlark.Value, error) {
+func (c *cache) once(thread *starlark.Thread, _ *starlark.Builtin, key string, function starlark.Callable) (starlark.Value, error) {
 	if v, ok := c.get(key); ok {
 		return v, nil
 	}

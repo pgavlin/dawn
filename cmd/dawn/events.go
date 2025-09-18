@@ -637,7 +637,7 @@ func contextSize(edits starlark.Tuple, index, contextLen int) (headContext, tail
 	return
 }
 
-func printStringDiff(w io.Writer, indent string, d *diff.SliceableDiff) {
+func printStringDiff(w io.Writer, d *diff.SliceableDiff) {
 	const contextLen = 10
 
 	var old, new strings.Builder
@@ -677,7 +677,7 @@ func printStringDiff(w io.Writer, indent string, d *diff.SliceableDiff) {
 	fmt.Fprintf(w, "\"%s\" => \"%s\"", old.String(), new.String())
 }
 
-func printBytesDiff(w io.Writer, indent string, d *diff.SliceableDiff) {
+func printBytesDiff(w io.Writer) {
 	colorYellow.Fprint(w, "<binary data differs>")
 }
 
@@ -687,12 +687,12 @@ func printSliceDiff(w io.Writer, indent string, d *diff.SliceableDiff) {
 	switch d.Old().(type) {
 	case starlark.String:
 		if _, ok := d.New().(starlark.String); ok {
-			printStringDiff(w, indent, d)
+			printStringDiff(w, d)
 			return
 		}
 	case starlark.Bytes:
 		if _, ok := d.New().(starlark.Bytes); ok {
-			printBytesDiff(w, indent, d)
+			printBytesDiff(w)
 			return
 		}
 	}

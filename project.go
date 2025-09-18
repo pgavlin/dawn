@@ -1,15 +1,17 @@
 package dawn
 
 import (
+	"cmp"
 	"encoding/json"
 	"fmt"
 	"io"
 	"io/fs"
+	"maps"
 	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
-	"sort"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -20,6 +22,8 @@ import (
 	"github.com/pgavlin/dawn/internal/spell"
 	"github.com/pgavlin/dawn/label"
 	"github.com/pgavlin/dawn/runner"
+	"github.com/pgavlin/fx/v2"
+	fxs "github.com/pgavlin/fx/v2/slices"
 	"github.com/rjeczalik/notify"
 	"go.starlark.net/starlark"
 )
@@ -333,12 +337,7 @@ func (proj *Project) Flags() []*Flag {
 	proj.m.Lock()
 	defer proj.m.Unlock()
 
-	flags := make([]*Flag, 0, len(proj.flags))
-	for _, flag := range proj.flags {
-		flags = append(flags, flag)
-	}
-	sort.Slice(flags, func(i, j int) bool { return flags[i].Name < flags[j].Name })
-	return flags
+	return slices.SortedFunc(maps.Values(proj.flags), func(a, b *Flag) int { return cmp.Compare(a.Name, b.Name) })
 }
 
 func (proj *Project) Target(label *label.Label) (Target, error) {
@@ -356,42 +355,33 @@ func (proj *Project) Targets() []Target {
 	proj.m.Lock()
 	defer proj.m.Unlock()
 
-	var targets []Target
-	for _, target := range proj.targets {
-		if IsTarget(target.target.Label()) || len(target.target.dependencies()) != 0 {
-			targets = append(targets, target.target)
-		}
-	}
-	sort.Slice(targets, func(i, j int) bool {
-		return targets[i].Label().String() < targets[j].Label().String()
-	})
-	return targets
+	return slices.SortedFunc(
+		fx.FMap(maps.Values(proj.targets), func(target *runTarget) (Target, bool) {
+			ok := IsTarget(target.target.Label()) || len(target.target.dependencies()) != 0
+			return target.target, ok
+		}),
+		func(a, b Target) int { return cmp.Compare(a.Label().String(), b.Label().String()) },
+	)
 }
 
 func (proj *Project) Sources() []string {
 	proj.m.Lock()
 	defer proj.m.Unlock()
 
-	var paths []string
-	for _, target := range proj.targets {
-		label := target.target.Label()
-		if IsSource(label) {
-			paths = append(paths, target.target.(*sourceFile).path)
+	return slices.Sorted(fx.FMap(maps.Values(proj.targets), func(target *runTarget) (string, bool) {
+		if IsSource(target.target.Label()) {
+			return target.target.(*sourceFile).path, true
 		}
-	}
-	sort.Strings(paths)
-	return paths
+		return "", false
+	}))
 }
 
 // NOTE: proj.m must be held!
 func (proj *Project) unknownTarget(label string) error {
-	var targets []string
-	for _, target := range proj.targets {
+	targets := slices.Collect(fx.FMap(maps.Values(proj.targets), func(target *runTarget) (string, bool) {
 		l := target.target.Label()
-		if IsTarget(l) {
-			targets = append(targets, l.String())
-		}
-	}
+		return l.String(), IsTarget(l)
+	}))
 	if len(targets) == 0 {
 		return UnknownTargetError(fmt.Sprintf("unknown target %v", label))
 	}
@@ -486,21 +476,18 @@ func (proj *Project) loadPackage(wg *sync.WaitGroup, path string) error {
 	if err != nil {
 		return err
 	}
-	for _, e := range entries {
-		switch {
-		case e.IsDir():
-			if e.Name() != ".dawn" {
-				pkg, _ := label.Join(path, e.Name())
-				if err := proj.loadPackage(wg, pkg); err != nil {
-					return err
-				}
-			}
-		case e.Name() == "BUILD.dawn":
-			wg.Add(1)
-			go func() {
-				proj.loadModule(nil, &label.Label{Kind: "module", Package: path, Name: "BUILD.dawn"})
-				wg.Done()
-			}()
+	if slices.ContainsFunc(entries, func(e os.DirEntry) bool { return e.Name() == "BUILD.dawn" }) {
+		wg.Add(1)
+		go func() {
+			proj.loadModule(nil, &label.Label{Kind: "module", Package: path, Name: "BUILD.dawn"})
+			wg.Done()
+		}()
+	}
+	dirs := fxs.Filter(entries, func(e os.DirEntry) bool { return e.IsDir() && e.Name() != ".dawn" })
+	for d := range dirs {
+		pkg, _ := label.Join(path, d.Name())
+		if err := proj.loadPackage(wg, pkg); err != nil {
+			return err
 		}
 	}
 
@@ -614,23 +601,6 @@ func (proj *Project) link() error {
 		}
 	}
 	return nil
-}
-
-func equalStringMaps(x, y map[string]string) bool {
-	if len(x) != len(y) {
-		return false
-	}
-	for k, vx := range x {
-		if vy, ok := y[k]; !ok || vx != vy {
-			return false
-		}
-	}
-	for k := range y {
-		if _, ok := x[k]; !ok {
-			return false
-		}
-	}
-	return true
 }
 
 func IsTarget(l *label.Label) bool {

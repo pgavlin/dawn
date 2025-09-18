@@ -4,11 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"slices"
 	"sort"
 	"text/tabwriter"
 
 	"github.com/pgavlin/dawn"
 	"github.com/pgavlin/dawn/label"
+	fxs "github.com/pgavlin/fx/v2/slices"
 	"github.com/spf13/cobra"
 )
 
@@ -33,13 +35,12 @@ func printFlagList(list []*dawn.Flag) error {
 		return w.Flush()
 	}
 
-	descriptions := make([]flagDescription, len(list))
-	for i, arg := range list {
-		descriptions[i] = flagDescription{
+	descriptions := slices.Collect(fxs.Map(list, func(arg *dawn.Flag) flagDescription {
+		return flagDescription{
 			Name: arg.Name,
 			Help: arg.Help,
 		}
-	}
+	}))
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "    ")
 	return enc.Encode(descriptions)
@@ -59,13 +60,12 @@ func printTargetList(list []dawn.Target) error {
 		return w.Flush()
 	}
 
-	descriptions := make([]targetDescription, len(list))
-	for i, t := range list {
-		descriptions[i] = targetDescription{
+	descriptions := slices.Collect(fxs.Map(list, func(t dawn.Target) targetDescription {
+		return targetDescription{
 			Label: t.Label().String(),
 			Doc:   t.Doc(),
 		}
-	}
+	}))
 
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "    ")

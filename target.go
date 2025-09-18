@@ -1,13 +1,16 @@
 package dawn
 
 import (
+	"cmp"
 	"fmt"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/pgavlin/dawn/diff"
 	"github.com/pgavlin/dawn/label"
 	"github.com/pgavlin/dawn/runner"
+	fxs "github.com/pgavlin/fx/v2/slices"
+	"github.com/pgavlin/fx/v2/try"
 	"go.starlark.net/starlark"
 )
 
@@ -50,16 +53,18 @@ func (t *runTarget) Evaluate(engine runner.Engine) error {
 	depsUpToDate := true
 	deps := t.target.dependencies()
 	depData := map[string]string{}
+	var failedDeps []string
 	var outOfDateDeps []string
 	for i, dep := range engine.EvaluateTargets(deps...) {
 		if dep.Error != nil {
 			switch err := dep.Error.(type) {
 			case UnknownTargetError:
-				proj.events.TargetFailed(label, fmt.Errorf("missing dependency: %w", dep.Error))
+				proj.events.TargetFailed(label, fmt.Errorf("missing dependency: %w", err))
 			case runner.CyclicDependencyError:
 				proj.events.TargetFailed(label, err)
 			}
-			return fmt.Errorf("dependency %v failed", deps[i])
+			failedDeps = append(failedDeps, deps[i])
+			continue
 		}
 
 		label := deps[i]
@@ -72,6 +77,18 @@ func (t *runTarget) Evaluate(engine runner.Engine) error {
 			outOfDateDeps = append(outOfDateDeps, label)
 			depsUpToDate = false
 		}
+	}
+
+	// Check for failed deps.
+	switch len(failedDeps) {
+	case 0:
+		// OK
+	case 1:
+		return fmt.Errorf("dependency %v failed", failedDeps[0])
+	case 2:
+		return fmt.Errorf("dependencies %v and %v failed", failedDeps[0], failedDeps[1])
+	default:
+		return fmt.Errorf("dependencies failed: %v", strings.Join(failedDeps, ","))
 	}
 
 	// Check whether the target is up-to-date.
@@ -141,19 +158,10 @@ func (t *runTarget) Evaluate(engine runner.Engine) error {
 }
 
 func targetDependencies(t Target) []*label.Label {
-	deps := t.dependencies()
-	labels := make([]*label.Label, len(deps))
-	for i, dep := range deps {
-		l, err := label.Parse(dep)
-		if err != nil {
-			panic(err)
-		}
-		labels[i] = l
-	}
-	sort.Slice(labels, func(i, j int) bool {
-		return labels[i].String() < labels[j].String()
-	})
-	return labels
+	return slices.SortedFunc(
+		try.Must(fxs.MapUnpack(t.dependencies(), label.Parse)),
+		func(a, b *label.Label) int { return cmp.Compare(a.String(), b.String()) },
+	)
 }
 
 // DocSummary returns a summary of the target's docstring.

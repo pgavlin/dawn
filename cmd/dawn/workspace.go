@@ -6,12 +6,14 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/pgavlin/dawn"
 	"github.com/pgavlin/dawn/label"
 	starlark_os "github.com/pgavlin/dawn/lib/os"
 	starlark_sh "github.com/pgavlin/dawn/lib/sh"
+	fxs "github.com/pgavlin/fx/v2/slices"
 	"github.com/spf13/cobra"
 	starlark_json "go.starlark.net/lib/json"
 	"go.starlark.net/repl"
@@ -112,12 +114,12 @@ func (w *workspace) validLabels(_ *cobra.Command, _ []string, _ string) ([]strin
 		return nil, cobra.ShellCompDirectiveError
 	}
 
-	labels := make([]string, 0, len(targets))
-	for _, t := range targets {
+	labels := slices.Collect(fxs.FMap(targets, func(t dawn.TargetSummary) (string, bool) {
 		if dawn.IsTarget(t.Label) {
-			labels = append(labels, fmt.Sprintf("%v\t%s", t.Label, t.Summary))
+			return fmt.Sprintf("%v\t%s", t.Label, t.Summary), true
 		}
-	}
+		return "", false
+	}))
 	return labels, cobra.ShellCompDirectiveDefault
 }
 
