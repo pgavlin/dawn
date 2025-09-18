@@ -1,0 +1,15 @@
+@target(deps=[":bar"])
+def foo():
+    pass
+
+@target(deps=[":baz"])
+def bar():
+    pass
+
+@target(deps=[":foo"])
+def baz():
+    pass
+
+@target(deps=[foo])
+def default():
+    pass

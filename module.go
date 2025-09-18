@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"slices"
 	"sync"
 
 	"github.com/pgavlin/dawn/label"
+	"github.com/pgavlin/dawn/runner"
 	"github.com/pgavlin/dawn/util"
 	"github.com/pgavlin/starlark-go/starlark"
 )
@@ -66,11 +68,18 @@ func (m *module) wait(waiter *module) (starlark.StringDict, error) {
 
 	if waiter != nil {
 		loading := m.loading
+		path := []string{waiter.label.String()}
 		for loading != nil {
 			if loading == waiter {
-				return nil, fmt.Errorf("cyclic dependency on %v", m.label)
+				path = append(path, m.label.String())
+				slices.Reverse(path)
+				return nil, &runner.CyclicDependencyError{
+					On:   m.label.String(),
+					Path: path,
+				}
 			}
-			loading = m.getLoading()
+			path = append(path, loading.label.String())
+			loading = loading.getLoading()
 		}
 	}
 

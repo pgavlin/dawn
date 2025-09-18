@@ -1,4 +1,4 @@
-load(":mod.dawn", "mod")
+load(":mod3.dawn", "mod3")
 
 def mod2():
     pass

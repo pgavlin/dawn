@@ -3,14 +3,28 @@ package runner
 import (
 	"fmt"
 	"runtime"
+	"slices"
+	"strings"
 	"sync"
 	"sync/atomic"
 )
 
-type CyclicDependencyError string
+type CyclicDependencyError struct {
+	On   string
+	Path []string
+}
 
-func (e CyclicDependencyError) Error() string {
-	return string(e)
+func (e *CyclicDependencyError) Error() string {
+	return fmt.Sprintf("cyclic dependency on %v", e.On)
+}
+
+func (e *CyclicDependencyError) Trace() string {
+	var out strings.Builder
+	fmt.Fprintf(&out, "%v:\n", e.Error())
+	for _, label := range slices.Backward(e.Path) {
+		fmt.Fprintf(&out, "  %v\n", label)
+	}
+	return out.String()
 }
 
 type Result struct {
@@ -23,6 +37,7 @@ type Targets interface {
 }
 
 type Engine interface {
+	Path() []string
 	EvaluateTargets(labels ...string) []Result
 }
 
@@ -56,7 +71,7 @@ func newTarget(label string) *target {
 	return tt
 }
 
-func (t *target) start(r *runner) {
+func (t *target) start(path []string, r *runner) {
 	t.m.Lock()
 	if t.status != statusIdle {
 		t.m.Unlock()
@@ -66,7 +81,7 @@ func (t *target) start(r *runner) {
 	t.status = statusRunning
 	t.m.Unlock()
 
-	go t.run(r)
+	go t.run(path, r)
 }
 
 func (t *target) wait() error {
@@ -82,7 +97,7 @@ func (t *target) wait() error {
 	return t.err
 }
 
-func (t *target) run(r *runner) {
+func (t *target) run(path []string, r *runner) {
 	unlock := func() {
 		t.m.Unlock()
 		t.c.Broadcast()
@@ -104,7 +119,7 @@ func (t *target) run(r *runner) {
 
 	// Evaluate and save the target.
 	status := statusSucceeded
-	if err = t.target.Evaluate(&engine{root: t, runner: r}); err != nil {
+	if err = t.target.Evaluate(&engine{path: path, root: t, runner: r}); err != nil {
 		status = statusFailed
 	}
 
@@ -114,45 +129,52 @@ func (t *target) run(r *runner) {
 }
 
 type engine struct {
+	path   []string
 	root   *target
 	runner *runner
 }
 
-func (e *engine) check(dep *target) error {
+func (e *engine) check(path []string, dep *target) error {
 	if dep == e.root {
-		return CyclicDependencyError(fmt.Sprintf("cyclic dependency on %v", dep.label))
+		return &CyclicDependencyError{On: dep.label, Path: path}
 	}
 
 	if waiting := dep.waiting.Load(); waiting != nil {
-		return e.checkDeps(*waiting)
+		return e.checkDeps(append(path, dep.label), *waiting)
 	}
 	return nil
 }
 
-func (e *engine) checkDeps(deps []*target) error {
+func (e *engine) checkDeps(path []string, deps []*target) error {
 	for _, t := range deps {
-		if err := e.check(t); err != nil {
+		if err := e.check(path, t); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
+func (e *engine) Path() []string {
+	return e.path
+}
+
 func (e *engine) EvaluateTargets(labels ...string) []Result {
 	e.runner.gate.exit()
 	defer e.runner.gate.enter()
 
+	path := append(e.path, e.root.label)
+
 	targets := make([]*target, len(labels))
 	for i, label := range labels {
 		targets[i] = e.runner.getTarget(label)
-		targets[i].start(e.runner)
+		targets[i].start(path, e.runner)
 	}
 
 	e.root.waiting.Swap(&targets)
 	defer e.root.waiting.Swap(nil)
 
 	results := make([]Result, len(targets))
-	if err := e.checkDeps(targets); err != nil {
+	if err := e.checkDeps([]string{e.root.label}, targets); err != nil {
 		for i := range results {
 			results[i].Error = err
 			results[i].Target = nil
@@ -211,6 +233,6 @@ func (r *runner) getTarget(label string) *target {
 func Run(targets Targets, label string) error {
 	r := runner{targetLoader: targets, gate: newGate(runtime.NumCPU())}
 	t := r.getTarget(label)
-	t.start(&r)
+	t.start(nil, &r)
 	return t.wait()
 }

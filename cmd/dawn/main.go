@@ -10,7 +10,7 @@ import (
 func main() {
 	if err := rootCmd.Execute(); err != nil {
 		if serr, ok := err.(*starlark.EvalError); ok {
-			fmt.Fprintf(os.Stderr, serr.Backtrace())
+			fmt.Fprintln(os.Stderr, serr.Backtrace())
 		} else {
 			fmt.Fprintln(os.Stderr, err)
 		}

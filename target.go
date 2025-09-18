@@ -2,6 +2,7 @@ package dawn
 
 import (
 	"cmp"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -13,6 +14,8 @@ import (
 	"github.com/pgavlin/fx/v2/try"
 	"github.com/pgavlin/starlark-go/starlark"
 )
+
+var DependenciesFailedError = errors.New("dependencies failed")
 
 // A Target represents a build target within a Project.
 type Target interface {
@@ -52,18 +55,33 @@ func (t *runTarget) Evaluate(engine runner.Engine) error {
 	// Evaluate the target's dependencies.
 	depsUpToDate := true
 	deps := t.target.dependencies()
+
+	// Remove generates -> sources cycles.
+	if file, ok := t.target.(*sourceFile); ok && file.generator != nil {
+		if path := engine.Path(); len(path) > 0 {
+			if generator := file.generator.String(); path[len(path)-1] == generator {
+				deps = slices.DeleteFunc(deps, func(s string) bool { return s == generator })
+			}
+		}
+	}
+
 	depData := map[string]string{}
-	var failedDeps []string
+	var cyclicDepErr *runner.CyclicDependencyError
+	var missingDeps []string
+	var hasFailedDeps bool
 	var outOfDateDeps []string
 	for i, dep := range engine.EvaluateTargets(deps...) {
 		if dep.Error != nil {
 			switch err := dep.Error.(type) {
 			case UnknownTargetError:
-				proj.events.TargetFailed(label, fmt.Errorf("missing dependency: %w", err))
-			case runner.CyclicDependencyError:
-				proj.events.TargetFailed(label, err)
+				missingDeps = append(missingDeps, err.Error())
+			case *runner.CyclicDependencyError:
+				if cyclicDepErr == nil || cyclicDepErr.On >= err.On {
+					cyclicDepErr = err
+				}
+			default:
+				hasFailedDeps = true
 			}
-			failedDeps = append(failedDeps, deps[i])
 			continue
 		}
 
@@ -79,16 +97,33 @@ func (t *runTarget) Evaluate(engine runner.Engine) error {
 		}
 	}
 
-	// Check for failed deps.
-	switch len(failedDeps) {
+	// Check for missing dependencies.
+	switch len(missingDeps) {
 	case 0:
 		// OK
 	case 1:
-		return fmt.Errorf("dependency %v failed", failedDeps[0])
+		err := fmt.Errorf("missing dependency %v", missingDeps[0])
+		proj.events.TargetFailed(label, err)
+		return err
 	case 2:
-		return fmt.Errorf("dependencies %v and %v failed", failedDeps[0], failedDeps[1])
+		err := fmt.Errorf("missing dependencies %v and %v", missingDeps[0], missingDeps[1])
+		proj.events.TargetFailed(label, err)
+		return err
 	default:
-		return fmt.Errorf("dependencies failed: %v", strings.Join(failedDeps, ","))
+		err := fmt.Errorf("missing dependencies: %v", strings.Join(missingDeps, ","))
+		proj.events.TargetFailed(label, err)
+		return err
+	}
+
+	// Check for cyclic dependencies.
+	if cyclicDepErr != nil {
+		proj.events.TargetFailed(label, cyclicDepErr)
+		return errors.New(cyclicDepErr.Error())
+	}
+
+	// Check for failed deps.
+	if hasFailedDeps {
+		return DependenciesFailedError
 	}
 
 	// Check whether the target is up-to-date.

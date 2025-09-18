@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -16,6 +17,7 @@ import (
 	"github.com/pgavlin/dawn/diff"
 	"github.com/pgavlin/dawn/internal/project"
 	"github.com/pgavlin/dawn/label"
+	"github.com/pgavlin/dawn/runner"
 	starlarkjson "github.com/pgavlin/starlark-go/lib/json"
 	starlark "github.com/pgavlin/starlark-go/starlark"
 )
@@ -944,7 +946,13 @@ func errMessage(err error) string {
 	if err == nil {
 		return ""
 	}
-	if evalErr, ok := err.(*starlark.EvalError); ok {
+
+	var evalErr *starlark.EvalError
+	var cdErr *runner.CyclicDependencyError
+	switch {
+	case errors.As(err, &cdErr):
+		return cdErr.Trace()
+	case errors.As(err, &evalErr):
 		return evalErr.Backtrace()
 	}
 	return err.Error()

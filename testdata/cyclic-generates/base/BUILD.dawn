@@ -1,0 +1,4 @@
+@target(sources=["foo.json"], generates=["foo.json"])
+def default():
+    indented = json.indent(sh.output("cat foo.json").strip())
+    sh.exec(f"echo '{indented}' >foo.json")

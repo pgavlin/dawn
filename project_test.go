@@ -13,10 +13,10 @@ import (
 	"github.com/pgavlin/dawn/label"
 	starlark_os "github.com/pgavlin/dawn/lib/os"
 	starlark_sh "github.com/pgavlin/dawn/lib/sh"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	starlark_json "github.com/pgavlin/starlark-go/lib/json"
 	"github.com/pgavlin/starlark-go/starlark"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func readFile(t *testing.T, path string) []byte {
@@ -240,6 +240,14 @@ func TestCyclicModules(t *testing.T) {
 func TestBuiltins(t *testing.T) {
 	pt := projectTest{
 		path:     "testdata/builtins",
+		validate: func(t *testing.T, _ string, _ []testEvent) {},
+	}
+	pt.run(t)
+}
+
+func TestCyclicGenerate(t *testing.T) {
+	pt := projectTest{
+		path:     "testdata/cyclic-generates",
 		validate: func(t *testing.T, _ string, _ []testEvent) {},
 	}
 	pt.run(t)
