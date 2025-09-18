@@ -29,14 +29,16 @@ func (c *cache) get(key string) (starlark.Value, bool) {
 	return v, ok
 }
 
-// def once(key, callable):
-//     """
-//     once calls the given callable if and only if key is not present in the cache.
+// starlark
 //
-//     The result is stored in the cache under the given key.
+//	def once(key, callable):
+//	    """
+//	    once calls the given callable if and only if key is not present in the cache.
 //
-//     Returns the result of the call or the cached value.
-//     """
+//	    The result is stored in the cache under the given key.
+//
+//	    Returns the result of the call or the cached value.
+//	    """
 //
 //starlark:builtin
 func (c *cache) once(thread *starlark.Thread, _ *starlark.Builtin, key string, function starlark.Callable) (starlark.Value, error) {

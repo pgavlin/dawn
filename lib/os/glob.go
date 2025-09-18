@@ -10,20 +10,22 @@ import (
 	"github.com/pgavlin/starlark-go/starlark"
 )
 
-// def glob(include, exclude=None):
-//     """
-//     Return a list of paths rooted in the current directory that match the
-//     given include and exclude patterns.
+// starlark
 //
-//     - `*` matches any number of non-path-separator characters
-//     - `**` matches any number of any characters
-//     - `?` matches a single character
+//	def glob(include, exclude=None):
+//	    """
+//	    Return a list of paths rooted in the current directory that match the
+//	    given include and exclude patterns.
 //
-//     :param include: the patterns to include.
-//     :param exclude: the patterns to exclude.
+//	    - `*` matches any number of non-path-separator characters
+//	    - `**` matches any number of any characters
+//	    - `?` matches a single character
 //
-//     :returns: the matched paths
-//     """
+//	    :param include: the patterns to include.
+//	    :param exclude: the patterns to exclude.
+//
+//	    :returns: the matched paths
+//	    """
 //
 //starlark:builtin factory=NewGlob,function=Glob
 func glob(t *starlark.Thread, fn *starlark.Builtin, include, exclude util.StringList) (starlark.Value, error) {

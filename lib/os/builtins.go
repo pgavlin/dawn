@@ -15,9 +15,9 @@ import (
 
 func NewEnviron() *starlark.Builtin {
 	const doc = `
-   Returns a mapping object where keys and values are strings that represent
-   the process environment. This mapping is captured at startup time.
-   `
+    Returns a mapping object where keys and values are strings that represent
+    the process environment. This mapping is captured at startup time.
+    `
 	return starlark.NewBuiltin("environ", Environ).WithDoc(doc)
 }
 
@@ -38,15 +38,15 @@ func Environ(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple,
 
 func NewLookPath() *starlark.Builtin {
 	const doc = `
-   Search for an executable named file in the directories named by
-   the PATH environment variable. If file contains a slash, it is
-   tried directly and the PATH is not consulted. Otherwise, on
-   success, the result is an absolute path.
+    Search for an executable named file in the directories named by
+    the PATH environment variable. If file contains a slash, it is
+    tried directly and the PATH is not consulted. Otherwise, on
+    success, the result is an absolute path.
 
-   :param file: the name of the executable to find
+    :param file: the name of the executable to find
 
-   :returns: the absolute path to file if found or None if not found.
-   `
+    :returns: the absolute path to file if found or None if not found.
+    `
 	return starlark.NewBuiltin("look_path", LookPath).WithDoc(doc)
 }
 
@@ -72,21 +72,21 @@ func LookPath(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple
 
 func NewExec() *starlark.Builtin {
 	const doc = `
-   Run an executable. If the process fails, the calling module will
-   abort unless `+"`"+`try_`+"`"+` is set to True, in which case the contents of
-   standard error will be returned.
+    Run an executable. If the process fails, the calling module will
+    abort unless `+"`"+`try_`+"`"+` is set to True, in which case the contents of
+    standard error will be returned.
 
-   :param command: a list of strings indicating the executable to run
-                   and its arguments (e.g. `+"`"+`["dawn", "build"]`+"`"+`).
-   :param cwd: the working directory for the command. Defaults to the
-               calling module's directory.
-   :param env: any environment variables to set when running the command.
-   :param `+"`"+`try_`+"`"+`: when True, the calling module will not be aborted if
-                the process fails.
+    :param command: a list of strings indicating the executable to run
+                    and its arguments (e.g. `+"`"+`["dawn", "build"]`+"`"+`).
+    :param cwd: the working directory for the command. Defaults to the
+                calling module's directory.
+    :param env: any environment variables to set when running the command.
+    :param `+"`"+`try_`+"`"+`: when True, the calling module will not be aborted if
+                 the process fails.
 
-   :returns: the contents of standard error if `+"`"+`try_`+"`"+` is set and None
-             otherwise. To capture the process's output, use output.
-   `
+    :returns: the contents of standard error if `+"`"+`try_`+"`"+` is set and None
+              otherwise. To capture the process's output, use output.
+    `
 	return starlark.NewBuiltin("exec", Exec).WithDoc(doc)
 }
 
@@ -118,23 +118,23 @@ func Exec(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kw
 
 func NewOutput() *starlark.Builtin {
 	const doc = `
-   Run an executable and return its output. If the process fails, the
-   calling module will abort unless `+"`"+`try_`+"`"+` is set to True, in which case
-   the contents of standard error will be returned.
+    Run an executable and return its output. If the process fails, the
+    calling module will abort unless `+"`"+`try_`+"`"+` is set to True, in which case
+    the contents of standard error will be returned.
 
-   :param command: a list of strings indicating the executable to run
-                   and its arguments (e.g. `+"`"+`["dawn", "build"]`+"`"+`).
-   :param cwd: the working directory for the command. Defaults to the
-               calling module's directory.
-   :param env: any environment variables to set when running the command.
-   :param `+"`"+`try_`+"`"+`: when True, the calling module will not be aborted if
-                the process fails.
+    :param command: a list of strings indicating the executable to run
+                    and its arguments (e.g. `+"`"+`["dawn", "build"]`+"`"+`).
+    :param cwd: the working directory for the command. Defaults to the
+                calling module's directory.
+    :param env: any environment variables to set when running the command.
+    :param `+"`"+`try_`+"`"+`: when True, the calling module will not be aborted if
+                 the process fails.
 
-   :returns: the contents of standard output if `+"`"+`try_`+"`"+` is not truthy and the
-             process succeeds. If `+"`"+`try_`+"`"+` is truthy, output returns
-             (stdout, True) if the process succeeds and (stderr, False)
-             if the process fails.
-   `
+    :returns: the contents of standard output if `+"`"+`try_`+"`"+` is not truthy and the
+              process succeeds. If `+"`"+`try_`+"`"+` is truthy, output returns
+              (stdout, True) if the process succeeds and (stderr, False)
+              if the process fails.
+    `
 	return starlark.NewBuiltin("output", Output).WithDoc(doc)
 }
 
@@ -166,8 +166,8 @@ func Output(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, 
 
 func NewExists() *starlark.Builtin {
 	const doc = `
-   Returns true if a file exists at the given path.
-   `
+    Returns true if a file exists at the given path.
+    `
 	return starlark.NewBuiltin("exists", Exists).WithDoc(doc)
 }
 
@@ -193,9 +193,9 @@ func Exists(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, 
 
 func NewGetcwd() *starlark.Builtin {
 	const doc = `
-   Returns the current OS working directory. This is typically the path of
-   the directory containg the root module on the callstack.
-   `
+    Returns the current OS working directory. This is typically the path of
+    the directory containg the root module on the callstack.
+    `
 	return starlark.NewBuiltin("getcwd", Getcwd).WithDoc(doc)
 }
 
@@ -216,8 +216,8 @@ func Getcwd(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, 
 
 func NewMkdir() *starlark.Builtin {
 	const doc = `
-   Create a directory named path with numeric mode mode.
-   `
+    Create a directory named path with numeric mode mode.
+    `
 	return starlark.NewBuiltin("mkdir", Mkdir).WithDoc(doc)
 }
 
@@ -245,9 +245,9 @@ func Mkdir(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, k
 
 func NewMakedirs() *starlark.Builtin {
 	const doc = `
-   Recursive directory creation function. Like mkdir(), but makes all
-   intermediate-level directories needed to contain the leaf directory.
-   `
+    Recursive directory creation function. Like mkdir(), but makes all
+    intermediate-level directories needed to contain the leaf directory.
+    `
 	return starlark.NewBuiltin("makedirs", Makedirs).WithDoc(doc)
 }
 
@@ -275,18 +275,18 @@ func Makedirs(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple
 
 func NewGlob() *starlark.Builtin {
 	const doc = `
-   Return a list of paths rooted in the current directory that match the
-   given include and exclude patterns.
+    Return a list of paths rooted in the current directory that match the
+    given include and exclude patterns.
 
-   - `+"`"+`*`+"`"+` matches any number of non-path-separator characters
-   - `+"`"+`**`+"`"+` matches any number of any characters
-   - `+"`"+`?`+"`"+` matches a single character
+    - `+"`"+`*`+"`"+` matches any number of non-path-separator characters
+    - `+"`"+`**`+"`"+` matches any number of any characters
+    - `+"`"+`?`+"`"+` matches a single character
 
-   :param include: the patterns to include.
-   :param exclude: the patterns to exclude.
+    :param include: the patterns to include.
+    :param exclude: the patterns to exclude.
 
-   :returns: the matched paths
-   `
+    :returns: the matched paths
+    `
 	return starlark.NewBuiltin("glob", Glob).WithDoc(doc)
 }
 

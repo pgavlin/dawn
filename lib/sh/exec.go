@@ -15,24 +15,26 @@ import (
 	"mvdan.cc/sh/v3/syntax"
 )
 
-// def exec(command, cwd=None, env=None, try_=None):
-//     """
-//     Execute a shell command. The command must be a valid POSIX Shell, Bash,
-//     or mksh command. Any commands that are not shell builtins must be
-//     available on the path. If the command fails, the calling module will
-//     abort unless `try_` is set to True, in which case the contents of
-//     standard error will be returned.
+// starlark
 //
-//     :param command: the command to execute.
-//     :param cwd: the working directory for the command. Defaults to the
-//                 calling module's directory.
-//     :param env: any environment variables to set when running the command.
-//     :param `try_`: when True, the calling module will not be aborted if
-//                  the shell command fails.
+//	def exec(command, cwd=None, env=None, try_=None):
+//	    """
+//	    Execute a shell command. The command must be a valid POSIX Shell, Bash,
+//	    or mksh command. Any commands that are not shell builtins must be
+//	    available on the path. If the command fails, the calling module will
+//	    abort unless `try_` is set to True, in which case the contents of
+//	    standard error will be returned.
 //
-//     :returns: the contents of standard error if `try_` is set and None
-//               otherwise. To capture the command's output, use output.
-//     """
+//	    :param command: the command to execute.
+//	    :param cwd: the working directory for the command. Defaults to the
+//	                calling module's directory.
+//	    :param env: any environment variables to set when running the command.
+//	    :param `try_`: when True, the calling module will not be aborted if
+//	                 the shell command fails.
+//
+//	    :returns: the contents of standard error if `try_` is set and None
+//	              otherwise. To capture the command's output, use output.
+//	    """
 //
 //starlark:builtin factory=NewExec,function=Exec
 func exec(thread *starlark.Thread, fn *starlark.Builtin, cmd, cwd string, env starlark.IterableMapping, try bool) (starlark.Value, error) {
@@ -54,26 +56,28 @@ func exec(thread *starlark.Thread, fn *starlark.Builtin, cmd, cwd string, env st
 	return starlark.None, nil
 }
 
-// def output(command, cwd=None, env=None, try_=None):
-//     """
-//     Execute a shell command and return its output. The command must be a
-//     valid POSIX Shell, Bash, or mksh command. Any commands that are not
-//     shell builtins must be available on the path. If the command fails, the
-//     calling module will abort unless `try_` is set to True, in which case
-//     the contents of standard error will be returned.
+// starlark
 //
-//     :param command: the command to execute.
-//     :param cwd: the working directory for the command. Defaults to the
-//                 calling module's directory.
-//     :param env: any environment variables to set when running the command.
-//     :param `try_`: when True, the calling module will not be aborted if
-//                  the shell command fails.
+//	def output(command, cwd=None, env=None, try_=None):
+//	    """
+//	    Execute a shell command and return its output. The command must be a
+//	    valid POSIX Shell, Bash, or mksh command. Any commands that are not
+//	    shell builtins must be available on the path. If the command fails, the
+//	    calling module will abort unless `try_` is set to True, in which case
+//	    the contents of standard error will be returned.
 //
-//     :returns: the contents of standard output if `try_` is not truthy and the
-//               command succeeds. If `try_` is truthy, output returns
-//               (stdout, True) if the command succeeds and (stderr, False)
-//               if the command fails.
-//     """
+//	    :param command: the command to execute.
+//	    :param cwd: the working directory for the command. Defaults to the
+//	                calling module's directory.
+//	    :param env: any environment variables to set when running the command.
+//	    :param `try_`: when True, the calling module will not be aborted if
+//	                 the shell command fails.
+//
+//	    :returns: the contents of standard output if `try_` is not truthy and the
+//	              command succeeds. If `try_` is truthy, output returns
+//	              (stdout, True) if the command succeeds and (stderr, False)
+//	              if the command fails.
+//	    """
 //
 //starlark:builtin factory=NewOutput,function=Output
 func output(thread *starlark.Thread, fn *starlark.Builtin, cmd, cwd string, env starlark.IterableMapping, try bool) (starlark.Value, error) {

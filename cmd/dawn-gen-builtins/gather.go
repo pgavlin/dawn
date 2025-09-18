@@ -3,10 +3,12 @@ package main
 import (
 	"fmt"
 	"go/ast"
+	"go/doc/comment"
 	"regexp"
 	"strings"
 	"unicode"
 
+	fxs "github.com/pgavlin/fx/v2/slices"
 	"github.com/pgavlin/starlark-go/syntax"
 	"golang.org/x/tools/go/packages"
 )
@@ -49,62 +51,28 @@ type objectDecl struct {
 
 var textRegex = regexp.MustCompile(`^\s*(?:(?://\s?)|(?:/\*+))?\s?(.*?)(?:\s*\*+/)?\s*$`)
 
-func getCommentText(comment *ast.Comment) (string, bool) {
-	// Remove any annotations.
-	if strings.HasPrefix(comment.Text, "//starlark:") {
-		return "", false
-	}
-
-	// Trim spaces and remove any leading or trailing comment markers.
-	// Remove any leading or trailing comment markers.
-	return textRegex.FindStringSubmatch(comment.Text)[1], true
-}
-
-func getDocText(doc *ast.CommentGroup) string {
+func getDocCode(doc *ast.CommentGroup) string {
 	if doc == nil {
 		return ""
 	}
 
+	var parser comment.Parser
+	docs := parser.Parse(doc.Text())
+	code := fxs.OfType[*comment.Code](docs.Content)
+
 	var text strings.Builder
-
-	// Remove leading blank lines.
-	comments := doc.List
-	for ; len(comments) > 0; comments = comments[1:] {
-		line, ok := getCommentText(comments[0])
-		if !ok || line == "" {
-			continue
+	for c := range code {
+		if text.Len() != 0 {
+			text.WriteByte('\n')
 		}
-		break
+		text.WriteString(c.Text)
 	}
-
-	// Add each block of blank lines followed by text. This will remove any trailing blanks.
-	blanks := 0
-	for ; len(comments) > 0; comments = comments[1:] {
-		line, ok := getCommentText(comments[0])
-		switch {
-		case !ok:
-			continue
-		case line == "":
-			blanks++
-		default:
-			for ; blanks > 0; blanks-- {
-				text.WriteRune('\n')
-			}
-			text.WriteString(line)
-			text.WriteRune('\n')
-		}
-	}
-
 	return text.String()
 }
 
-func parseDecl(name string, doc *ast.CommentGroup) (*syntax.DefStmt, error) {
-	if doc == nil {
-		return nil, fmt.Errorf("function %v is missing a Starlark declaration", name)
-	}
-
+func parseDecl(name, text string) (*syntax.DefStmt, error) {
 	// Parse the doc comment as a starlark file.
-	f, err := syntax.Parse(name+".star", getDocText(doc), syntax.RetainComments)
+	f, err := syntax.Parse(name+".star", text, syntax.RetainComments)
 	if err != nil {
 		return nil, fmt.Errorf("parsing declaration for %v: %w", name, err)
 	}
@@ -239,28 +207,29 @@ func parseObjectDecl(def *syntax.DefStmt) (*objectDecl, error) {
 	}, nil
 }
 
-// def module():
-//     @constructor
-//     def class():
-//         """
-//         Class docs
-//         """
+// Example:
 //
-//     @module
-//     def module():
-//         """
-//         Module docs, if any
-//         """
+//	def module():
+//	    @constructor
+//	    def class():
+//	        """
+//	        Class docs
+//	        """
 //
-//     @attribute
-//     def attr():
-//         """
-//         Attribute docs
-//         """
+//	    @module
+//	    def module():
+//	        """
+//	        Module docs, if any
+//	        """
 //
-//     @function("foo.bar")
-//     def fn():
+//	    @attribute
+//	    def attr():
+//	        """
+//	        Attribute docs
+//	        """
 //
+//	    @function("foo.bar")
+//	    def fn():
 func parseModuleDecl(text string) (*objectDecl, error) {
 	// Parse the text as a starlark file.
 	f, err := syntax.Parse("module.star", text, syntax.RetainComments)
@@ -321,7 +290,7 @@ func gatherFile(file *ast.File) ([]objectDecl, []*function, error) {
 		switch decl := decl.(type) {
 		case *ast.FuncDecl:
 			if comment, kind, ok := getStarlarkAnnotation(decl.Doc); ok && kind == "builtin" {
-				def, err := parseDecl(decl.Name.Name, decl.Doc)
+				def, err := parseDecl(decl.Name.Name, getDocCode(decl.Doc))
 				if err != nil {
 					return nil, nil, err
 				}
@@ -336,7 +305,7 @@ func gatherFile(file *ast.File) ([]objectDecl, []*function, error) {
 		case *ast.GenDecl:
 			_, kind, ok := getStarlarkAnnotation(decl.Doc)
 			if ok && kind == "module" {
-				module, err := parseModuleDecl(getDocText(decl.Doc))
+				module, err := parseModuleDecl(getDocCode(decl.Doc))
 				if err != nil {
 					return nil, nil, err
 				}

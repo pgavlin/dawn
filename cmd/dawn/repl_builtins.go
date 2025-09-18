@@ -30,15 +30,17 @@ func getLabel(thread *starlark.Thread, fn *starlark.Builtin, labelOrTarget starl
 	}
 }
 
-// def depends(label_or_target):
-//     """
-//     Returns the transitive closure of targets depended on by the given
-//     target.
+// starlark
 //
-//     :param label_or_target: the label or target in question.
-//     :returns: the target's transitive dependency closure.
-//     :rtype: List[str]
-//     """
+//	def depends(label_or_target):
+//	    """
+//	    Returns the transitive closure of targets depended on by the given
+//	    target.
+//
+//	    :param label_or_target: the label or target in question.
+//	    :returns: the target's transitive dependency closure.
+//	    :rtype: List[str]
+//	    """
 //
 //starlark:builtin
 func (w *workspace) builtin_depends(thread *starlark.Thread, fn *starlark.Builtin, labelOrTarget starlark.Value) (_ starlark.Value, err error) {
@@ -54,14 +56,16 @@ func (w *workspace) builtin_depends(thread *starlark.Thread, fn *starlark.Builti
 	return util.StringList(list).List(), nil
 }
 
-// def what_depends(label_or_target):
-//     """
-//     Returns the transitive closure of target that depend on the given target.
+// starlark
 //
-//     :param label_or_target: the label or target in question.
-//     :returns: the target's transitive dependent closure.
-//     :rtype: List[str]
-//     """
+//	def what_depends(label_or_target):
+//	    """
+//	    Returns the transitive closure of target that depend on the given target.
+//
+//	    :param label_or_target: the label or target in question.
+//	    :returns: the target's transitive dependent closure.
+//	    :rtype: List[str]
+//	    """
 //
 //starlark:builtin
 func (w *workspace) builtin_whatDepends(thread *starlark.Thread, fn *starlark.Builtin, labelOrTarget starlark.Value) (_ starlark.Value, err error) {
@@ -77,18 +81,20 @@ func (w *workspace) builtin_whatDepends(thread *starlark.Thread, fn *starlark.Bu
 	return util.StringList(list).List(), nil
 }
 
-// def cli():
-//     """
-//     CLI-only builtin functions.
-//     """
+// starlark
 //
-//     @function("*workspace.builtin_depends")
-//     def depends():
-//         pass
+//	def cli():
+//	    """
+//	    CLI-only builtin functions.
+//	    """
 //
-//     @function("*workspace.builtin_whatDepends")
-//     def what_depends():
-//         pass
+//	    @function("*workspace.builtin_depends")
+//	    def depends():
+//	        pass
+//
+//	    @function("*workspace.builtin_whatDepends")
+//	    def what_depends():
+//	        pass
 //
 //starlark:module
 type cliModule int

@@ -21,11 +21,13 @@ func init() {
 	environValue = envV
 }
 
-// def environ():
-//     """
-//     Returns a mapping object where keys and values are strings that represent
-//     the process environment. This mapping is captured at startup time.
-//     """
+// starlark
+//
+//	def environ():
+//	    """
+//	    Returns a mapping object where keys and values are strings that represent
+//	    the process environment. This mapping is captured at startup time.
+//	    """
 //
 //starlark:builtin factory=NewEnviron,function=Environ
 func environ(thread *starlark.Thread, fn *starlark.Builtin) (starlark.Value, error) {

@@ -10,17 +10,19 @@ import (
 	"github.com/pgavlin/starlark-go/starlark"
 )
 
-// def look_path(file):
-//     """
-//     Search for an executable named file in the directories named by
-//     the PATH environment variable. If file contains a slash, it is
-//     tried directly and the PATH is not consulted. Otherwise, on
-//     success, the result is an absolute path.
+// starlark
 //
-//     :param file: the name of the executable to find
+//	def look_path(file):
+//	    """
+//	    Search for an executable named file in the directories named by
+//	    the PATH environment variable. If file contains a slash, it is
+//	    tried directly and the PATH is not consulted. Otherwise, on
+//	    success, the result is an absolute path.
 //
-//     :returns: the absolute path to file if found or None if not found.
-//     """
+//	    :param file: the name of the executable to find
+//
+//	    :returns: the absolute path to file if found or None if not found.
+//	    """
 //
 //starlark:builtin factory=NewLookPath,function=LookPath
 func lookPath(
@@ -35,23 +37,25 @@ func lookPath(
 	return starlark.String(path), nil
 }
 
-// def exec(command, cwd=None, env=None, try_=None):
-//     """
-//     Run an executable. If the process fails, the calling module will
-//     abort unless `try_` is set to True, in which case the contents of
-//     standard error will be returned.
+// starlark
 //
-//     :param command: a list of strings indicating the executable to run
-//                     and its arguments (e.g. `["dawn", "build"]`).
-//     :param cwd: the working directory for the command. Defaults to the
-//                 calling module's directory.
-//     :param env: any environment variables to set when running the command.
-//     :param `try_`: when True, the calling module will not be aborted if
-//                  the process fails.
+//	def exec(command, cwd=None, env=None, try_=None):
+//	    """
+//	    Run an executable. If the process fails, the calling module will
+//	    abort unless `try_` is set to True, in which case the contents of
+//	    standard error will be returned.
 //
-//     :returns: the contents of standard error if `try_` is set and None
-//               otherwise. To capture the process's output, use output.
-//     """
+//	    :param command: a list of strings indicating the executable to run
+//	                    and its arguments (e.g. `["dawn", "build"]`).
+//	    :param cwd: the working directory for the command. Defaults to the
+//	                calling module's directory.
+//	    :param env: any environment variables to set when running the command.
+//	    :param `try_`: when True, the calling module will not be aborted if
+//	                 the process fails.
+//
+//	    :returns: the contents of standard error if `try_` is set and None
+//	              otherwise. To capture the process's output, use output.
+//	    """
 //
 //starlark:builtin factory=NewExec,function=Exec
 func execf(
@@ -74,25 +78,27 @@ func execf(
 	return starlark.None, nil
 }
 
-// def output(command, cwd=None, env=None, try_=None):
-//     """
-//     Run an executable and return its output. If the process fails, the
-//     calling module will abort unless `try_` is set to True, in which case
-//     the contents of standard error will be returned.
+// starlark
 //
-//     :param command: a list of strings indicating the executable to run
-//                     and its arguments (e.g. `["dawn", "build"]`).
-//     :param cwd: the working directory for the command. Defaults to the
-//                 calling module's directory.
-//     :param env: any environment variables to set when running the command.
-//     :param `try_`: when True, the calling module will not be aborted if
-//                  the process fails.
+//	def output(command, cwd=None, env=None, try_=None):
+//	    """
+//	    Run an executable and return its output. If the process fails, the
+//	    calling module will abort unless `try_` is set to True, in which case
+//	    the contents of standard error will be returned.
 //
-//     :returns: the contents of standard output if `try_` is not truthy and the
-//               process succeeds. If `try_` is truthy, output returns
-//               (stdout, True) if the process succeeds and (stderr, False)
-//               if the process fails.
-//     """
+//	    :param command: a list of strings indicating the executable to run
+//	                    and its arguments (e.g. `["dawn", "build"]`).
+//	    :param cwd: the working directory for the command. Defaults to the
+//	                calling module's directory.
+//	    :param env: any environment variables to set when running the command.
+//	    :param `try_`: when True, the calling module will not be aborted if
+//	                 the process fails.
+//
+//	    :returns: the contents of standard output if `try_` is not truthy and the
+//	              process succeeds. If `try_` is truthy, output returns
+//	              (stdout, True) if the process succeeds and (stderr, False)
+//	              if the process fails.
+//	    """
 //
 //starlark:builtin factory=NewOutput,function=Output
 func output(

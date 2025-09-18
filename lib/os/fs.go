@@ -8,10 +8,12 @@ import (
 	"github.com/pgavlin/starlark-go/starlark"
 )
 
-// def exists(path):
-//     """
-//     Returns true if a file exists at the given path.
-//     """
+// starlark
+//
+//	def exists(path):
+//	    """
+//	    Returns true if a file exists at the given path.
+//	    """
 //
 //starlark:builtin factory=NewExists,function=Exists
 func exists(thread *starlark.Thread, fn *starlark.Builtin, path string) (starlark.Value, error) {
@@ -31,21 +33,25 @@ func exists(thread *starlark.Thread, fn *starlark.Builtin, path string) (starlar
 	}
 }
 
-// def getcwd():
-//     """
-//     Returns the current OS working directory. This is typically the path of
-//     the directory containg the root module on the callstack.
-//     """
+// starlark
+//
+//	def getcwd():
+//	    """
+//	    Returns the current OS working directory. This is typically the path of
+//	    the directory containg the root module on the callstack.
+//	    """
 //
 //starlark:builtin factory=NewGetcwd,function=Getcwd
 func getcwd(thread *starlark.Thread, fn *starlark.Builtin) (starlark.Value, error) {
 	return starlark.String(util.Getwd(thread)), nil
 }
 
-// def mkdir(path, mode=None):
-//     """
-//     Create a directory named path with numeric mode mode.
-//     """
+// starlark
+//
+//	def mkdir(path, mode=None):
+//	    """
+//	    Create a directory named path with numeric mode mode.
+//	    """
 //
 //starlark:builtin factory=NewMkdir,function=Mkdir
 func mkdir(thread *starlark.Thread, fn *starlark.Builtin, path string, mode int) (starlark.Value, error) {
@@ -64,11 +70,13 @@ func mkdir(thread *starlark.Thread, fn *starlark.Builtin, path string, mode int)
 	return starlark.None, nil
 }
 
-// def makedirs(path, mode=None):
-//     """
-//     Recursive directory creation function. Like mkdir(), but makes all
-//     intermediate-level directories needed to contain the leaf directory.
-//     """
+// starlark
+//
+//	def makedirs(path, mode=None):
+//	    """
+//	    Recursive directory creation function. Like mkdir(), but makes all
+//	    intermediate-level directories needed to contain the leaf directory.
+//	    """
 //
 //starlark:builtin factory=NewMakedirs,function=Makedirs
 func makedirs(thread *starlark.Thread, fn *starlark.Builtin, path string, mode int) (starlark.Value, error) {

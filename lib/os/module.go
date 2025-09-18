@@ -8,53 +8,55 @@ import (
 	"github.com/pgavlin/starlark-go/starlarkstruct"
 )
 
-// def os():
-//     """
-//     Provides a platform-independent interface to host operating system
-//     functionality. Functions in this package expect and return host paths.
-//     """
+// starlark
 //
-//     @module
-//     def path():
-//         """
-//         The path module provides functions to manipulate host paths.
-//         """
+//	def os():
+//	    """
+//	    Provides a platform-independent interface to host operating system
+//	    functionality. Functions in this package expect and return host paths.
+//	    """
 //
-//     @function("environ")
-//     def environ():
-//         pass
+//	    @module
+//	    def path():
+//	        """
+//	        The path module provides functions to manipulate host paths.
+//	        """
 //
-//     @function("lookPath")
-//     def look_path():
-//         pass
+//	    @function("environ")
+//	    def environ():
+//	        pass
 //
-//     @function("execf")
-//     def exec():
-//         pass
+//	    @function("lookPath")
+//	    def look_path():
+//	        pass
 //
-//     @function("output")
-//     def output():
-//         pass
+//	    @function("execf")
+//	    def exec():
+//	        pass
 //
-//     @function("exists")
-//     def exists():
-//         pass
+//	    @function("output")
+//	    def output():
+//	        pass
 //
-//     @function("getcwd")
-//     def getcwd():
-//         pass
+//	    @function("exists")
+//	    def exists():
+//	        pass
 //
-//     @function("glob")
-//     def glob():
-//         pass
+//	    @function("getcwd")
+//	    def getcwd():
+//	        pass
 //
-//     @function("mkdir")
-//     def mkdir():
-//         pass
+//	    @function("glob")
+//	    def glob():
+//	        pass
 //
-//     @function("makedirs")
-//     def makedirs():
-//         pass
+//	    @function("mkdir")
+//	    def mkdir():
+//	        pass
+//
+//	    @function("makedirs")
+//	    def makedirs():
+//	        pass
 //
 //starlark:module
 var Module = &starlarkstruct.Module{
