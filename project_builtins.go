@@ -13,8 +13,8 @@ import (
 	"github.com/pgavlin/dawn/label"
 	"github.com/pgavlin/dawn/util"
 	"github.com/spf13/pflag"
-	"go.starlark.net/starlark"
-	"go.starlark.net/starlarkstruct"
+	"github.com/pgavlin/starlark-go/starlark"
+	"github.com/pgavlin/starlark-go/starlarkstruct"
 )
 
 func CurrentModule(thread *starlark.Thread) (*label.Label, bool) {

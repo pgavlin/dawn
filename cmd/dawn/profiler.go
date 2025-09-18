@@ -5,7 +5,7 @@ import (
 	"runtime/pprof"
 	"runtime/trace"
 
-	"go.starlark.net/starlark"
+	"github.com/pgavlin/starlark-go/starlark"
 )
 
 type profiler struct {

@@ -15,9 +15,9 @@ import (
 	"github.com/pgavlin/dawn/pickle"
 	"github.com/pgavlin/dawn/util"
 	fxs "github.com/pgavlin/fx/v2/slices"
-	"go.starlark.net/starlark"
-	"go.starlark.net/starlarkstruct"
-	"go.starlark.net/syntax"
+	"github.com/pgavlin/starlark-go/starlark"
+	"github.com/pgavlin/starlark-go/starlarkstruct"
+	"github.com/pgavlin/starlark-go/syntax"
 )
 
 // A function is the primary representation of a dawn build target.

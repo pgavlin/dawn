@@ -3,7 +3,7 @@ package util
 import (
 	"os"
 
-	"go.starlark.net/starlark"
+	"github.com/pgavlin/starlark-go/starlark"
 )
 
 func Chdir(thread *starlark.Thread, wd string) {

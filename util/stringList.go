@@ -3,7 +3,7 @@ package util
 import (
 	"errors"
 
-	"go.starlark.net/starlark"
+	"github.com/pgavlin/starlark-go/starlark"
 )
 
 type StringList []string

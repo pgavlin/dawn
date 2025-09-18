@@ -11,7 +11,7 @@ import (
 	"github.com/pgavlin/dawn/runner"
 	fxs "github.com/pgavlin/fx/v2/slices"
 	"github.com/pgavlin/fx/v2/try"
-	"go.starlark.net/starlark"
+	"github.com/pgavlin/starlark-go/starlark"
 )
 
 // A Target represents a build target within a Project.

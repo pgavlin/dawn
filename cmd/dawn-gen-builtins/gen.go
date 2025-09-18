@@ -10,7 +10,7 @@ import (
 	"strings"
 	"text/template"
 
-	"go.starlark.net/syntax"
+	"github.com/pgavlin/starlark-go/syntax"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -202,7 +202,7 @@ func genFunctionWrappers(w io.Writer, pkg *packages.Package, fns []*function) er
 	}
 
 	imports := importSet{}
-	imports["go.starlark.net/starlark"] = packageImport{Path: "go.starlark.net/starlark"}
+	imports["github.com/pgavlin/starlark-go/starlark"] = packageImport{Path: "go.starlark.net/starlark"}
 
 	for _, fn := range fns {
 		fnData, err := genFunctionWrapper(imports, pkg, fn)

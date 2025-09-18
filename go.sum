@@ -237,6 +237,8 @@ github.com/pgavlin/mvs v0.0.0-20250123095647-090776a03765 h1:/HgcjkeTWBaURvJT1Dz
 github.com/pgavlin/mvs v0.0.0-20250123095647-090776a03765/go.mod h1:W28LY2nUddQsVDvie8Lb9n/ITqoHQWg0tUK5gZZQlkQ=
 github.com/pgavlin/starlark-go v0.0.0-20250130180140-a8830bbe58fc h1:Q1dah1l6YHgc9kgxPXMStxbHCfy2OXIlykWN2EfSB4E=
 github.com/pgavlin/starlark-go v0.0.0-20250130180140-a8830bbe58fc/go.mod h1:kIVgS18CjmEC3PqMd5kaJSGEifyV/CeB9x506ZJ1Vbk=
+github.com/pgavlin/starlark-go v0.0.0-20250918081209-6d07710dbf05 h1:v77cDhOpsAwNzVOJIneY8P3qkX4s/6eKA0gG6E3mBDU=
+github.com/pgavlin/starlark-go v0.0.0-20250918081209-6d07710dbf05/go.mod h1:sc6W1VosKi/LIb+5qXbHgj1Hsoky0tRyimQpJKCDrS4=
 github.com/pjbgf/sha1cd v0.3.0 h1:4D5XXmUUBUl/xQ6IjCkEAbqXskkq/4O7LmGn0AqMDs4=
 github.com/pjbgf/sha1cd v0.3.0/go.mod h1:nZ1rrWOcGJ5uZgEEVL1VUM9iRQiZvWdbZjkKyFzPPsI=
 github.com/pkg/diff v0.0.0-20210226163009-20ebb0f2a09e/go.mod h1:pJLUxLENpZxwdsKMEsNbx1VGcRFpLqf3715MtcvvzbA=

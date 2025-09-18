@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/pgavlin/dawn/util"
-	"go.starlark.net/starlark"
+	"github.com/pgavlin/starlark-go/starlark"
 )
 
 // def glob(include, exclude=None):

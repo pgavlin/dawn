@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/pgavlin/dawn/util"
-	"go.starlark.net/starlark"
+	"github.com/pgavlin/starlark-go/starlark"
 
 	"mvdan.cc/sh/v3/expand"
 	"mvdan.cc/sh/v3/interp"

@@ -7,7 +7,7 @@ import (
 	"math"
 	"reflect"
 
-	"go.starlark.net/starlark"
+	"github.com/pgavlin/starlark-go/starlark"
 )
 
 type failure error

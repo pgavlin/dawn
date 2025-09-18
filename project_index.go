@@ -9,7 +9,7 @@ import (
 
 	"github.com/pgavlin/dawn/diff"
 	"github.com/pgavlin/dawn/label"
-	"go.starlark.net/starlark"
+	"github.com/pgavlin/starlark-go/starlark"
 )
 
 // A TargetSummary contains summarial information about a build target.

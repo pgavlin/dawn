@@ -9,7 +9,7 @@ import (
 	"math/big"
 	"strings"
 
-	"go.starlark.net/starlark"
+	"github.com/pgavlin/starlark-go/starlark"
 )
 
 type reader struct {

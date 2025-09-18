@@ -6,7 +6,7 @@ import (
 	"github.com/pgavlin/dawn"
 	"github.com/pgavlin/dawn/label"
 	"github.com/pgavlin/dawn/util"
-	"go.starlark.net/starlark"
+	"github.com/pgavlin/starlark-go/starlark"
 )
 
 func getLabel(thread *starlark.Thread, fn *starlark.Builtin, labelOrTarget starlark.Value) (*label.Label, error) {

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"unicode"
 
-	"go.starlark.net/syntax"
+	"github.com/pgavlin/starlark-go/syntax"
 	"golang.org/x/tools/go/packages"
 )
 

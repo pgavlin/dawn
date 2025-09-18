@@ -4,7 +4,7 @@ import (
 	"os"
 	"strings"
 
-	starlark "go.starlark.net/starlark"
+	starlark "github.com/pgavlin/starlark-go/starlark"
 )
 
 var environValue starlark.Value

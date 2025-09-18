@@ -7,7 +7,7 @@ import (
 	
 	util "github.com/pgavlin/dawn/util"
 	
-	starlark "go.starlark.net/starlark"
+	starlark "github.com/pgavlin/starlark-go/starlark"
 	
 )
 

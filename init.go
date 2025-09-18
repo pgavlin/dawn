@@ -1,6 +1,6 @@
 package dawn
 
-import "go.starlark.net/resolve"
+import "github.com/pgavlin/starlark-go/resolve"
 
 func init() {
 	// Relax some Starlark restrictions.

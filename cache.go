@@ -4,7 +4,7 @@ import (
 	"errors"
 	"sync"
 
-	"go.starlark.net/starlark"
+	"github.com/pgavlin/starlark-go/starlark"
 )
 
 // A cache provides a simple, concurrency-safe string -> value map for use by dawn programs.

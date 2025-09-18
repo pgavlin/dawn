@@ -4,7 +4,7 @@ import (
 	"io"
 	"os"
 
-	"go.starlark.net/starlark"
+	"github.com/pgavlin/starlark-go/starlark"
 )
 
 func SetStdio(thread *starlark.Thread, stdout, stderr io.Writer) {

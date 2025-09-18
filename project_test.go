@@ -15,8 +15,8 @@ import (
 	starlark_sh "github.com/pgavlin/dawn/lib/sh"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	starlark_json "go.starlark.net/lib/json"
-	"go.starlark.net/starlark"
+	starlark_json "github.com/pgavlin/starlark-go/lib/json"
+	"github.com/pgavlin/starlark-go/starlark"
 )
 
 func readFile(t *testing.T, path string) []byte {

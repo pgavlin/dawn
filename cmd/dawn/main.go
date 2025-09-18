@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"go.starlark.net/starlark"
+	"github.com/pgavlin/starlark-go/starlark"
 )
 
 func main() {

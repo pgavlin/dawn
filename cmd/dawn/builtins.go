@@ -5,7 +5,7 @@ package main
 
 import (
 	
-	starlark "go.starlark.net/starlark"
+	starlark "github.com/pgavlin/starlark-go/starlark"
 	
 )
 

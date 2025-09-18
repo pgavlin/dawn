@@ -5,8 +5,8 @@ package path
 import (
 	"path/filepath"
 
-	"go.starlark.net/starlark"
-	"go.starlark.net/starlarkstruct"
+	"github.com/pgavlin/starlark-go/starlark"
+	"github.com/pgavlin/starlark-go/starlarkstruct"
 )
 
 // def path():

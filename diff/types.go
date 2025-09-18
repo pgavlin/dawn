@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"go.starlark.net/starlark"
+	"github.com/pgavlin/starlark-go/starlark"
 )
 
 type ValueDiff interface {

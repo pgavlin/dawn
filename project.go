@@ -25,7 +25,7 @@ import (
 	"github.com/pgavlin/fx/v2"
 	fxs "github.com/pgavlin/fx/v2/slices"
 	"github.com/rjeczalik/notify"
-	"go.starlark.net/starlark"
+	"github.com/pgavlin/starlark-go/starlark"
 )
 
 // An UnknownTargetError is returned by Project.LoadTarget if a referenced target does not exist.

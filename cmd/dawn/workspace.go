@@ -15,9 +15,9 @@ import (
 	starlark_sh "github.com/pgavlin/dawn/lib/sh"
 	fxs "github.com/pgavlin/fx/v2/slices"
 	"github.com/spf13/cobra"
-	starlark_json "go.starlark.net/lib/json"
-	"go.starlark.net/repl"
-	"go.starlark.net/starlark"
+	starlark_json "github.com/pgavlin/starlark-go/lib/json"
+	"github.com/pgavlin/starlark-go/repl"
+	"github.com/pgavlin/starlark-go/starlark"
 )
 
 type workspace struct {

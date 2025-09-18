@@ -1,8 +1,8 @@
 package label
 
 import (
-	"go.starlark.net/starlark"
-	"go.starlark.net/syntax"
+	"github.com/pgavlin/starlark-go/starlark"
+	"github.com/pgavlin/starlark-go/syntax"
 )
 
 // starlark.Value

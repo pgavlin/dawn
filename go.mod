@@ -17,7 +17,6 @@ require (
 	github.com/spf13/cobra v1.1.3
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.10.0
-	go.starlark.net v0.0.0-20240329153429-e6e8e7ce1b7a
 	golang.org/x/mod v0.25.0
 	golang.org/x/sys v0.33.0
 	golang.org/x/term v0.32.0
@@ -48,6 +47,7 @@ require (
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/mattn/go-colorable v0.1.8 // indirect
 	github.com/mattn/go-isatty v0.0.12 // indirect
+	github.com/pgavlin/starlark-go v0.0.0-20250918081209-6d07710dbf05 // indirect
 	github.com/pjbgf/sha1cd v0.3.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
@@ -65,5 +65,3 @@ require (
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-replace go.starlark.net => github.com/pgavlin/starlark-go v0.0.0-20250130180140-a8830bbe58fc

@@ -2,7 +2,7 @@ package dawn
 
 import (
 	"github.com/pgavlin/dawn/util"
-	"go.starlark.net/starlark"
+	"github.com/pgavlin/starlark-go/starlark"
 )
 
 // A Flag holds information about a project configuration flag.

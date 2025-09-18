@@ -16,8 +16,8 @@ import (
 	"github.com/pgavlin/dawn/diff"
 	"github.com/pgavlin/dawn/internal/project"
 	"github.com/pgavlin/dawn/label"
-	starlarkjson "go.starlark.net/lib/json"
-	starlark "go.starlark.net/starlark"
+	starlarkjson "github.com/pgavlin/starlark-go/lib/json"
+	starlark "github.com/pgavlin/starlark-go/starlark"
 )
 
 type renderer interface {

@@ -1,7 +1,7 @@
 package diff
 
 import (
-	"go.starlark.net/starlark"
+	"github.com/pgavlin/starlark-go/starlark"
 )
 
 // limit of cordinate size

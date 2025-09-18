@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/pgavlin/dawn/util"
-	"go.starlark.net/starlark"
+	"github.com/pgavlin/starlark-go/starlark"
 )
 
 // def look_path(file):
