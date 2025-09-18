@@ -37,7 +37,6 @@ type Targets interface {
 }
 
 type Engine interface {
-	Path() []string
 	EvaluateTargets(labels ...string) []Result
 }
 
@@ -71,7 +70,7 @@ func newTarget(label string) *target {
 	return tt
 }
 
-func (t *target) start(path []string, r *runner) {
+func (t *target) start(r *runner) {
 	t.m.Lock()
 	if t.status != statusIdle {
 		t.m.Unlock()
@@ -81,7 +80,7 @@ func (t *target) start(path []string, r *runner) {
 	t.status = statusRunning
 	t.m.Unlock()
 
-	go t.run(path, r)
+	go t.run(r)
 }
 
 func (t *target) wait() error {
@@ -97,7 +96,7 @@ func (t *target) wait() error {
 	return t.err
 }
 
-func (t *target) run(path []string, r *runner) {
+func (t *target) run(r *runner) {
 	unlock := func() {
 		t.m.Unlock()
 		t.c.Broadcast()
@@ -119,7 +118,7 @@ func (t *target) run(path []string, r *runner) {
 
 	// Evaluate and save the target.
 	status := statusSucceeded
-	if err = t.target.Evaluate(&engine{path: path, root: t, runner: r}); err != nil {
+	if err = t.target.Evaluate(&engine{root: t, runner: r}); err != nil {
 		status = statusFailed
 	}
 
@@ -129,7 +128,6 @@ func (t *target) run(path []string, r *runner) {
 }
 
 type engine struct {
-	path   []string
 	root   *target
 	runner *runner
 }
@@ -154,37 +152,30 @@ func (e *engine) checkDeps(path []string, deps []*target) error {
 	return nil
 }
 
-func (e *engine) Path() []string {
-	return e.path
-}
-
 func (e *engine) EvaluateTargets(labels ...string) []Result {
 	e.runner.gate.exit()
 	defer e.runner.gate.enter()
 
-	path := append(e.path, e.root.label)
-
 	targets := make([]*target, len(labels))
 	for i, label := range labels {
 		targets[i] = e.runner.getTarget(label)
-		targets[i].start(path, e.runner)
+		targets[i].start(e.runner)
 	}
 
 	e.root.waiting.Swap(&targets)
 	defer e.root.waiting.Swap(nil)
 
+	path := []string{e.root.label}
 	results := make([]Result, len(targets))
-	if err := e.checkDeps([]string{e.root.label}, targets); err != nil {
-		for i := range results {
+	for i, t := range targets {
+		err := e.check(path, t)
+		if err != nil {
 			results[i].Error = err
 			results[i].Target = nil
+		} else {
+			results[i].Error = t.wait()
+			results[i].Target = t.target
 		}
-		return results
-	}
-
-	for i, t := range targets {
-		results[i].Error = t.wait()
-		results[i].Target = t.target
 	}
 	return results
 }
@@ -233,6 +224,6 @@ func (r *runner) getTarget(label string) *target {
 func Run(targets Targets, label string) error {
 	r := runner{targetLoader: targets, gate: newGate(runtime.NumCPU())}
 	t := r.getTarget(label)
-	t.start(nil, &r)
+	t.start(&r)
 	return t.wait()
 }

@@ -1,4 +1,14 @@
-@target(sources=["foo.json"], generates=["foo.json"])
+def indent(file):
+    @target(name=f"indent-{file}", sources=[file], generates=[file])
+    def do():
+        indented = json.indent(sh.output("cat foo.json").strip())
+        sh.exec(f"echo '{indented}' >foo.json")
+    return do
+
+foo = indent("foo.json")
+bar = indent("bar.json")
+
+@target(deps=[bar], sources=["foo.json"])
 def default():
-    indented = json.indent(sh.output("cat foo.json").strip())
-    sh.exec(f"echo '{indented}' >foo.json")
+    pass
+

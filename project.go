@@ -22,6 +22,7 @@ import (
 	"github.com/pgavlin/dawn/internal/spell"
 	"github.com/pgavlin/dawn/label"
 	"github.com/pgavlin/dawn/runner"
+	"github.com/pgavlin/dawn/util"
 	"github.com/pgavlin/fx/v2"
 	fxs "github.com/pgavlin/fx/v2/slices"
 	"github.com/pgavlin/starlark-go/starlark"
@@ -272,6 +273,7 @@ func (proj *Project) Watch(label *label.Label) error {
 func (proj *Project) REPLEnv(stdout io.Writer, pkg *label.Label) (thread *starlark.Thread, globals starlark.StringDict) {
 	m := &module{label: &label.Label{Kind: "module", Package: pkg.Package, Name: "<stdin>"}}
 	thread, globals, _ = m.env(proj)
+	util.SetStdio(thread, stdout, stdout)
 	thread.Print = func(_ *starlark.Thread, msg string) {
 		fmt.Fprintln(stdout, msg)
 	}
