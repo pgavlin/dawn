@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"path/filepath"
@@ -12,7 +13,6 @@ import (
 
 	"github.com/pgavlin/dawn/diff"
 	"github.com/pgavlin/dawn/label"
-	"github.com/pgavlin/dawn/util"
 	"github.com/pgavlin/starlark-go/starlark"
 )
 
@@ -145,7 +145,19 @@ func fileSum(path string) (string, error) {
 		return dirSum(path, f)
 	}
 
-	return util.SHA256(f)
+	h := sha256.New()
+	buf := make([]byte, min(64<<20, stat.Size()))
+	for {
+		n, err := f.Read(buf)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			return "", err
+		}
+		h.Write(buf[:n])
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
 func dirSum(path string, dir *os.File) (string, error) {
@@ -160,9 +172,7 @@ func dirSum(path string, dir *os.File) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		if _, err := h.Write([]byte(sum)); err != nil {
-			return "", err
-		}
+		h.Write([]byte(sum))
 	}
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
