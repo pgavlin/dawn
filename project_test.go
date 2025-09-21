@@ -2,6 +2,7 @@ package dawn
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"os"
 	"path/filepath"
@@ -130,13 +131,22 @@ func (pt *projectTest) run(t *testing.T) {
 		paths = append(paths, filepath.Join(path, edit))
 	}
 
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+
+	cancelBuiltin := starlark.NewBuiltin("cancel", func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+		cancel()
+		return starlark.None, nil
+	})
+
 	events := &testEvents{}
 	options := &LoadOptions{
 		Events: events,
 		Builtins: starlark.StringDict{
-			"json": starlark_json.Module,
-			"os":   starlark_os.Module,
-			"sh":   starlark_sh.Module,
+			"cancel": cancelBuiltin,
+			"json":   starlark_json.Module,
+			"os":     starlark_os.Module,
+			"sh":     starlark_sh.Module,
 		},
 	}
 
@@ -146,7 +156,7 @@ func (pt *projectTest) run(t *testing.T) {
 		}})
 		require.NoError(t, err)
 
-		proj, err := Load(temp, options)
+		proj, err := Load(ctx, temp, options)
 		if pt.loadErr != "" {
 			assert.ErrorContains(t, err, pt.loadErr)
 			return
@@ -156,7 +166,7 @@ func (pt *projectTest) run(t *testing.T) {
 		err = proj.GC()
 		require.NoError(t, err)
 
-		err = proj.Run(def, nil)
+		err = proj.Run(ctx, def, nil)
 		if pt.runErr != "" {
 			assert.ErrorContains(t, err, pt.runErr)
 			return
@@ -249,6 +259,22 @@ func TestCyclicGenerate(t *testing.T) {
 	pt := projectTest{
 		path:     "testdata/cyclic-generates",
 		validate: func(t *testing.T, _ string, _ []testEvent) {},
+	}
+	pt.run(t)
+}
+
+func TestCancelLoad(t *testing.T) {
+	pt := projectTest{
+		path:    "testdata/cancel-load",
+		loadErr: "context canceled",
+	}
+	pt.run(t)
+}
+
+func TestCancelRun(t *testing.T) {
+	pt := projectTest{
+		path:   "testdata/cancel-run",
+		runErr: "context canceled",
 	}
 	pt.run(t)
 }

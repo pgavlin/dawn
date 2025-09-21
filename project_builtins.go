@@ -527,7 +527,7 @@ func (proj *Project) builtin_run(
 		Always: always,
 		DryRun: dryRun,
 	}
-	return starlark.None, proj.Run(l, &options)
+	return starlark.None, proj.Run(util.GetContext(thread), l, &options)
 }
 
 // starlark

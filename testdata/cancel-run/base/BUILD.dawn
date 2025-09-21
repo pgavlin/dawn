@@ -1,0 +1,4 @@
+@target()
+def default():
+    for i in range(1, 10000000000):
+        cancel()

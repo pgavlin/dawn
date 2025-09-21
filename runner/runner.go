@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"context"
 	"fmt"
 	"runtime"
 	"slices"
@@ -33,15 +34,15 @@ type Result struct {
 }
 
 type Targets interface {
-	LoadTarget(label string) (Target, error)
+	LoadTarget(ctx context.Context, label string) (Target, error)
 }
 
 type Engine interface {
-	EvaluateTargets(labels ...string) []Result
+	EvaluateTargets(ctx context.Context, labels ...string) []Result
 }
 
 type Target interface {
-	Evaluate(engine Engine) error
+	Evaluate(ctx context.Context, engine Engine) error
 }
 
 const (
@@ -70,7 +71,7 @@ func newTarget(label string) *target {
 	return tt
 }
 
-func (t *target) start(r *runner) {
+func (t *target) start(ctx context.Context, r *runner) {
 	t.m.Lock()
 	if t.status != statusIdle {
 		t.m.Unlock()
@@ -80,7 +81,7 @@ func (t *target) start(r *runner) {
 	t.status = statusRunning
 	t.m.Unlock()
 
-	go t.run(r)
+	go t.run(ctx, r)
 }
 
 func (t *target) wait() error {
@@ -96,7 +97,7 @@ func (t *target) wait() error {
 	return t.err
 }
 
-func (t *target) run(r *runner) {
+func (t *target) run(ctx context.Context, r *runner) {
 	unlock := func() {
 		t.m.Unlock()
 		t.c.Broadcast()
@@ -106,7 +107,7 @@ func (t *target) run(r *runner) {
 	defer r.gate.exit()
 
 	// Load the target.
-	tt, err := r.targetLoader.LoadTarget(t.label)
+	tt, err := r.targetLoader.LoadTarget(ctx, t.label)
 	if err != nil {
 		t.m.Lock()
 		defer unlock()
@@ -118,7 +119,7 @@ func (t *target) run(r *runner) {
 
 	// Evaluate and save the target.
 	status := statusSucceeded
-	if err = t.target.Evaluate(&engine{root: t, runner: r}); err != nil {
+	if err = t.target.Evaluate(ctx, &engine{root: t, runner: r}); err != nil {
 		status = statusFailed
 	}
 
@@ -152,14 +153,14 @@ func (e *engine) checkDeps(path []string, deps []*target) error {
 	return nil
 }
 
-func (e *engine) EvaluateTargets(labels ...string) []Result {
+func (e *engine) EvaluateTargets(ctx context.Context, labels ...string) []Result {
 	e.runner.gate.exit()
 	defer e.runner.gate.enter()
 
 	targets := make([]*target, len(labels))
 	for i, label := range labels {
 		targets[i] = e.runner.getTarget(label)
-		targets[i].start(e.runner)
+		targets[i].start(ctx, e.runner)
 	}
 
 	e.root.waiting.Swap(&targets)
@@ -221,9 +222,9 @@ func (r *runner) getTarget(label string) *target {
 	return tv.(*target)
 }
 
-func Run(targets Targets, label string) error {
+func Run(ctx context.Context, targets Targets, label string) error {
 	r := runner{targetLoader: targets, gate: newGate(runtime.NumCPU())}
 	t := r.getTarget(label)
-	t.start(&r)
+	t.start(ctx, &r)
 	return t.wait()
 }

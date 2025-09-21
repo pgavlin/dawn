@@ -104,7 +104,7 @@ func (m *module) env(proj *Project) (*starlark.Thread, starlark.StringDict, erro
 			proj.events.Print(m.label, msg)
 		},
 		Load: func(t *starlark.Thread, rawLabel string) (starlark.StringDict, error) {
-			return m.loadModule(proj, rawLabel)
+			return m.loadModule(util.GetContext(t), proj, rawLabel)
 		},
 	}
 
@@ -136,7 +136,7 @@ func (m *module) env(proj *Project) (*starlark.Thread, starlark.StringDict, erro
 	return &t, builtins, nil
 }
 
-func (m *module) loadModule(proj *Project, rawLabel string) (starlark.StringDict, error) {
+func (m *module) loadModule(ctx context.Context, proj *Project, rawLabel string) (starlark.StringDict, error) {
 	label, err := label.Parse(rawLabel)
 	if err != nil {
 		return nil, err
@@ -154,11 +154,11 @@ func (m *module) loadModule(proj *Project, rawLabel string) (starlark.StringDict
 	label.Kind = "module"
 
 	m.dependencies = append(m.dependencies, label.String())
-	return proj.loadModule(m, label)
+	return proj.loadModule(ctx, m, label)
 }
 
 // load executes the module's code.
-func (m *module) load(proj *Project) (starlark.StringDict, error) {
+func (m *module) load(ctx context.Context, proj *Project) (starlark.StringDict, error) {
 	proj.events.ModuleLoading(m.label)
 
 	t, builtins, err := m.env(proj)
@@ -166,6 +166,8 @@ func (m *module) load(proj *Project) (starlark.StringDict, error) {
 		proj.events.ModuleLoadFailed(m.label, err)
 		return nil, err
 	}
+	done := util.SetContext(ctx, t)
+	defer done()
 
 	v, err := m.done(starlark.ExecFile(t, m.path, nil, builtins))
 	if err != nil {

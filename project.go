@@ -2,6 +2,7 @@ package dawn
 
 import (
 	"cmp"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -87,7 +88,7 @@ func (options *LoadOptions) apply(p *Project, preferIndex *bool) {
 	}
 }
 
-func Load(root string, options *LoadOptions) (proj *Project, err error) {
+func Load(ctx context.Context, root string, options *LoadOptions) (proj *Project, err error) {
 	home, err := homedir.Dir()
 	if err != nil {
 		return nil, fmt.Errorf("getting home directory: %w", err)
@@ -111,13 +112,13 @@ func Load(root string, options *LoadOptions) (proj *Project, err error) {
 		return nil, err
 	}
 
-	if err := proj.load(preferIndex); err != nil {
+	if err := proj.load(ctx, preferIndex); err != nil {
 		return nil, err
 	}
 	return proj, nil
 }
 
-func (proj *Project) load(index bool) (err error) {
+func (proj *Project) load(ctx context.Context, index bool) (err error) {
 	defer func() {
 		proj.events.LoadDone(err)
 	}()
@@ -132,7 +133,7 @@ func (proj *Project) load(index bool) (err error) {
 		return err
 	}
 
-	if err = proj.loadPackage(nil, "//"); err != nil {
+	if err = proj.loadPackage(ctx, nil, "//"); err != nil {
 		return err
 	}
 	for _, m := range proj.modules {
@@ -149,11 +150,11 @@ func (proj *Project) load(index bool) (err error) {
 	return nil
 }
 
-func (proj *Project) Reload() (err error) {
+func (proj *Project) Reload(ctx context.Context) (err error) {
 	proj.flags = map[string]*Flag{}
 	proj.modules = map[string]*module{}
 	proj.targets = map[string]*runTarget{}
-	return proj.load(false)
+	return proj.load(ctx, false)
 }
 
 type RunOptions struct {
@@ -172,16 +173,16 @@ func (opts *RunOptions) apply(proj *Project) {
 	proj.dryrun = opts.DryRun
 }
 
-func (proj *Project) Run(label *label.Label, options *RunOptions) error {
+func (proj *Project) Run(ctx context.Context, label *label.Label, options *RunOptions) error {
 	options.apply(proj)
 
-	err := runner.Run(proj, label.String())
+	err := runner.Run(ctx, proj, label.String())
 	proj.events.RunDone(err)
 	return err
 }
 
 // LoadTarget implements runner.Host.
-func (proj *Project) LoadTarget(rawlabel string) (runner.Target, error) {
+func (proj *Project) LoadTarget(_ context.Context, rawlabel string) (runner.Target, error) {
 	l, err := label.Parse(rawlabel)
 	if err != nil {
 		return nil, err
@@ -197,7 +198,10 @@ func (proj *Project) LoadTarget(rawlabel string) (runner.Target, error) {
 	return target, nil
 }
 
-func (proj *Project) Watch(label *label.Label) error {
+func (proj *Project) Watch(ctx context.Context, label *label.Label) error {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	events := make(chan notify.EventInfo, 1000)
 	eventsDone := make(chan struct{})
 	go func() {
@@ -206,15 +210,22 @@ func (proj *Project) Watch(label *label.Label) error {
 
 		go func() {
 			for range builds {
-				if err := proj.Reload(); err != nil {
+				if err := proj.Reload(ctx); err != nil {
 					// Project's load events are responsible for logging the error.
 					continue
 				}
 
 				// Project's run events are responsible for logging the error.
-				proj.Run(label, nil)
+				proj.Run(ctx, label, nil)
 			}
 			close(buildsDone)
+		}()
+
+		defer func() {
+			close(builds)
+			<-buildsDone
+
+			close(eventsDone)
 		}()
 
 		dirty := false
@@ -223,10 +234,6 @@ func (proj *Project) Watch(label *label.Label) error {
 			select {
 			case event, ok := <-events:
 				if !ok {
-					close(builds)
-					<-buildsDone
-
-					close(eventsDone)
 					return
 				}
 
@@ -254,6 +261,9 @@ func (proj *Project) Watch(label *label.Label) error {
 						// Loop around
 					}
 				}
+
+			case <-ctx.Done():
+				close(builds)
 			}
 		}
 	}()
@@ -266,8 +276,7 @@ func (proj *Project) Watch(label *label.Label) error {
 
 	// Never terminates
 	<-eventsDone
-
-	return nil
+	return ctx.Err()
 }
 
 func (proj *Project) REPLEnv(stdout io.Writer, pkg *label.Label) (thread *starlark.Thread, globals starlark.StringDict) {
@@ -462,7 +471,8 @@ func (proj *Project) ignored(path string) bool {
 	return proj.ignore != nil && proj.ignore.MatchString(path)
 }
 
-func (proj *Project) loadPackage(wg *sync.WaitGroup, path string) error {
+func (proj *Project) loadPackage(ctx context.Context, wg *sync.WaitGroup, path string) error {
+
 	if proj.ignored(path[2:]) {
 		return nil
 	}
@@ -481,14 +491,14 @@ func (proj *Project) loadPackage(wg *sync.WaitGroup, path string) error {
 	if slices.ContainsFunc(entries, func(e os.DirEntry) bool { return e.Name() == "BUILD.dawn" }) {
 		wg.Add(1)
 		go func() {
-			proj.loadModule(nil, &label.Label{Kind: "module", Package: path, Name: "BUILD.dawn"})
+			proj.loadModule(ctx, nil, &label.Label{Kind: "module", Package: path, Name: "BUILD.dawn"})
 			wg.Done()
 		}()
 	}
 	dirs := fxs.Filter(entries, func(e os.DirEntry) bool { return e.IsDir() && e.Name() != ".dawn" })
 	for d := range dirs {
 		pkg, _ := label.Join(path, d.Name())
-		if err := proj.loadPackage(wg, pkg); err != nil {
+		if err := proj.loadPackage(ctx, wg, pkg); err != nil {
 			return err
 		}
 	}
@@ -496,7 +506,7 @@ func (proj *Project) loadPackage(wg *sync.WaitGroup, path string) error {
 	return nil
 }
 
-func (proj *Project) loadModule(waiter *module, label *label.Label) (starlark.StringDict, error) {
+func (proj *Project) loadModule(ctx context.Context, waiter *module, label *label.Label) (starlark.StringDict, error) {
 	proj.m.Lock()
 	if m, ok := proj.modules[label.String()]; ok {
 		proj.m.Unlock()
@@ -519,7 +529,7 @@ func (proj *Project) loadModule(waiter *module, label *label.Label) (starlark.St
 		defer waiter.setLoading(nil)
 	}
 
-	return m.load(proj)
+	return m.load(ctx, proj)
 }
 
 func (proj *Project) loadFunction(m *module, l *label.Label, dependencies, sources, generates []string, fn starlark.Callable, always bool, docs string) (*function, error) {

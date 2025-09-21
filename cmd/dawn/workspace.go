@@ -1,23 +1,26 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
+	"os/signal"
 	"path"
 	"path/filepath"
 	"slices"
 	"strings"
+	"syscall"
 
 	"github.com/pgavlin/dawn"
 	"github.com/pgavlin/dawn/label"
 	starlark_os "github.com/pgavlin/dawn/lib/os"
 	starlark_sh "github.com/pgavlin/dawn/lib/sh"
 	fxs "github.com/pgavlin/fx/v2/slices"
-	"github.com/spf13/cobra"
 	starlark_json "github.com/pgavlin/starlark-go/lib/json"
 	"github.com/pgavlin/starlark-go/repl"
 	"github.com/pgavlin/starlark-go/starlark"
+	"github.com/spf13/cobra"
 )
 
 type workspace struct {
@@ -28,12 +31,25 @@ type workspace struct {
 	verbose    bool
 	diff       bool
 
+	context  context.Context
 	project  *dawn.Project
 	graph    graph
 	renderer renderer
 }
 
 func (w *workspace) init() error {
+	ctx, cancel := context.WithCancelCause(context.Background())
+
+	// The channel for signal.Notify should be buffered https://pkg.go.dev/os/signal#Notify
+	sigint := make(chan os.Signal, 1)
+	go func() {
+		sig := <-sigint
+		cancel(errors.New(sig.String()))
+	}()
+	signal.Notify(sigint, os.Interrupt, syscall.SIGTERM)
+
+	w.context = ctx
+
 	wd, err := os.Getwd()
 	if err != nil {
 		return err
@@ -155,7 +171,7 @@ func (w *workspace) loadProject(args []string, index, quiet bool) error {
 		},
 		PreferIndex: !w.reindex && index,
 	}
-	project, err := dawn.Load(w.root, options)
+	project, err := dawn.Load(w.context, w.root, options)
 	if err != nil {
 		renderer.Close()
 		return err
@@ -228,13 +244,13 @@ func (w *workspace) labelOrNearestDefault(l *label.Label) *label.Label {
 }
 
 func (w *workspace) run(label *label.Label, opts dawn.RunOptions) error {
-	err := w.project.Run(w.labelOrNearestDefault(label), &opts)
+	err := w.project.Run(w.context, w.labelOrNearestDefault(label), &opts)
 	w.renderer.Close()
 	return err
 }
 
 func (w *workspace) watch(label *label.Label) error {
-	err := w.project.Watch(w.labelOrNearestDefault(label))
+	err := w.project.Watch(w.context, w.labelOrNearestDefault(label))
 	w.renderer.Close()
 	return err
 }

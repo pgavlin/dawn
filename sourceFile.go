@@ -1,6 +1,7 @@
 package dawn
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -100,8 +101,8 @@ func (f *sourceFile) info() targetInfo {
 	return f.targetInfo
 }
 
-func (f *sourceFile) upToDate() (bool, string, diff.ValueDiff, error) {
-	sum, err := fileSum(f.path)
+func (f *sourceFile) upToDate(ctx context.Context) (bool, string, diff.ValueDiff, error) {
+	sum, err := fileSum(ctx, f.path)
 	if err != nil && !os.IsNotExist(err) {
 		return false, "", nil, err
 	}
@@ -114,7 +115,7 @@ func (f *sourceFile) upToDate() (bool, string, diff.ValueDiff, error) {
 	return false, "file contents changed", nil, nil
 }
 
-func (f *sourceFile) evaluate() (data string, changed bool, err error) {
+func (f *sourceFile) evaluate(_ context.Context) (data string, changed bool, err error) {
 	f.oldSum = f.sum
 	return f.sum, true, nil
 }
@@ -130,7 +131,7 @@ func (f *sourceFile) load() error {
 	return nil
 }
 
-func fileSum(path string) (string, error) {
+func fileSum(ctx context.Context, path string) (string, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return "", err
@@ -142,12 +143,15 @@ func fileSum(path string) (string, error) {
 		return "", err
 	}
 	if stat.IsDir() {
-		return dirSum(path, f)
+		return dirSum(ctx, path, f)
 	}
 
 	h := sha256.New()
 	buf := make([]byte, min(64<<20, stat.Size()))
 	for {
+		if err := ctx.Err(); err != nil {
+			return "", err
+		}
 		n, err := f.Read(buf)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
@@ -160,7 +164,7 @@ func fileSum(path string) (string, error) {
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
-func dirSum(path string, dir *os.File) (string, error) {
+func dirSum(ctx context.Context, path string, dir *os.File) (string, error) {
 	entries, err := dir.ReadDir(0)
 	if err != nil {
 		return "", err
@@ -168,7 +172,7 @@ func dirSum(path string, dir *os.File) (string, error) {
 
 	h := sha256.New()
 	for _, entry := range entries {
-		sum, err := fileSum(filepath.Join(path, entry.Name()))
+		sum, err := fileSum(ctx, filepath.Join(path, entry.Name()))
 		if err != nil {
 			return "", err
 		}

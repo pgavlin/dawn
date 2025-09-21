@@ -2,6 +2,7 @@ package dawn
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -173,7 +174,7 @@ func (f *function) diffEnv() (bool, string, diff.ValueDiff, error) {
 	return false, reason + " changed", d, nil
 }
 
-func (f *function) upToDate() (bool, string, diff.ValueDiff, error) {
+func (f *function) upToDate(_ context.Context) (bool, string, diff.ValueDiff, error) {
 	// check env
 	newEnv, err := functionEnv(f.function)
 	if err != nil {
@@ -206,7 +207,7 @@ func (f *function) upToDate() (bool, string, diff.ValueDiff, error) {
 	return true, "", nil, nil
 }
 
-func (f *function) newThread() *starlark.Thread {
+func (f *function) newThread(ctx context.Context) (*starlark.Thread, func()) {
 	thread := &starlark.Thread{
 		Name: f.label.String(),
 		Print: func(_ *starlark.Thread, msg string) {
@@ -226,10 +227,10 @@ func (f *function) newThread() *starlark.Thread {
 	thread.SetLocal("root", f.proj.root)
 	thread.SetLocal("module", f.module)
 
-	return thread
+	return thread, util.SetContext(ctx, thread)
 }
 
-func (f *function) evaluate() (data string, changed bool, err error) {
+func (f *function) evaluate(ctx context.Context) (data string, changed bool, err error) {
 	defer f.out.Flush()
 
 	var args starlark.Tuple
@@ -237,7 +238,9 @@ func (f *function) evaluate() (data string, changed bool, err error) {
 		args = starlark.Tuple{f}
 	}
 
-	_, err = starlark.Call(f.newThread(), f.function, args, nil)
+	thread, done := f.newThread(ctx)
+	defer done()
+	_, err = starlark.Call(thread, f.function, args, nil)
 	if err != nil {
 		return "", false, err
 	}

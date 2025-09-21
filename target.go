@@ -2,6 +2,7 @@ package dawn
 
 import (
 	"cmp"
+	"context"
 	"errors"
 	"fmt"
 	"slices"
@@ -35,8 +36,8 @@ type Target interface {
 	dependencies() []string
 	generates() []string
 	info() targetInfo
-	upToDate() (bool, string, diff.ValueDiff, error)
-	evaluate() (data string, changed bool, err error)
+	upToDate(ctx context.Context) (bool, string, diff.ValueDiff, error)
+	evaluate(ctx context.Context) (data string, changed bool, err error)
 }
 
 // runTarget implements runner.Target.
@@ -78,7 +79,7 @@ func (t *runTarget) canBreakCycle(cycle []string) bool {
 	return file.generator.String() == generator.Label().String()
 }
 
-func (t *runTarget) Evaluate(engine runner.Engine) error {
+func (t *runTarget) Evaluate(ctx context.Context, engine runner.Engine) error {
 	proj, label, info := t.target.Project(), t.target.Label(), t.target.info()
 
 	// Copy the current version of the data.
@@ -93,7 +94,7 @@ func (t *runTarget) Evaluate(engine runner.Engine) error {
 	var missingDeps []string
 	var hasFailedDeps bool
 	var outOfDateDeps []string
-	for i, dep := range engine.EvaluateTargets(deps...) {
+	for i, dep := range engine.EvaluateTargets(ctx, deps...) {
 		if dep.Error != nil {
 			switch err := dep.Error.(type) {
 			case UnknownTargetError:
@@ -152,7 +153,7 @@ func (t *runTarget) Evaluate(engine runner.Engine) error {
 	}
 
 	// Check whether the target is up-to-date.
-	upToDate, reason, diff, err := t.target.upToDate()
+	upToDate, reason, diff, err := t.target.upToDate(ctx)
 	if err != nil {
 		proj.events.TargetFailed(label, err)
 		return err
@@ -186,7 +187,7 @@ func (t *runTarget) Evaluate(engine runner.Engine) error {
 	}
 
 	// Otherwise, evaluate the target.
-	data, changed, err := t.target.evaluate()
+	data, changed, err := t.target.evaluate(ctx)
 	if err != nil {
 		proj.events.TargetFailed(label, err)
 

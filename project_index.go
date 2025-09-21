@@ -1,6 +1,7 @@
 package dawn
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -96,11 +97,11 @@ func (t *indexTarget) info() targetInfo {
 	}
 }
 
-func (t *indexTarget) upToDate() (bool, string, diff.ValueDiff, error) {
+func (t *indexTarget) upToDate(_ context.Context) (bool, string, diff.ValueDiff, error) {
 	return true, "", nil, nil
 }
 
-func (*indexTarget) evaluate() (data string, changed bool, err error) {
+func (*indexTarget) evaluate(_ context.Context) (data string, changed bool, err error) {
 	return "", false, fmt.Errorf("index targets are not executable; please reload the project")
 }
 
