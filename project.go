@@ -3,12 +3,13 @@ package dawn
 import (
 	"cmp"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"io/fs"
 	"maps"
-	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -404,6 +405,7 @@ func (proj *Project) unknownTarget(label string) error {
 }
 
 type targetInfo struct {
+	Label        string            `json:"label,omitempty"`
 	Doc          string            `json:"doc,omitempty"`
 	Dependencies map[string]string `json:"dependencies,omitempty"`
 	Data         string            `json:"stamp,omitempty"`
@@ -420,8 +422,8 @@ func (proj *Project) targetInfoPath(l *label.Label) string {
 		target = "BUILD.dawn"
 	}
 
-	targetPath := url.PathEscape(l.Package[2:] + "/" + target)
-	return filepath.Join(proj.work, kind+"s", targetPath)
+	pathSum := sha256.Sum256([]byte(l.Package[2:] + "/" + target))
+	return filepath.Join(proj.work, kind+"s", hex.EncodeToString(pathSum[:]))
 }
 
 func (proj *Project) loadTargetInfo(label *label.Label) (targetInfo, error) {
@@ -441,6 +443,9 @@ func (proj *Project) loadTargetInfo(label *label.Label) (targetInfo, error) {
 	if err := json.NewDecoder(f).Decode(&info); err != nil {
 		return targetInfo{}, err
 	}
+	if info.Label != label.String() {
+		return targetInfo{}, fmt.Errorf("internal error: label mismatch: expected %v, not %v at path %v", label, info.Label, path)
+	}
 	return info, nil
 }
 
@@ -457,6 +462,7 @@ func (proj *Project) saveTargetInfo(label *label.Label, info targetInfo) error {
 	}
 	tempName := f.Name()
 
+	info.Label = label.String()
 	if err = json.NewEncoder(f).Encode(info); err != nil {
 		return err
 	}
