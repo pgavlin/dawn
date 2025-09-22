@@ -352,6 +352,20 @@ func (proj *Project) builtin_target(
 		dependencies = deps
 	}
 
+	// Process gens.
+	genSet := fx.Set[string]{}
+	gens := make([]string, 0, len(generates))
+	for _, g := range generates {
+		path, err := repoSourcePath(m.label.Package, g)
+		if err != nil {
+			return nil, err
+		}
+		components := strings.Split(path, "/")
+		path = filepath.Join(proj.root, filepath.Join(components...))
+		gens = append(gens, path)
+		genSet.Add(path)
+	}
+
 	sourcePaths := make([]string, 0, len(sources))
 	for _, s := range sources {
 		label, err := sourceLabel(m.label.Package, s)
@@ -362,19 +376,18 @@ func (proj *Project) builtin_target(
 		if err != nil {
 			return nil, err
 		}
-		sourcePaths, dependencies = append(sourcePaths, f.path), append(dependencies, label.String())
-	}
+		sourcePaths = append(sourcePaths, f.path)
 
-	// Process gens.
-	gens := make([]string, 0, len(generates))
-	for _, g := range generates {
-		path, err := repoSourcePath(m.label.Package, g)
-		if err != nil {
-			return nil, err
+		if genSet.Has(f.path) {
+			shadow := label.Copy()
+			shadow.Kind = "shadow"
+			f, err = proj.loadSourceFile(shadow)
+			if err != nil {
+				return nil, err
+			}
+			label = shadow
 		}
-		components := strings.Split(path, "/")
-		path = filepath.Join(proj.root, filepath.Join(components...))
-		gens = append(gens, path)
+		sourcePaths, dependencies = append(sourcePaths, f.path), append(dependencies, label.String())
 	}
 
 	// TODO: Process the user-visible position. Basically, crawl the stack until we find the first frame in the root project's code.

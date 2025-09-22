@@ -95,6 +95,11 @@ func New(kind, project, pkg, name string) (*Label, error) {
 	return &Label{Kind: kind, Project: project, Package: pkg, Name: name}, nil
 }
 
+func (l *Label) Copy() *Label {
+	copy := *l
+	return &copy
+}
+
 func (l *Label) MarshalText() ([]byte, error) {
 	return []byte(l.String()), nil
 }

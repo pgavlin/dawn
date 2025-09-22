@@ -50,6 +50,7 @@ type Target interface {
 const (
 	statusIdle = iota
 	statusRunning
+	statusWaiting
 	statusSucceeded
 	statusFailed
 )

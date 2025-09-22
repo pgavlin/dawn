@@ -547,7 +547,7 @@ func (proj *Project) loadFunction(m *module, l *label.Label, dependencies, sourc
 	f := &function{
 		proj:     proj,
 		module:   m,
-		label:    l,
+		label:    l.Copy(),
 		deps:     dependencies,
 		sources:  sources,
 		gens:     generates,
@@ -578,7 +578,7 @@ func (proj *Project) loadSourceFile(l *label.Label) (*sourceFile, error) {
 	}
 	f := &sourceFile{
 		proj:  proj,
-		label: l,
+		label: l.Copy(),
 		path:  path,
 	}
 	proj.targets[rawlabel] = &runTarget{target: f}
@@ -619,7 +619,7 @@ func IsTarget(l *label.Label) bool {
 }
 
 func IsSource(l *label.Label) bool {
-	return l.Kind == "source"
+	return l.Kind == "source" || l.Kind == "shadow"
 }
 
 type resolveEvents struct {

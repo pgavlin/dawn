@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"sync"
 	"testing"
 
@@ -251,11 +252,18 @@ func TestCyclicModules(t *testing.T) {
 	pt.run(t)
 }
 
-func TestBuiltins(t *testing.T) {
+func TestCyclicTargets(t *testing.T) {
 	t.Parallel()
 	pt := projectTest{
-		path:     "testdata/builtins",
-		validate: func(t *testing.T, _ string, _ []testEvent) {},
+		path:   "testdata/cyclic-targets",
+		runErr: "dependencies failed",
+		validate: func(t *testing.T, _ string, events []testEvent) {
+			i := slices.IndexFunc(events, func(e testEvent) bool {
+				return e["kind"].(string) == "TargetFailed"
+			})
+			require.NotEqual(t, -1, i)
+			assert.ErrorContains(t, events[i]["err"].(error), "cyclic dependency")
+		},
 	}
 	pt.run(t)
 }
@@ -264,6 +272,15 @@ func TestCyclicGenerate(t *testing.T) {
 	t.Parallel()
 	pt := projectTest{
 		path:     "testdata/cyclic-generates",
+		validate: func(t *testing.T, _ string, _ []testEvent) {},
+	}
+	pt.run(t)
+}
+
+func TestBuiltins(t *testing.T) {
+	t.Parallel()
+	pt := projectTest{
+		path:     "testdata/builtins",
 		validate: func(t *testing.T, _ string, _ []testEvent) {},
 	}
 	pt.run(t)

@@ -47,38 +47,6 @@ type runTarget struct {
 	data    string
 }
 
-func (t *runTarget) canBreakCycle(cycle []string) bool {
-	// We can only break cycles of the form target(sources=[x], generates=[x]).
-	if len(cycle) != 2 {
-		return false
-	}
-
-	// Resolve the labels in the cycle to targets.
-	targets, err := fxs.TryCollect(fxs.MapUnpack(cycle, func(rawLabel string) (Target, error) {
-		l, err := label.Parse(rawLabel)
-		if err != nil {
-			return nil, err
-		}
-		return t.target.Project().Target(l)
-	}))
-	if err != nil {
-		return false
-	}
-
-	// Determine the generator and the source.
-	generator, source := targets[0], targets[1]
-	if !IsSource(source.Label()) {
-		generator, source = source, generator
-		if !IsSource(source.Label()) {
-			return false
-		}
-	}
-
-	// We can break the cycle if the file's generator matches the other element in the cycle.
-	file := source.(*sourceFile)
-	return file.generator.String() == generator.Label().String()
-}
-
 func (t *runTarget) Evaluate(ctx context.Context, engine runner.Engine) error {
 	proj, label, info := t.target.Project(), t.target.Label(), t.target.info()
 
@@ -100,10 +68,8 @@ func (t *runTarget) Evaluate(ctx context.Context, engine runner.Engine) error {
 			case UnknownTargetError:
 				missingDeps = append(missingDeps, err.Error())
 			case *runner.CyclicDependencyError:
-				if !t.canBreakCycle(err.Path) {
-					if cyclicDepErr == nil || cyclicDepErr.On >= err.On {
-						cyclicDepErr = err
-					}
+				if cyclicDepErr == nil || cyclicDepErr.On >= err.On {
+					cyclicDepErr = err
 				}
 			default:
 				hasFailedDeps = true
