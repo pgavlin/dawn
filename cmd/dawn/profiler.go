@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"os"
+	"runtime"
 	"runtime/pprof"
 	"runtime/trace"
 
@@ -11,6 +12,7 @@ import (
 
 type profiler struct {
 	cpuPath   string
+	memPath   string
 	starPath  string
 	tracePath string
 
@@ -52,6 +54,17 @@ func (p *profiler) stop() error {
 	if p.cpuPath != "" {
 		pprof.StopCPUProfile()
 		err = errors.Join(err, p.cpu.Close())
+	}
+	if p.memPath != "" {
+		err = errors.Join(err, func() (err error) {
+			f, err := os.Create(p.memPath)
+			if err != nil {
+				return err
+			}
+			defer func() { err = errors.Join(err, f.Close()) }()
+			runtime.GC()
+			return pprof.WriteHeapProfile(f)
+		}())
 	}
 	if p.starPath != "" {
 		err = errors.Join(func() error {

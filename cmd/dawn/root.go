@@ -41,10 +41,12 @@ var rootCmd = &cobra.Command{
 
 func init() {
 	rootCmd.PersistentFlags().StringVar(&prof.cpuPath, "cpuprofile", "", "write a CPU profile to the given path")
+	rootCmd.PersistentFlags().StringVar(&prof.memPath, "memprofile", "", "write a memory profile to the given path")
 	rootCmd.PersistentFlags().StringVar(&prof.starPath, "profile", "", "write an execution profile to the given path")
 	rootCmd.PersistentFlags().StringVar(&prof.tracePath, "trace", "", "write a runtime trace to the given path")
 
 	util.Must(rootCmd.PersistentFlags().MarkHidden("cpuprofile"))
+	util.Must(rootCmd.PersistentFlags().MarkHidden("memprofile"))
 	util.Must(rootCmd.PersistentFlags().MarkHidden("trace"))
 
 	rootCmd.PersistentFlags().BoolVarP(&work.reindex, "reindex", "r", false, "refresh the project's index")
