@@ -37,6 +37,7 @@ type function struct {
 	sources    []string
 	gens       []string
 	docs       string
+	pos        *syntax.Position
 	function   starlark.Callable
 	oldEnv     starlark.Value
 	newEnv     starlark.Value
@@ -50,6 +51,13 @@ func (f *function) Name() string {
 
 func (f *function) Doc() string {
 	return f.docs
+}
+
+func (f *function) Pos() string {
+	if f.pos != nil {
+		return f.pos.String()
+	}
+	return ""
 }
 
 func (f *function) String() string        { return f.label.String() }
@@ -73,12 +81,11 @@ func (f *function) Attr(name string) (starlark.Value, error) {
 	case "generates":
 		return util.StringList(f.gens).List(), nil
 	case "position":
-		if hasPosition, ok := f.function.(interface{ Position() syntax.Position }); ok {
-			pos := hasPosition.Position()
+		if f.pos != nil {
 			return starlarkstruct.FromStringDict(starlarkstruct.Default, starlark.StringDict{
-				"filename": starlark.String(pos.Filename()),
-				"line":     starlark.MakeInt(int(pos.Line)),
-				"column":   starlark.MakeInt(int(pos.Col)),
+				"filename": starlark.String(f.pos.Filename()),
+				"line":     starlark.MakeInt(int(f.pos.Line)),
+				"column":   starlark.MakeInt(int(f.pos.Col)),
 			}), nil
 		}
 		return starlark.None, nil

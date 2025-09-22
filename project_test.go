@@ -303,3 +303,12 @@ func TestCancelRun(t *testing.T) {
 	}
 	pt.run(t)
 }
+
+func TestInvalidTargetName(t *testing.T) {
+	t.Parallel()
+	pt := projectTest{
+		path:    "testdata/invalid-target-name",
+		loadErr: "invalid name",
+	}
+	pt.run(t)
+}

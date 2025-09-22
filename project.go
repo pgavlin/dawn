@@ -27,6 +27,7 @@ import (
 	"github.com/pgavlin/fx/v2"
 	fxs "github.com/pgavlin/fx/v2/slices"
 	"github.com/pgavlin/starlark-go/starlark"
+	"github.com/pgavlin/starlark-go/syntax"
 	"github.com/rjeczalik/notify"
 	"github.com/sugawarayuuta/sonnet"
 )
@@ -407,6 +408,7 @@ func (proj *Project) unknownTarget(label string) error {
 type targetInfo struct {
 	Label        string            `json:"label,omitempty"`
 	Doc          string            `json:"doc,omitempty"`
+	Pos          string            `json:"pos,omitempty"`
 	Dependencies map[string]string `json:"dependencies,omitempty"`
 	Data         string            `json:"stamp,omitempty"`
 	Rerun        bool              `json:"rerun,omitempty"`
@@ -537,10 +539,16 @@ func (proj *Project) loadModule(ctx context.Context, waiter *module, label *labe
 	return m.load(ctx, proj)
 }
 
-func (proj *Project) loadFunction(m *module, l *label.Label, dependencies, sources, generates []string, fn starlark.Callable, always bool, docs string) (*function, error) {
+func (proj *Project) loadFunction(m *module, l *label.Label, dependencies, sources, generates []string, fn starlark.Callable, always bool, docs string, pos *syntax.Position) (*function, error) {
 	if docs == "" {
 		if hasdoc, ok := fn.(starlark.HasDoc); ok {
 			docs = hasdoc.Doc()
+		}
+	}
+	if pos == nil {
+		if hasPosition, ok := fn.(interface{ Position() syntax.Position }); ok {
+			p := hasPosition.Position()
+			pos = &p
 		}
 	}
 
@@ -558,6 +566,7 @@ func (proj *Project) loadFunction(m *module, l *label.Label, dependencies, sourc
 		sources:  sources,
 		gens:     generates,
 		docs:     docs,
+		pos:      pos,
 		function: fn,
 		always:   always,
 		out:      newLineWriter(l, proj.events),

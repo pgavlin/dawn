@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -34,14 +35,27 @@ var helpCmd = &cobra.Command{
 			return err
 		}
 
+		fmt.Print(target.Label())
+		if pos := work.targetRelPos(target); pos != "" {
+			fmt.Printf(" (defined at %v)", pos)
+		}
+		fmt.Println()
+		fmt.Println()
+
 		doc := target.Doc()
 		if doc == "" {
-			fmt.Printf("No help for %v\n", label)
+			fmt.Println("    No help available.")
+			fmt.Println()
 			return nil
 		}
 
-		fmt.Println(target.Label())
-		fmt.Println(target.Doc())
+		for l := range strings.Lines(strings.TrimSpace(doc)) {
+			if l != "" && !strings.HasPrefix(l, "    ") {
+				fmt.Print("    ")
+			}
+			fmt.Println(l)
+		}
+		fmt.Println()
 		return nil
 	},
 	ValidArgsFunction: func(cmd *cobra.Command, args []string, completing string) ([]string, cobra.ShellCompDirective) {

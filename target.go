@@ -32,6 +32,8 @@ type Target interface {
 	Name() string
 	// Doc returns the target's documentation string.
 	Doc() string
+	// Pos returns the position in the target's module where the target is defined.
+	Pos() string
 
 	dependencies() []string
 	generates() []string
@@ -160,7 +162,9 @@ func (t *runTarget) Evaluate(ctx context.Context, engine runner.Engine) error {
 		// If the target fails, record that it must be re-run on the next build.
 		saveErr := proj.saveTargetInfo(label, targetInfo{
 			Doc:          t.target.Doc(),
-			Dependencies: depData,
+			Pos:          t.target.Pos(),
+			Dependencies: info.Dependencies,
+			Data:         t.data,
 			Rerun:        true,
 		})
 		return errors.Join(saveErr, err)
@@ -173,6 +177,7 @@ func (t *runTarget) Evaluate(ctx context.Context, engine runner.Engine) error {
 	}
 	err = proj.saveTargetInfo(label, targetInfo{
 		Doc:          t.target.Doc(),
+		Pos:          t.target.Pos(),
 		Dependencies: depData,
 		Data:         t.data,
 	})

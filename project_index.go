@@ -18,12 +18,14 @@ type TargetSummary struct {
 	// Label is the target's label.
 	Label *label.Label `json:"label"`
 	// Summary is a summary of the target's docstring (as returned by DocSummary(t)).
-	Summary string `json:"summary"`
+	Summary string `json:"summary,omitempty"`
+	// Pos is the position in the target's module that defines the target.
+	Pos string `json:"pos,omitempty"`
 }
 
 type index struct {
-	Flags   []*Flag         `json:"flags"`
-	Targets []TargetSummary `json:"targets"`
+	Flags   []*Flag         `json:"flags,omitempty"`
+	Targets []TargetSummary `json:"targets,omitempty"`
 }
 
 // Targets returns the targets listed in the index file of the project rooted at the given
@@ -53,6 +55,7 @@ type indexTarget struct {
 	deps    []string
 	depData map[string]string
 	doc     string
+	pos     string
 	data    string
 }
 
@@ -62,6 +65,10 @@ func (t *indexTarget) Name() string {
 
 func (t *indexTarget) Doc() string {
 	return t.doc
+}
+
+func (t *indexTarget) Pos() string {
+	return t.pos
 }
 
 func (t *indexTarget) String() string        { return t.label.String() }
@@ -146,10 +153,17 @@ func (proj *Project) loadIndex() error {
 				deps = append(deps, k)
 			}
 			sort.Strings(deps)
+
+			doc := info.Doc
+			if doc == "" {
+				doc = summary.Summary
+			}
+
 			target = &indexTarget{
 				proj:    proj,
 				label:   l,
-				doc:     info.Doc,
+				doc:     doc,
+				pos:     summary.Pos,
 				deps:    deps,
 				depData: info.Dependencies,
 				data:    info.Data,
@@ -181,6 +195,7 @@ func (proj *Project) saveIndex() error {
 		index.Targets = append(index.Targets, TargetSummary{
 			Label:   t.target.Label(),
 			Summary: DocSummary(t.target),
+			Pos:     t.target.Pos(),
 		})
 	}
 	sort.Slice(index.Targets, func(i, j int) bool { return index.Targets[i].Label.String() < index.Targets[j].Label.String() })

@@ -5,15 +5,21 @@ version = "0.1.0"
 
 debug = parse_flag("debug", type=bool, help="True to run a debug build")
 
-all_go_sources=os.glob(include=["**/*.go"], exclude=[".dawn/**"])
+all_go_sources=os.glob(include=["**.go"], exclude=[".dawn/**"])
 
 @target(sources=all_go_sources)
 def format():
+    """
+    Formats all of the project's Go sources.
+    """
     for f in all_go_sources:
         sh.exec(f"gofumpt -w {f}")
 
 @target(sources=all_go_sources)
 def lint():
+    """
+    Runs golangci-lint.
+    """
     sh.exec("golangci-lint run")
 
 gen_builtins("cli_builtins", "./cmd/dawn", "./cmd/dawn/builtins.go")
@@ -43,7 +49,7 @@ def dawn_goreleaser():
     results to the location expected by Goreleaser.
     """
 
-@target(deps=[":lint", ":dawn", "docs:site"])
+@target(deps=[lint, dawn, "docs:site"])
 def default():
     """
     Builds the dawn CLI and docs.

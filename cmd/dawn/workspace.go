@@ -219,6 +219,16 @@ func (w *workspace) sources(label *label.Label) ([]string, error) {
 	return w.graph.sources(t, w.root)
 }
 
+func (w *workspace) targetRelPos(target dawn.Target) string {
+	pos := target.Pos()
+	if pos != "" {
+		if rel, err := filepath.Rel(work.root, pos); err == nil {
+			return rel
+		}
+	}
+	return ""
+}
+
 func (w *workspace) repl(label *label.Label) error {
 	thread, globals := w.project.REPLEnv(os.Stdout, label)
 	globals["depends"] = w.newBuiltin_depends()

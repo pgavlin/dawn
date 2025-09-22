@@ -68,6 +68,10 @@ func (f *sourceFile) Doc() string {
 	return ""
 }
 
+func (f *sourceFile) Pos() string {
+	return ""
+}
+
 func (f *sourceFile) String() string        { return f.label.String() }
 func (f *sourceFile) Type() string          { return "source" }
 func (f *sourceFile) Freeze()               {} // immutable

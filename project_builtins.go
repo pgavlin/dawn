@@ -20,6 +20,7 @@ import (
 	fxs "github.com/pgavlin/fx/v2/slices"
 	"github.com/pgavlin/starlark-go/starlark"
 	"github.com/pgavlin/starlark-go/starlarkstruct"
+	"github.com/pgavlin/starlark-go/syntax"
 	"github.com/spf13/pflag"
 )
 
@@ -323,6 +324,12 @@ func (proj *Project) builtin_target(
 
 	m := thread.Local("module").(*module)
 
+	// Validate the name.
+	l, err := label.New("", "", m.label.Package, name)
+	if err != nil {
+		return nil, fmt.Errorf("invalid name %q: %w", name, err)
+	}
+
 	// Process deps.
 	var dependencies []string //nolint:prealloc
 	if deps != nil {
@@ -390,15 +397,17 @@ func (proj *Project) builtin_target(
 		sourcePaths, dependencies = append(sourcePaths, f.path), append(dependencies, label.String())
 	}
 
-	// TODO: Process the user-visible position. Basically, crawl the stack until we find the first frame in the root project's code.
-	//
-	// NOTE: this could also be extended through helper-function annotations.
-
-	l := &label.Label{
-		Package: m.label.Package,
-		Name:    name,
+	// TODO: allow annotations for helper functions, then skip those frames as well?
+	var pos *syntax.Position
+	for i, depth := 1, thread.CallStackDepth(); i < depth; i++ {
+		framePos := thread.CallFrame(i).Pos
+		if framePos.Filename() == m.path {
+			pos = &framePos
+			break
+		}
 	}
-	f, err := proj.loadFunction(m, l, dependencies, sourcePaths, gens, function, always, docs)
+
+	f, err := proj.loadFunction(m, l, dependencies, sourcePaths, gens, function, always, docs, pos)
 	if err != nil {
 		return nil, fmt.Errorf("%v: %w", fn.Name(), err)
 	}
@@ -408,7 +417,7 @@ func (proj *Project) builtin_target(
 			Package: m.label.Package,
 			Name:    "default",
 		}
-		if _, err = proj.loadFunction(m, defaultLabel, []string{l.String()}, nil, nil, builtin_default(function.Doc()), false, ""); err != nil {
+		if _, err = proj.loadFunction(m, defaultLabel, []string{l.String()}, nil, nil, builtin_default(function.Doc()), false, "", pos); err != nil {
 			return nil, err
 		}
 	}

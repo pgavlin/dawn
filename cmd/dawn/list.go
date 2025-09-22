@@ -11,6 +11,7 @@ import (
 
 	"github.com/pgavlin/dawn"
 	"github.com/pgavlin/dawn/label"
+	"github.com/pgavlin/fx/v2"
 	fxs "github.com/pgavlin/fx/v2/slices"
 	"github.com/spf13/cobra"
 )
@@ -50,21 +51,25 @@ func printFlagList(list []*dawn.Flag) error {
 type targetDescription struct {
 	Label string `json:"label"`
 	Doc   string `json:"doc"`
+	Pos   string `json:"pos"`
 }
 
 func printTargetList(list []dawn.Target) error {
+	targets := fxs.Filter(list, func(t dawn.Target) bool { return !dawn.IsSource(t.Label()) })
+
 	if !listJSON {
 		w := tabwriter.NewWriter(os.Stdout, 0, 2, 0, ' ', 0)
-		for _, t := range list {
-			fmt.Fprintf(w, "%v\t %s\n", t.Label(), dawn.DocSummary(t))
+		for t := range targets {
+			fmt.Fprintf(w, "%v\t %s\t %v\n", t.Label(), dawn.DocSummary(t), work.targetRelPos(t))
 		}
 		return w.Flush()
 	}
 
-	descriptions := slices.Collect(fxs.Map(list, func(t dawn.Target) targetDescription {
+	descriptions := slices.Collect(fx.Map(targets, func(t dawn.Target) targetDescription {
 		return targetDescription{
 			Label: t.Label().String(),
 			Doc:   t.Doc(),
+			Pos:   t.Pos(),
 		}
 	}))
 

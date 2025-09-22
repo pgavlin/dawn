@@ -18,6 +18,10 @@ def gen_builtins(name="gen_builtins", dir=".", output="builtins.go"):
 
     @target(name=name, deps=[dawn_gen_builtins], sources=go_files, generates=[output])
     def gen():
+        """
+        Generates Starlark wrappers and docs.
+        """
+
         bin_path = path("//bin:dawn-gen-builtins")
         docs_path = path("//docs/source/modules")
         sh.exec(f"{bin_path} {dir} {output} {docs_path}")
