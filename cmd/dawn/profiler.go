@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"os"
 	"runtime/pprof"
 	"runtime/trace"
@@ -23,36 +24,46 @@ func (p *profiler) start() (err error) {
 		if p.cpu, err = os.Create(p.cpuPath); err != nil {
 			return err
 		}
-		pprof.StartCPUProfile(p.cpu)
+		if err = pprof.StartCPUProfile(p.cpu); err != nil {
+			return err
+		}
 	}
 	if p.starPath != "" {
 		if p.star, err = os.Create(p.starPath); err != nil {
 			return err
 		}
-		starlark.StartProfile(p.star)
+		if err = starlark.StartProfile(p.star); err != nil {
+			return err
+		}
 	}
 	if p.tracePath != "" {
 		if p.trace, err = os.Create(p.tracePath); err != nil {
 			return err
 		}
-		trace.Start(p.trace)
+		if err = trace.Start(p.trace); err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
 func (p *profiler) stop() error {
+	var err error
 	if p.cpuPath != "" {
 		pprof.StopCPUProfile()
-		p.cpu.Close()
+		err = errors.Join(err, p.cpu.Close())
 	}
 	if p.starPath != "" {
-		starlark.StopProfile()
-		p.star.Close()
+		err = errors.Join(func() error {
+			if err := starlark.StopProfile(); err != nil {
+				return err
+			}
+			return p.star.Close()
+		}())
 	}
 	if p.tracePath != "" {
 		trace.Stop()
-		p.trace.Close()
+		err = errors.Join(err, p.trace.Close())
 	}
-
-	return nil
+	return err
 }

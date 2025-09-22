@@ -27,6 +27,7 @@ type Config struct {
 }
 
 func LoadConfigFile(path string) (*Config, error) {
+	//nolint:gosec
 	contents, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -57,6 +58,7 @@ func LoadConfigBytes(contents []byte) (*Config, error) {
 }
 
 func WriteConfigFile(path string, c *Config) error {
+	//nolint:gosec
 	f, err := os.Create(path)
 	if err != nil {
 		return err

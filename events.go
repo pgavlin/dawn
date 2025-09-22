@@ -1,6 +1,8 @@
 package dawn
 
 import (
+	"errors"
+
 	"github.com/pgavlin/dawn/diff"
 	"github.com/pgavlin/dawn/label"
 	"github.com/pgavlin/starlark-go/starlark"
@@ -66,21 +68,18 @@ func (discardEventsT) FileChanged(label *label.Label)                           
 type runEvents struct {
 	c        chan starlark.Value
 	callback starlark.Callable
-	done     chan bool
 }
 
-func (e *runEvents) process(thread *starlark.Thread) {
+func (e *runEvents) process(thread *starlark.Thread) error {
+	var errs error
 	for event := range e.c {
 		if e.callback != nil {
-			starlark.Call(thread, e.callback, starlark.Tuple{event}, nil)
+			if _, err := starlark.Call(thread, e.callback, starlark.Tuple{event}, nil); err != nil {
+				errs = errors.Join(errs, err)
+			}
 		}
 	}
-	close(e.done)
-}
-
-func (e *runEvents) Close() {
-	close(e.c)
-	<-e.done
+	return errs
 }
 
 func (*runEvents) RequirementLoading(label *label.Label, version string)               {}
@@ -118,7 +117,6 @@ func (e *runEvents) TargetEvaluating(label *label.Label, reason string, diff dif
 		"reason": starlark.String(reason),
 		"diff":   diffValue,
 	})
-
 }
 
 func (e *runEvents) TargetFailed(label *label.Label, err error) {
@@ -127,7 +125,6 @@ func (e *runEvents) TargetFailed(label *label.Label, err error) {
 		"label": starlark.String(label.String()),
 		"err":   starlark.String(err.Error()),
 	})
-
 }
 
 func (e *runEvents) TargetSucceeded(label *label.Label, changed bool) {
@@ -136,7 +133,6 @@ func (e *runEvents) TargetSucceeded(label *label.Label, changed bool) {
 		"label":   starlark.String(label.String()),
 		"changed": starlark.Bool(changed),
 	})
-
 }
 
 func (e *runEvents) RunDone(err error) {

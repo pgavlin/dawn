@@ -4,13 +4,16 @@ import (
 	"os"
 
 	"github.com/pgavlin/dawn/cmd/dawn/internal/term"
+	"github.com/pgavlin/dawn/util"
 	"github.com/spf13/cobra"
 )
 
-var prof = &profiler{}
-var work = &workspace{}
-var version = "development"
-var termWidth int
+var (
+	prof      = &profiler{}
+	work      = &workspace{}
+	version   = "development"
+	termWidth int
+)
 
 var rootCmd = &cobra.Command{
 	Version:       version,
@@ -41,8 +44,8 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&prof.starPath, "profile", "", "write an execution profile to the given path")
 	rootCmd.PersistentFlags().StringVar(&prof.tracePath, "trace", "", "write a runtime trace to the given path")
 
-	rootCmd.PersistentFlags().MarkHidden("cpuprofile")
-	rootCmd.PersistentFlags().MarkHidden("trace")
+	util.Must(rootCmd.PersistentFlags().MarkHidden("cpuprofile"))
+	util.Must(rootCmd.PersistentFlags().MarkHidden("trace"))
 
 	rootCmd.PersistentFlags().BoolVarP(&work.reindex, "reindex", "r", false, "refresh the project's index")
 	rootCmd.PersistentFlags().BoolVarP(&work.verbose, "verbose", "V", false, "print verbose build output (incl. target stdout)")

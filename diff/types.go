@@ -1,6 +1,7 @@
 package diff
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -28,7 +29,7 @@ func (d *valueDiff) Truth() starlark.Bool {
 }
 
 func (d *valueDiff) Hash() (uint32, error) {
-	return 0, fmt.Errorf("unhashable type: diff")
+	return 0, errors.New("unhashable type: diff")
 }
 
 func (d *valueDiff) Old() starlark.Value {
@@ -112,7 +113,7 @@ func (e *Edit) Attr(name string) (starlark.Value, error) {
 	return nil, nil
 }
 
-func (d *Edit) AttrNames() []string {
+func (e *Edit) AttrNames() []string {
 	return []string{"kind", "values"}
 }
 

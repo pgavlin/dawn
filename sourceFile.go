@@ -132,6 +132,7 @@ func (f *sourceFile) load() error {
 }
 
 func fileSum(ctx context.Context, path string) (string, error) {
+	//nolint:gosec
 	f, err := os.Open(path)
 	if err != nil {
 		return "", err

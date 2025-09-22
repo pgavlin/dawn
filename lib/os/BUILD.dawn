@@ -1,7 +1,2 @@
-@target(deps=["//:dawn_gen_builtins"], sources=["environ.go", "exec.go", "fs.go", "glob.go", "module.go"], generates=["builtins.go"])
-def gen_builtins():
-    """
-    Generates wrappers + documentation for builtin functions.
-    """
-
-    sh.exec("dawn-gen-builtins . builtins.go ../../docs/source/modules")
+load("//cmd/dawn-gen-builtins", "gen_builtins")
+gen_builtins()

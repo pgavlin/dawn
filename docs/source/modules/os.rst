@@ -82,7 +82,7 @@
 .. py:function:: getcwd()
 
     Returns the current OS working directory. This is typically the path of
-    the directory containg the root module on the callstack.
+    the directory containing the root module on the callstack.
     
 
 .. py:function:: glob(include, exclude=None)

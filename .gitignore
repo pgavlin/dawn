@@ -17,3 +17,4 @@ docs/venv/
 # dawn build files
 .dawn/build
 dist/
+bin/

@@ -3,6 +3,8 @@ package util
 import (
 	"errors"
 
+	"github.com/pgavlin/fx/v2"
+	fxs "github.com/pgavlin/fx/v2/slices"
 	"github.com/pgavlin/starlark-go/starlark"
 )
 
@@ -22,15 +24,15 @@ func (l *StringList) Unpack(v starlark.Value) error {
 		return errors.New("expected a sequence of strings")
 	}
 
-	var strings []string
-	it := seq.Iterate()
-	defer it.Done()
-	for it.Next(&v) {
+	strings, err := fxs.TryCollect(fx.MapUnpack(All(seq), func(v starlark.Value) (string, error) {
 		s, ok := starlark.AsString(v)
 		if !ok {
-			return errors.New("expected a sequence of strings")
+			return "", errors.New("expected a sequence of strings")
 		}
-		strings = append(strings, s)
+		return s, nil
+	}))
+	if err != nil {
+		return err
 	}
 	*l = strings
 	return nil

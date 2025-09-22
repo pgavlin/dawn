@@ -8,6 +8,8 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+
+	"github.com/pgavlin/fx/v2"
 )
 
 type CyclicDependencyError struct {
@@ -133,20 +135,27 @@ type engine struct {
 	runner *runner
 }
 
-func (e *engine) check(path []string, dep *target) error {
+func (e *engine) check(set fx.Set[*target], path []string, dep *target) error {
 	if dep == e.root {
 		return &CyclicDependencyError{On: dep.label, Path: path}
 	}
 
+	if set.Has(dep) {
+		// Strictly speaking this is a cyclic dependency error, but we'll let the involved targets report the error.
+		return nil
+	}
+	set.Add(dep)
+	defer set.Remove(dep)
+
 	if waiting := dep.waiting.Load(); waiting != nil {
-		return e.checkDeps(append(path, dep.label), *waiting)
+		return e.checkDeps(set, append(path, dep.label), *waiting)
 	}
 	return nil
 }
 
-func (e *engine) checkDeps(path []string, deps []*target) error {
+func (e *engine) checkDeps(set fx.Set[*target], path []string, deps []*target) error {
 	for _, t := range deps {
-		if err := e.check(path, t); err != nil {
+		if err := e.check(set, path, t); err != nil {
 			return err
 		}
 	}
@@ -169,7 +178,7 @@ func (e *engine) EvaluateTargets(ctx context.Context, labels ...string) []Result
 	path := []string{e.root.label}
 	results := make([]Result, len(targets))
 	for i, t := range targets {
-		err := e.check(path, t)
+		err := e.check(fx.Set[*target]{}, path, t)
 		if err != nil {
 			results[i].Error = err
 			results[i].Target = nil

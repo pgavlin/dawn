@@ -1,13 +1,16 @@
 package diff
 
 import (
+	"github.com/pgavlin/dawn/util"
 	"github.com/pgavlin/starlark-go/starlark"
 )
 
+// Diff diffs two values.
 func Diff(old, new starlark.Value) (ValueDiff, error) {
 	return DiffDepth(old, new, starlark.CompareLimit)
 }
 
+// DiffDepth diffs two values up to the given depth.
 func DiffDepth(old, new starlark.Value, depth int) (ValueDiff, error) {
 	eq, err := starlark.EqualDepth(old, new, depth)
 	if err != nil {
@@ -35,15 +38,11 @@ func DiffDepth(old, new starlark.Value, depth int) (ValueDiff, error) {
 func diffMapping(old, new starlark.IterableMapping, depth int) (*MappingDiff, error) {
 	edits := starlark.NewDict(0)
 
-	oldKeys := old.Iterate()
-	defer oldKeys.Done()
-
-	var key starlark.Value
-	for oldKeys.Next(&key) {
+	for key := range util.All(old) {
 		oldV, _, _ := old.Get(key)
 		newV, has, _ := new.Get(key)
 		if !has {
-			edits.SetKey(key, &Edit{Sliceable: starlark.Tuple{oldV}, kind: EditKindDelete})
+			util.Must(edits.SetKey(key, &Edit{Sliceable: starlark.Tuple{oldV}, kind: EditKindDelete}))
 			continue
 		}
 
@@ -52,17 +51,14 @@ func diffMapping(old, new starlark.IterableMapping, depth int) (*MappingDiff, er
 			return nil, err
 		}
 		if diff != nil {
-			edits.SetKey(key, &Edit{Sliceable: starlark.Tuple{diff}, kind: EditKindReplace})
+			util.Must(edits.SetKey(key, &Edit{Sliceable: starlark.Tuple{diff}, kind: EditKindReplace}))
 		}
 	}
 
-	newKeys := new.Iterate()
-	defer newKeys.Done()
-
-	for newKeys.Next(&key) {
+	for key := range util.All(new) {
 		if _, has, _ := old.Get(key); !has {
 			newV, _, _ := new.Get(key)
-			edits.SetKey(key, &Edit{Sliceable: starlark.Tuple{newV}, kind: EditKindAdd})
+			util.Must(edits.SetKey(key, &Edit{Sliceable: starlark.Tuple{newV}, kind: EditKindAdd}))
 		}
 	}
 

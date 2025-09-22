@@ -21,8 +21,10 @@ type Label struct {
 	Name    string
 }
 
-var _ encoding.TextMarshaler = (*Label)(nil)
-var _ encoding.TextUnmarshaler = (*Label)(nil)
+var (
+	_ encoding.TextMarshaler   = (*Label)(nil)
+	_ encoding.TextUnmarshaler = (*Label)(nil)
+)
 
 // Parse parses rawlabel into a Label structure.
 func Parse(rawlabel string) (*Label, error) {
@@ -33,7 +35,7 @@ func Parse(rawlabel string) (*Label, error) {
 
 	kindProjectAndPkg := rawlabel[:nameColon]
 
-	kind, projectAndPkg := "", ""
+	var kind, projectAndPkg string
 	if kindColon := strings.IndexByte(kindProjectAndPkg, ':'); kindColon != -1 {
 		kind, projectAndPkg = kindProjectAndPkg[:kindColon], kindProjectAndPkg[kindColon+1:]
 	} else {
@@ -45,7 +47,7 @@ func Parse(rawlabel string) (*Label, error) {
 		project, pkg = projectAndPkg[:i], projectAndPkg[i:]
 	}
 	if strings.ContainsAny(project, ":") {
-		return nil, errors.New("project may not contain ':")
+		return nil, errors.New("project may not contain ':'")
 	}
 
 	pkg, err := Clean(pkg)
@@ -255,9 +257,7 @@ func Parent(pkg string) string {
 
 // Dir returns the last component of pkg.
 func Dir(pkg string) string {
-	if strings.HasPrefix(pkg, "//") {
-		pkg = pkg[2:]
-	}
+	pkg = strings.TrimPrefix(pkg, "//")
 
 	lastSlash := strings.LastIndexByte(pkg, '/')
 	if lastSlash == -1 {
@@ -278,8 +278,8 @@ func Split(pkg string) []string {
 	}
 
 	for i < len(pkg) {
-		switch {
-		case pkg[i] == '/':
+		switch pkg[i] {
+		case '/':
 			i++
 		default:
 			start := i

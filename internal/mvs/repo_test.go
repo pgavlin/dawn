@@ -148,7 +148,7 @@ func (r *testRepository) FetchRevision(ctx context.Context, projectPath string, 
 	}
 
 	projectDir := filepath.Join(destDir, filepath.FromSlash(projectPath))
-	err := os.MkdirAll(projectDir, 0700)
+	err := os.MkdirAll(projectDir, 0o700)
 	if err != nil {
 		return err
 	}

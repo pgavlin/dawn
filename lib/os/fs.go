@@ -38,7 +38,7 @@ func exists(thread *starlark.Thread, fn *starlark.Builtin, path string) (starlar
 //	def getcwd():
 //	    """
 //	    Returns the current OS working directory. This is typically the path of
-//	    the directory containg the root module on the callstack.
+//	    the directory containing the root module on the callstack.
 //	    """
 //
 //starlark:builtin factory=NewGetcwd,function=Getcwd
@@ -61,9 +61,10 @@ func mkdir(thread *starlark.Thread, fn *starlark.Builtin, path string, mode int)
 	}
 
 	if mode == 0 {
-		mode = 0777
+		mode = 0o777
 	}
 
+	//nolint:gosec
 	if err := os.Mkdir(path, os.FileMode(mode)); err != nil {
 		return nil, err
 	}
@@ -86,9 +87,10 @@ func makedirs(thread *starlark.Thread, fn *starlark.Builtin, path string, mode i
 	}
 
 	if mode == 0 {
-		mode = 0777
+		mode = 0o777
 	}
 
+	//nolint:gosec
 	if err := os.MkdirAll(path, os.FileMode(mode)); err != nil {
 		return nil, err
 	}

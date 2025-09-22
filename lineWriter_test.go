@@ -20,6 +20,7 @@ func (e *lwTestEvents) Print(_ *label.Label, line string) {
 }
 
 func TestLineWriter(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		writes   []string
 		expected string
@@ -47,13 +48,14 @@ func TestLineWriter(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.expected, func(t *testing.T) {
+			t.Parallel()
 			var events lwTestEvents
 
 			w := newLineWriter(nil, &events)
 			for _, t := range c.writes {
-				w.Write([]byte(t))
+				w.Write([]byte(t)) //nolint:gosec
 			}
-			w.Flush()
+			w.Flush() //nolint:gosec
 
 			assert.Equal(t, c.expected, events.lines.String())
 		})

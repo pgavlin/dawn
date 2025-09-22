@@ -5,9 +5,11 @@ import (
 	"github.com/pgavlin/dawn/label"
 )
 
-var buildJSON string
-var buildDOT string
-var buildOptions dawn.RunOptions
+var (
+	buildJSON    string
+	buildDOT     string
+	buildOptions dawn.RunOptions
+)
 
 var buildCmd = newTargetCommand(&targetCommand{
 	Use:   "build",

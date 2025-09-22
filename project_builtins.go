@@ -2,16 +2,22 @@
 package dawn
 
 import (
+	"cmp"
+	"errors"
 	"fmt"
 	"io/fs"
+	"maps"
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"sort"
 	"strings"
 
 	"github.com/pgavlin/dawn/label"
 	"github.com/pgavlin/dawn/util"
+	"github.com/pgavlin/fx/v2"
+	fxs "github.com/pgavlin/fx/v2/slices"
 	"github.com/pgavlin/starlark-go/starlark"
 	"github.com/pgavlin/starlark-go/starlarkstruct"
 	"github.com/spf13/pflag"
@@ -81,7 +87,7 @@ func (proj *Project) builtin_path(thread *starlark.Thread, fn *starlark.Builtin,
 //
 //	def label(path):
 //	    """
-//	    Returns the label that corresponds to the given OS path, if any.
+//	    Returns the label that corresponds to the given project-relative path, if any.
 //	    """
 //
 //starlark:builtin
@@ -318,34 +324,35 @@ func (proj *Project) builtin_target(
 	m := thread.Local("module").(*module)
 
 	// Process deps.
-	var dependencies []string
-	var dep starlark.Value
+	var dependencies []string //nolint:prealloc
 	if deps != nil {
-		it := deps.Iterate()
-		defer it.Done()
-		for it.Next(&dep) {
+		deps, err := fxs.TryCollect(fx.MapUnpack(util.All(deps), func(dep starlark.Value) (string, error) {
 			var deplabel *label.Label
 			switch dep := dep.(type) {
 			case starlark.String:
 				l, err := label.Parse(string(dep))
 				if err != nil {
-					return nil, err
+					return "", err
 				}
 				l, err = l.RelativeTo(m.label.Package)
 				if err != nil {
-					return nil, err
+					return "", err
 				}
 				deplabel = l
 			case Target:
 				deplabel = dep.Label()
 			default:
-				return nil, fmt.Errorf("%v: dependency is a %s, not a string or target", fn.Name(), dep.Type())
+				return "", fmt.Errorf("%v: dependency is a %s, not a string or target", fn.Name(), dep.Type())
 			}
-			dependencies = append(dependencies, deplabel.String())
+			return deplabel.String(), nil
+		}))
+		if err != nil {
+			return nil, err
 		}
+		dependencies = deps
 	}
 
-	var sourcePaths []string
+	sourcePaths := make([]string, 0, len(sources))
 	for _, s := range sources {
 		label, err := sourceLabel(m.label.Package, s)
 		if err != nil {
@@ -359,7 +366,7 @@ func (proj *Project) builtin_target(
 	}
 
 	// Process gens.
-	var gens []string
+	gens := make([]string, 0, len(generates))
 	for _, g := range generates {
 		path, err := repoSourcePath(m.label.Package, g)
 		if err != nil {
@@ -456,7 +463,7 @@ func (proj *Project) builtin_glob(
 
 		path = path[1:]
 		if includeRE.MatchString(path) && !excludeRE.MatchString(path) {
-			sources.Append(starlark.String(path))
+			util.Must(sources.Append(starlark.String(path)))
 		}
 		return nil
 	})
@@ -507,14 +514,19 @@ func (proj *Project) builtin_run(
 		return nil, fmt.Errorf("%v: label_or_target must be a string or a target", fn.Name())
 	}
 
-	if callback != nil {
+	eventsChan := make(chan starlark.Value)
+	eventsErr := make(chan error)
+	if callback == nil {
+		close(eventsErr)
+	} else {
 		events := &runEvents{
-			c:        make(chan starlark.Value),
+			c:        eventsChan,
 			callback: callback,
-			done:     make(chan bool),
 		}
-		go events.process(thread)
-		defer events.Close()
+		go func() {
+			eventsErr <- events.process(thread)
+			close(eventsErr)
+		}()
 
 		currentEvents := proj.events
 		proj.events = events
@@ -523,11 +535,15 @@ func (proj *Project) builtin_run(
 		}()
 	}
 
-	options := RunOptions{
-		Always: always,
-		DryRun: dryRun,
-	}
-	return starlark.None, proj.Run(util.GetContext(thread), l, &options)
+	err = func() error {
+		defer close(eventsChan)
+		options := RunOptions{
+			Always: always,
+			DryRun: dryRun,
+		}
+		return proj.Run(util.GetContext(thread), l, &options)
+	}()
+	return starlark.None, errors.Join(err, <-eventsErr)
 }
 
 // starlark
@@ -581,14 +597,10 @@ func (proj *Project) builtin_flags(thread *starlark.Thread, fn *starlark.Builtin
 	proj.m.Lock()
 	defer proj.m.Unlock()
 
-	var flags []starlark.Value
-	for _, flag := range proj.flags {
-		flags = append(flags, flag)
-	}
-	sort.Slice(flags, func(i, j int) bool {
-		return flags[i].(*Flag).Name < flags[j].(*Flag).Name
-	})
-	return starlark.NewList(flags), nil
+	return starlark.NewList(slices.SortedFunc(
+		fx.Map(maps.Values(proj.flags), func(f *Flag) starlark.Value { return f }),
+		func(a, b starlark.Value) int { return cmp.Compare(a.(*Flag).Name, b.(*Flag).Name) },
+	)), nil
 }
 
 // starlark

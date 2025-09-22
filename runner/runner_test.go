@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"testing"
+
+	"github.com/test-go/testify/require"
 )
 
 type testTarget func(engine Engine) error
@@ -22,6 +24,7 @@ func (tt testTargets) LoadTarget(_ context.Context, label string) (Target, error
 }
 
 func TestCyclicDependency(t *testing.T) {
+	t.Parallel()
 	foo := testTarget(func(engine Engine) error {
 		return engine.EvaluateTargets(t.Context(), "bar")[0].Error
 	})
@@ -29,13 +32,15 @@ func TestCyclicDependency(t *testing.T) {
 		return engine.EvaluateTargets(t.Context(), "foo")[0].Error
 	})
 
-	Run(t.Context(), testTargets{
+	err := Run(t.Context(), testTargets{
 		"foo": foo,
 		"bar": bar,
 	}, "foo")
+	require.Error(t, err)
 }
 
 func TestCyclicDependency_Inner(t *testing.T) {
+	t.Parallel()
 	foo := testTarget(func(engine Engine) error {
 		return engine.EvaluateTargets(t.Context(), "bar")[0].Error
 	})
@@ -46,9 +51,10 @@ func TestCyclicDependency_Inner(t *testing.T) {
 		return engine.EvaluateTargets(t.Context(), "bar")[0].Error
 	})
 
-	Run(t.Context(), testTargets{
+	err := Run(t.Context(), testTargets{
 		"foo": foo,
 		"bar": bar,
 		"baz": baz,
 	}, "foo")
+	require.Error(t, err)
 }

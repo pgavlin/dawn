@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"slices"
@@ -112,8 +113,6 @@ var graphCmd = &cobra.Command{
 		if err := work.loadProject(args, true, true); err != nil {
 			return err
 		}
-		work.renderer.Close()
-
-		return work.graph.dot(os.Stdout, func(_ *node) bool { return true })
+		return errors.Join(work.renderer.Close(), work.graph.dot(os.Stdout, func(_ *node) bool { return true }))
 	},
 }

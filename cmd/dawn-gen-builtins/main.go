@@ -8,6 +8,7 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
+//nolint:gosec
 func main() {
 	if len(os.Args) != 4 {
 		fmt.Fprintf(os.Stderr, "usage: %v <import path> <function wrappers path> <docs output directory path>\n", os.Args[0])

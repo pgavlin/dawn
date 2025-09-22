@@ -36,7 +36,7 @@ func (s *cpuStats) update(delta float64) {
 	}
 
 	t := stats[0]
-	total, io := t.Total()-t.Idle-t.Iowait, t.Iowait
+	total, io := t.User+t.System+t.Nice+t.Irq+t.Softirq+t.Steal+t.Guest+t.GuestNice, t.Iowait
 
 	s.totalPercent = 100.0 * (total - s.total) / delta / float64(s.count)
 	s.ioPercent = 100.0 * (io - s.io) / delta / float64(s.count)

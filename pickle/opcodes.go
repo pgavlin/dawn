@@ -1,3 +1,4 @@
+//nolint:revive
 package pickle
 
 // Note that the opcodes below represent a superset of those supported by this package's

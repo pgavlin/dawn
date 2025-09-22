@@ -2,16 +2,11 @@
 
 package os
 
-
 import (
-	
 	util "github.com/pgavlin/dawn/util"
-	
+
 	starlark "github.com/pgavlin/starlark-go/starlark"
-	
 )
-
-
 
 func NewEnviron() *starlark.Builtin {
 	const doc = `
@@ -21,20 +16,17 @@ func NewEnviron() *starlark.Builtin {
 	return starlark.NewBuiltin("environ", Environ).WithDoc(doc)
 }
 
-
 func Environ(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	
 	if err := starlark.UnpackPositionalArgs(fn.Name(), args, kwargs, 0); err != nil {
 		return nil, err
 	}
-	
+
 	val, err := environ(thread, fn)
 	if err != nil {
 		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
 	}
 	return val, nil
 }
-
 
 func NewLookPath() *starlark.Builtin {
 	const doc = `
@@ -50,18 +42,12 @@ func NewLookPath() *starlark.Builtin {
 	return starlark.NewBuiltin("look_path", LookPath).WithDoc(doc)
 }
 
-
 func LookPath(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	
-	var (
-		
-		file string
-		
-	)
+	var file string
 	if err := starlark.UnpackArgs(fn.Name(), args, kwargs, "file", &file); err != nil {
 		return nil, err
 	}
-	
+
 	val, err := lookPath(thread, fn, file)
 	if err != nil {
 		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
@@ -69,45 +55,40 @@ func LookPath(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple
 	return val, nil
 }
 
-
 func NewExec() *starlark.Builtin {
 	const doc = `
     Run an executable. If the process fails, the calling module will
-    abort unless `+"`"+`try_`+"`"+` is set to True, in which case the contents of
+    abort unless ` + "`" + `try_` + "`" + ` is set to True, in which case the contents of
     standard error will be returned.
 
     :param command: a list of strings indicating the executable to run
-                    and its arguments (e.g. `+"`"+`["dawn", "build"]`+"`"+`).
+                    and its arguments (e.g. ` + "`" + `["dawn", "build"]` + "`" + `).
     :param cwd: the working directory for the command. Defaults to the
                 calling module's directory.
     :param env: any environment variables to set when running the command.
-    :param `+"`"+`try_`+"`"+`: when True, the calling module will not be aborted if
+    :param ` + "`" + `try_` + "`" + `: when True, the calling module will not be aborted if
                  the process fails.
 
-    :returns: the contents of standard error if `+"`"+`try_`+"`"+` is set and None
+    :returns: the contents of standard error if ` + "`" + `try_` + "`" + ` is set and None
               otherwise. To capture the process's output, use output.
     `
 	return starlark.NewBuiltin("exec", Exec).WithDoc(doc)
 }
 
-
 func Exec(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	
 	var (
-		
 		cmdV util.StringList
-		
+
 		cwd string
-		
+
 		envV starlark.IterableMapping
-		
+
 		try bool
-		
 	)
 	if err := starlark.UnpackArgs(fn.Name(), args, kwargs, "command", &cmdV, "cwd??", &cwd, "env??", &envV, "try_??", &try); err != nil {
 		return nil, err
 	}
-	
+
 	val, err := execf(thread, fn, cmdV, cwd, envV, try)
 	if err != nil {
 		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
@@ -115,54 +96,48 @@ func Exec(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kw
 	return val, nil
 }
 
-
 func NewOutput() *starlark.Builtin {
 	const doc = `
     Run an executable and return its output. If the process fails, the
-    calling module will abort unless `+"`"+`try_`+"`"+` is set to True, in which case
+    calling module will abort unless ` + "`" + `try_` + "`" + ` is set to True, in which case
     the contents of standard error will be returned.
 
     :param command: a list of strings indicating the executable to run
-                    and its arguments (e.g. `+"`"+`["dawn", "build"]`+"`"+`).
+                    and its arguments (e.g. ` + "`" + `["dawn", "build"]` + "`" + `).
     :param cwd: the working directory for the command. Defaults to the
                 calling module's directory.
     :param env: any environment variables to set when running the command.
-    :param `+"`"+`try_`+"`"+`: when True, the calling module will not be aborted if
+    :param ` + "`" + `try_` + "`" + `: when True, the calling module will not be aborted if
                  the process fails.
 
-    :returns: the contents of standard output if `+"`"+`try_`+"`"+` is not truthy and the
-              process succeeds. If `+"`"+`try_`+"`"+` is truthy, output returns
+    :returns: the contents of standard output if ` + "`" + `try_` + "`" + ` is not truthy and the
+              process succeeds. If ` + "`" + `try_` + "`" + ` is truthy, output returns
               (stdout, True) if the process succeeds and (stderr, False)
               if the process fails.
     `
 	return starlark.NewBuiltin("output", Output).WithDoc(doc)
 }
 
-
 func Output(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	
 	var (
-		
 		cmdV util.StringList
-		
+
 		cwd string
-		
+
 		envV starlark.IterableMapping
-		
+
 		try bool
-		
 	)
 	if err := starlark.UnpackArgs(fn.Name(), args, kwargs, "command", &cmdV, "cwd??", &cwd, "env??", &envV, "try_??", &try); err != nil {
 		return nil, err
 	}
-	
+
 	val, err := output(thread, fn, cmdV, cwd, envV, try)
 	if err != nil {
 		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
 	}
 	return val, nil
 }
-
 
 func NewExists() *starlark.Builtin {
 	const doc = `
@@ -171,18 +146,12 @@ func NewExists() *starlark.Builtin {
 	return starlark.NewBuiltin("exists", Exists).WithDoc(doc)
 }
 
-
 func Exists(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	
-	var (
-		
-		path string
-		
-	)
+	var path string
 	if err := starlark.UnpackArgs(fn.Name(), args, kwargs, "path", &path); err != nil {
 		return nil, err
 	}
-	
+
 	val, err := exists(thread, fn, path)
 	if err != nil {
 		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
@@ -190,29 +159,25 @@ func Exists(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, 
 	return val, nil
 }
 
-
 func NewGetcwd() *starlark.Builtin {
 	const doc = `
     Returns the current OS working directory. This is typically the path of
-    the directory containg the root module on the callstack.
+    the directory containing the root module on the callstack.
     `
 	return starlark.NewBuiltin("getcwd", Getcwd).WithDoc(doc)
 }
 
-
 func Getcwd(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	
 	if err := starlark.UnpackPositionalArgs(fn.Name(), args, kwargs, 0); err != nil {
 		return nil, err
 	}
-	
+
 	val, err := getcwd(thread, fn)
 	if err != nil {
 		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
 	}
 	return val, nil
 }
-
 
 func NewMkdir() *starlark.Builtin {
 	const doc = `
@@ -221,27 +186,22 @@ func NewMkdir() *starlark.Builtin {
 	return starlark.NewBuiltin("mkdir", Mkdir).WithDoc(doc)
 }
 
-
 func Mkdir(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	
 	var (
-		
 		path string
-		
+
 		mode int
-		
 	)
 	if err := starlark.UnpackArgs(fn.Name(), args, kwargs, "path", &path, "mode??", &mode); err != nil {
 		return nil, err
 	}
-	
+
 	val, err := mkdir(thread, fn, path, mode)
 	if err != nil {
 		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
 	}
 	return val, nil
 }
-
 
 func NewMakedirs() *starlark.Builtin {
 	const doc = `
@@ -251,20 +211,16 @@ func NewMakedirs() *starlark.Builtin {
 	return starlark.NewBuiltin("makedirs", Makedirs).WithDoc(doc)
 }
 
-
 func Makedirs(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	
 	var (
-		
 		path string
-		
+
 		mode int
-		
 	)
 	if err := starlark.UnpackArgs(fn.Name(), args, kwargs, "path", &path, "mode??", &mode); err != nil {
 		return nil, err
 	}
-	
+
 	val, err := makedirs(thread, fn, path, mode)
 	if err != nil {
 		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
@@ -272,15 +228,14 @@ func Makedirs(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple
 	return val, nil
 }
 
-
 func NewGlob() *starlark.Builtin {
 	const doc = `
     Return a list of paths rooted in the current directory that match the
     given include and exclude patterns.
 
-    - `+"`"+`*`+"`"+` matches any number of non-path-separator characters
-    - `+"`"+`**`+"`"+` matches any number of any characters
-    - `+"`"+`?`+"`"+` matches a single character
+    - ` + "`" + `*` + "`" + ` matches any number of non-path-separator characters
+    - ` + "`" + `**` + "`" + ` matches any number of any characters
+    - ` + "`" + `?` + "`" + ` matches a single character
 
     :param include: the patterns to include.
     :param exclude: the patterns to exclude.
@@ -290,25 +245,19 @@ func NewGlob() *starlark.Builtin {
 	return starlark.NewBuiltin("glob", Glob).WithDoc(doc)
 }
 
-
 func Glob(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	
 	var (
-		
 		include util.StringList
-		
+
 		exclude util.StringList
-		
 	)
 	if err := starlark.UnpackArgs(fn.Name(), args, kwargs, "include", &include, "exclude??", &exclude); err != nil {
 		return nil, err
 	}
-	
+
 	val, err := glob(thread, fn, include, exclude)
 	if err != nil {
 		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
 	}
 	return val, nil
 }
-
-

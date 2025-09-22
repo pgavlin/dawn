@@ -21,7 +21,7 @@ import (
 )
 
 func readFile(t *testing.T, path string) []byte {
-	contents, err := os.ReadFile(path)
+	contents, err := os.ReadFile(path) //nolint:gosec
 	require.NoError(t, err)
 	return bytes.ReplaceAll(contents, []byte{'\r', '\n'}, []byte{'\n'})
 }
@@ -118,8 +118,7 @@ func (pt *projectTest) run(t *testing.T) {
 	def, err := label.Parse("//:default")
 	require.NoError(t, err)
 
-	temp, err := os.MkdirTemp("", "")
-	require.NoError(t, err)
+	temp := t.TempDir()
 
 	t.Logf("temp dir: %v", temp)
 
@@ -185,6 +184,7 @@ func (pt *projectTest) run(t *testing.T) {
 }
 
 func TestSimpleFiles(t *testing.T) {
+	t.Parallel()
 	pt := projectTest{
 		path:  "testdata/simple-files",
 		edits: []string{"edit1", "edit2", "edit3"},
@@ -198,6 +198,7 @@ func TestSimpleFiles(t *testing.T) {
 }
 
 func TestSimpleTargets(t *testing.T) {
+	t.Parallel()
 	pt := projectTest{
 		path:  "testdata/simple-targets",
 		edits: []string{"edit1", "edit2", "edit3"},
@@ -211,6 +212,7 @@ func TestSimpleTargets(t *testing.T) {
 }
 
 func TestTargetDiffs(t *testing.T) {
+	t.Parallel()
 	dirs := []string{"constants", "functions", "names", "predeclared", "universal", "globals", "freevars"}
 	for _, dir := range dirs {
 		pt := projectTest{
@@ -232,6 +234,7 @@ func TestTargetDiffs(t *testing.T) {
 }
 
 func TestLocalModules(t *testing.T) {
+	t.Parallel()
 	pt := projectTest{
 		path:     "testdata/local-modules",
 		validate: func(t *testing.T, _ string, _ []testEvent) {},
@@ -240,6 +243,7 @@ func TestLocalModules(t *testing.T) {
 }
 
 func TestCyclicModules(t *testing.T) {
+	t.Parallel()
 	pt := projectTest{
 		path:    "testdata/cyclic-modules",
 		loadErr: "cyclic dependency",
@@ -248,6 +252,7 @@ func TestCyclicModules(t *testing.T) {
 }
 
 func TestBuiltins(t *testing.T) {
+	t.Parallel()
 	pt := projectTest{
 		path:     "testdata/builtins",
 		validate: func(t *testing.T, _ string, _ []testEvent) {},
@@ -256,6 +261,7 @@ func TestBuiltins(t *testing.T) {
 }
 
 func TestCyclicGenerate(t *testing.T) {
+	t.Parallel()
 	pt := projectTest{
 		path:     "testdata/cyclic-generates",
 		validate: func(t *testing.T, _ string, _ []testEvent) {},
@@ -264,6 +270,7 @@ func TestCyclicGenerate(t *testing.T) {
 }
 
 func TestCancelLoad(t *testing.T) {
+	t.Parallel()
 	pt := projectTest{
 		path:    "testdata/cancel-load",
 		loadErr: "context canceled",
@@ -272,6 +279,7 @@ func TestCancelLoad(t *testing.T) {
 }
 
 func TestCancelRun(t *testing.T) {
+	t.Parallel()
 	pt := projectTest{
 		path:   "testdata/cancel-run",
 		runErr: "context canceled",

@@ -1,11 +1,12 @@
 package diff
 
 import (
+	"strconv"
 	"testing"
 
+	"github.com/pgavlin/starlark-go/starlark"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/pgavlin/starlark-go/starlark"
 )
 
 type S = starlark.String
@@ -17,12 +18,15 @@ func T(values ...starlark.Value) starlark.Tuple { return starlark.Tuple(values) 
 func D(pairs ...starlark.Tuple) starlark.Value {
 	dict := starlark.NewDict(len(pairs))
 	for _, p := range pairs {
+		//nolint:gosec
 		dict.SetKey(p[0], p[1])
 	}
 	return dict
 }
 
 func TestDiff(t *testing.T) {
+	t.Parallel()
+
 	cases := []struct {
 		a, b starlark.Value
 		want string
@@ -73,9 +77,13 @@ func TestDiff(t *testing.T) {
 			want: `[~((42 -> "a"), (24 -> "b"))]`,
 		},
 	}
-	for _, c := range cases {
-		diff, err := Diff(c.a, c.b)
-		require.NoError(t, err)
-		assert.Equal(t, c.want, diff.String())
+	for i, c := range cases {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			t.Parallel()
+
+			diff, err := Diff(c.a, c.b)
+			require.NoError(t, err)
+			assert.Equal(t, c.want, diff.String())
+		})
 	}
 }

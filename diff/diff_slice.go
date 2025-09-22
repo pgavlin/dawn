@@ -230,7 +230,7 @@ func (diff *differ) compose() (starlark.Tuple, error) {
 }
 
 func (diff *differ) snake(k, p, pp, offset int) (int, error) {
-	r := 0
+	var r int
 	if p > pp {
 		r = diff.path[k-1+offset]
 	} else {

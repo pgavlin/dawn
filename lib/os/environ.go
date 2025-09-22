@@ -4,6 +4,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/pgavlin/dawn/util"
 	starlark "github.com/pgavlin/starlark-go/starlark"
 )
 
@@ -15,7 +16,7 @@ func init() {
 	for _, kvp := range env {
 		eq := strings.IndexByte(kvp, '=')
 		key, value := kvp[:eq], kvp[eq+1:]
-		envV.SetKey(starlark.String(key), starlark.String(value))
+		util.Must(envV.SetKey(starlark.String(key), starlark.String(value)))
 	}
 	envV.Freeze()
 	environValue = envV

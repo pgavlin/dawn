@@ -1,0 +1,72 @@
+version: "2"
+run:
+  build-tags:
+    - all
+linters:
+  enable:
+    - durationcheck
+    - exhaustive
+    - goheader
+    - goprintffuncname
+    - gosec
+    - importas
+    - misspell
+    - nakedret
+    - nolintlint
+    - paralleltest
+    - perfsprint
+    - prealloc
+    - revive
+    - unconvert
+    - usetesting
+    - wastedassign
+    - whitespace
+  disable:
+    - errcheck
+    - unused
+  settings:
+    govet:
+      enable:
+        - nilness
+        - reflectvaluecompare
+        - sortslice
+        - unusedwrite
+    nakedret:
+      max-func-lines: 60
+    nolintlint:
+      allow-unused: true
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - revive
+        text: 'unused-parameter: parameter \S+ seems to be unused, consider removing or renaming it as _'
+      - linters:
+          - revive
+        text: 'empty-block: this block is empty, you can remove it'
+      - linters:
+          - revive
+        text: 'redefines-builtin-id: redefinition of the built-in function'
+      - linters:
+          - revive
+        text: "var-naming: don't use underscores in Go names"
+      - linters:
+          - revive
+        text: "by other packages, and that stutters"
+      - linters:
+          - revive
+        text: "avoid meaningless package names"
+
+formatters:
+  enable:
+    - gofumpt
+  exclusions:
+    generated: lax
+    paths:
+      - venv$
+      - testdata$
