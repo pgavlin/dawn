@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"io"
 	"io/fs"
@@ -29,6 +28,7 @@ import (
 	fxs "github.com/pgavlin/fx/v2/slices"
 	"github.com/pgavlin/starlark-go/starlark"
 	"github.com/rjeczalik/notify"
+	"github.com/sugawarayuuta/sonnet"
 )
 
 // An UnknownTargetError is returned by Project.LoadTarget if a referenced target does not exist.
@@ -440,7 +440,7 @@ func (proj *Project) loadTargetInfo(label *label.Label) (targetInfo, error) {
 	defer f.Close()
 
 	var info targetInfo
-	if err := json.NewDecoder(f).Decode(&info); err != nil {
+	if err := sonnet.NewDecoder(f).Decode(&info); err != nil {
 		return targetInfo{}, err
 	}
 	if info.Label != label.String() {
@@ -463,7 +463,7 @@ func (proj *Project) saveTargetInfo(label *label.Label, info targetInfo) error {
 	tempName := f.Name()
 
 	info.Label = label.String()
-	if err = json.NewEncoder(f).Encode(info); err != nil {
+	if err = sonnet.NewEncoder(f).Encode(info); err != nil {
 		return err
 	}
 	if err = f.Close(); err != nil {

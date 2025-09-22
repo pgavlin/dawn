@@ -2,7 +2,6 @@ package dawn
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -11,6 +10,7 @@ import (
 	"github.com/pgavlin/dawn/diff"
 	"github.com/pgavlin/dawn/label"
 	"github.com/pgavlin/starlark-go/starlark"
+	"github.com/sugawarayuuta/sonnet"
 )
 
 // A TargetSummary contains summarial information about a build target.
@@ -39,7 +39,7 @@ func Targets(root string) ([]TargetSummary, error) {
 	defer f.Close()
 
 	var index index
-	if err := json.NewDecoder(f).Decode(&index); err != nil {
+	if err := sonnet.NewDecoder(f).Decode(&index); err != nil {
 		return nil, err
 	}
 
@@ -114,7 +114,7 @@ func (proj *Project) loadIndex() error {
 	defer f.Close()
 
 	var index index
-	if err := json.NewDecoder(f).Decode(&index); err != nil {
+	if err := sonnet.NewDecoder(f).Decode(&index); err != nil {
 		return err
 	}
 
@@ -185,7 +185,7 @@ func (proj *Project) saveIndex() error {
 	}
 	sort.Slice(index.Targets, func(i, j int) bool { return index.Targets[i].Label.String() < index.Targets[j].Label.String() })
 
-	enc := json.NewEncoder(f)
+	enc := sonnet.NewEncoder(f)
 	enc.SetIndent("", "    ")
 	return enc.Encode(index)
 }
