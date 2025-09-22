@@ -109,7 +109,7 @@ func get(ctx context.Context, root *mvsProject, resolver *Resolver, query versio
 		return nil, err
 	}
 
-	currentVersion := ""
+	var currentVersion string
 	if i := slices.IndexFunc(buildList, func(v module.Version) bool { return v.Path == version.Path }); i != -1 {
 		currentVersion = buildList[i].Version
 	} else {

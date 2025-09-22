@@ -12,9 +12,11 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"time"
 
 	"golang.org/x/mod/module"
 
+	"github.com/gofrs/flock"
 	"github.com/pgavlin/dawn/internal/project"
 	"github.com/pgavlin/dawn/internal/vcs"
 )
@@ -230,12 +232,12 @@ func (r *Resolver) listVersions(ctx context.Context, p module.Version) ([]module
 	return versionsV.([]module.Version), nil
 }
 
-func (r *Resolver) FetchProject(ctx context.Context, p project.RequirementConfig) (string, error) {
+func (r *Resolver) FetchProject(ctx context.Context, p project.RequirementConfig) (_ string, err error) {
 	cacheDir := filepath.Join(r.cacheDir, fmt.Sprintf("%v@%v", project.TrimPathVersion(p.Path), p.Version))
+	projDir := filepath.Join(cacheDir, "project")
+	lockFile := filepath.Join(cacheDir, "lock")
 
 	doFetch := func() (err error) {
-		// TODO: eliminate internal races (will ensure events are only issued once per project)
-
 		r.events.ProjectLoading(p)
 
 		repo, projectPath, revisionID, err := r.resolveProjectRevision(ctx, requirementVersion(p))
@@ -263,30 +265,39 @@ func (r *Resolver) FetchProject(ctx context.Context, p project.RequirementConfig
 		if projectPath != "" {
 			srcPath = filepath.Join(tmpDir, filepath.FromSlash(projectPath))
 		}
-		return os.Rename(srcPath, cacheDir)
-	}
-
-	// Is the project already in the cache?
-	if _, err := os.Stat(cacheDir); err == nil {
-		return cacheDir, nil
+		return os.Rename(srcPath, projDir)
 	}
 
 	// Make sure the cache directory exists.
-	if err := os.MkdirAll(filepath.Dir(cacheDir), 0700); err != nil {
-		return "", fmt.Errorf("creating cache directory: %w", err)
+	for i := 0; i < 10; i++ {
+		err := os.MkdirAll(cacheDir, 0o700)
+		if err == nil {
+			break
+		}
+		if !errors.Is(err, fs.ErrExist) {
+			return "", fmt.Errorf("creating cache directory: %w", err)
+		}
+	}
+
+	// Lock the project.
+	lock := flock.New(lockFile)
+	if _, err := lock.TryLockContext(ctx, 500*time.Millisecond); err != nil {
+		return "", fmt.Errorf("obtaining lock: %w", err)
+	}
+	defer func() {
+		err = errors.Join(err, lock.Unlock())
+	}()
+
+	// Is the project already in the cache?
+	if _, err := os.Stat(projDir); err == nil {
+		return projDir, nil
 	}
 
 	// Fetch the module's project.
 	if err := doFetch(); err != nil {
-		if errors.Is(err, fs.ErrExist) {
-			if _, err := os.Stat(cacheDir); err == nil {
-				r.events.ProjectLoaded(p)
-				return cacheDir, nil
-			}
-		}
 		r.events.ProjectLoadFailed(p, err)
 		return "", fmt.Errorf("downloading project: %w", err)
 	}
 	r.events.ProjectLoaded(p)
-	return cacheDir, nil
+	return projDir, nil
 }

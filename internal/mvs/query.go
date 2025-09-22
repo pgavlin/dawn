@@ -108,9 +108,8 @@ func (q *querier) resolveUpgradeQuery(ctx context.Context, buildList []module.Ve
 		if v.Path == newVersion.Path {
 			if semver.Compare(newVersion.Version, v.Version) < 0 {
 				return v, nil
-			} else {
-				break
 			}
+			break
 		}
 	}
 	return newVersion, nil

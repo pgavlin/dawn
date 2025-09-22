@@ -1,0 +1,10 @@
+[tools]
+"go:github.com/go-delve/delve/cmd/dlv" = "latest"
+"go:golang.org/x/tools/gopls" = "latest"
+go = "1.24"
+gofumpt = "latest"
+golangci-lint = "2.3.0"
+gotestsum = "1.13.0"
+python = "3.8"
+
+[plugins]

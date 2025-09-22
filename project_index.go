@@ -3,7 +3,7 @@ package dawn
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"os"
 	"path/filepath"
 	"sort"
@@ -31,6 +31,7 @@ type index struct {
 func Targets(root string) ([]TargetSummary, error) {
 	work := filepath.Join(root, ".dawn", "build")
 
+	//nolint:gosec
 	f, err := os.Open(filepath.Join(work, "index.json"))
 	if err != nil {
 		return nil, err
@@ -102,7 +103,7 @@ func (t *indexTarget) upToDate(_ context.Context) (bool, string, diff.ValueDiff,
 }
 
 func (*indexTarget) evaluate(_ context.Context) (data string, changed bool, err error) {
-	return "", false, fmt.Errorf("index targets are not executable; please reload the project")
+	return "", false, errors.New("index targets are not executable; please reload the project")
 }
 
 func (proj *Project) loadIndex() error {

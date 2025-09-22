@@ -2,6 +2,7 @@ package main
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
 	"go/ast"
 	"go/types"
@@ -76,7 +77,7 @@ func typeStringImpl(w io.Writer, imports importSet, pkg *packages.Package, x ast
 		fmt.Fprint(w, "*")
 		typeStringImpl(w, imports, pkg, x.X)
 	default:
-		panic(fmt.Errorf("parameter types must be identifiers, selectors, arrays, slices, or pointers"))
+		panic(errors.New("parameter types must be identifiers, selectors, arrays, slices, or pointers"))
 	}
 }
 

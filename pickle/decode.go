@@ -9,6 +9,7 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/pgavlin/dawn/util"
 	"github.com/pgavlin/starlark-go/starlark"
 )
 
@@ -17,11 +18,15 @@ type reader struct {
 }
 
 func (r reader) Read(b []byte) (int, error) {
+	return r.read(b), nil
+}
+
+func (r reader) read(b []byte) int {
 	n, err := io.ReadFull(r.r, b)
 	if err != nil {
 		panic(failure(err))
 	}
-	return n, nil
+	return n
 }
 
 type markT int
@@ -105,19 +110,19 @@ func (d *Decoder) get(id int) starlark.Value {
 
 func (d *Decoder) readByte() byte {
 	var buf [1]byte
-	d.r.Read(buf[:])
+	d.r.read(buf[:])
 	return buf[0]
 }
 
 func (d *Decoder) readUint32() uint32 {
 	var b [4]byte
-	d.r.Read(b[:])
+	d.r.read(b[:])
 	return uint32(b[0]) | uint32(b[1])<<8 | uint32(b[2])<<16 | uint32(b[3])<<24
 }
 
 func (d *Decoder) readUint64() uint64 {
 	var b [8]byte
-	d.r.Read(b[:])
+	d.r.read(b[:])
 	return uint64(b[0]) | uint64(b[1])<<8 | uint64(b[2])<<16 | uint64(b[3])<<24 | uint64(b[4])<<32 | uint64(b[5])<<40 | uint64(b[6])<<48 | uint64(b[7])<<56
 }
 
@@ -168,6 +173,7 @@ func (d *Decoder) decode() starlark.Value {
 			l, h := d.readByte(), d.readByte()
 			d.push(starlark.MakeInt(int(l) | int(h)<<16))
 		case opBININT:
+			//nolint:gosec
 			d.push(starlark.MakeInt(int(int32(d.readUint32()))))
 		case opBINFLOAT:
 			d.push(starlark.Float(math.Float64frombits(d.readUint64())))
@@ -187,7 +193,7 @@ func (d *Decoder) decode() starlark.Value {
 			if !ok {
 				panic(failure(fmt.Errorf("APPEND expects a list, not a %s", d.peek().Type())))
 			}
-			l.Append(v)
+			util.Must(l.Append(v))
 		case opAPPENDS:
 			if len(d.stack) == 0 {
 				panic(failure(errors.New("stack underflow")))
@@ -203,7 +209,7 @@ func (d *Decoder) decode() starlark.Value {
 				panic(failure(fmt.Errorf("APPENDS expects a list, not a %s", d.stack[i-1].Type())))
 			}
 			for _, v := range d.stack[i+1:] {
-				l.Append(v)
+				util.Must(l.Append(v))
 			}
 			d.stack = d.stack[:i]
 		case opEMPTY_TUPLE:
@@ -251,7 +257,7 @@ func (d *Decoder) decode() starlark.Value {
 			}
 			for j := i + 1; j < len(d.stack); j += 2 {
 				key, value := d.stack[j], d.stack[j+1]
-				dict.SetKey(key, value)
+				util.Must(dict.SetKey(key, value))
 			}
 			d.stack = d.stack[:i]
 		case opEMPTY_SET:
@@ -271,7 +277,7 @@ func (d *Decoder) decode() starlark.Value {
 				panic(failure(fmt.Errorf("ADDITEMS expects a set, not a %s", d.stack[i-1].Type())))
 			}
 			for _, v := range d.stack[i+1:] {
-				set.Insert(v)
+				util.Must(set.Insert(v))
 			}
 			d.stack = d.stack[:i]
 		case opSTACK_GLOBAL:

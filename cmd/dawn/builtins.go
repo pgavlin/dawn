@@ -2,14 +2,9 @@
 
 package main
 
-
 import (
-	
 	starlark "github.com/pgavlin/starlark-go/starlark"
-	
 )
-
-
 
 func (w *workspace) newBuiltin_depends() *starlark.Builtin {
 	const doc = `
@@ -23,25 +18,18 @@ func (w *workspace) newBuiltin_depends() *starlark.Builtin {
 	return starlark.NewBuiltin("depends", w.starlark_builtin_depends).WithDoc(doc)
 }
 
-
 func (w *workspace) starlark_builtin_depends(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	
-	var (
-		
-		labelOrTarget starlark.Value
-		
-	)
+	var labelOrTarget starlark.Value
 	if err := starlark.UnpackArgs(fn.Name(), args, kwargs, "label_or_target", &labelOrTarget); err != nil {
 		return nil, err
 	}
-	
+
 	val, err := w.builtin_depends(thread, fn, labelOrTarget)
 	if err != nil {
 		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
 	}
 	return val, nil
 }
-
 
 func (w *workspace) newBuiltin_whatDepends() *starlark.Builtin {
 	const doc = `
@@ -54,23 +42,15 @@ func (w *workspace) newBuiltin_whatDepends() *starlark.Builtin {
 	return starlark.NewBuiltin("what_depends", w.starlark_builtin_whatDepends).WithDoc(doc)
 }
 
-
 func (w *workspace) starlark_builtin_whatDepends(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	
-	var (
-		
-		labelOrTarget starlark.Value
-		
-	)
+	var labelOrTarget starlark.Value
 	if err := starlark.UnpackArgs(fn.Name(), args, kwargs, "label_or_target", &labelOrTarget); err != nil {
 		return nil, err
 	}
-	
+
 	val, err := w.builtin_whatDepends(thread, fn, labelOrTarget)
 	if err != nil {
 		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
 	}
 	return val, nil
 }
-
-

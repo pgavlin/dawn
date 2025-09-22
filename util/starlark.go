@@ -2,6 +2,7 @@ package util
 
 import (
 	"context"
+	"iter"
 
 	"github.com/pgavlin/starlark-go/starlark"
 )
@@ -26,4 +27,17 @@ func GetContext(thread *starlark.Thread) context.Context {
 		return ctx
 	}
 	return context.Background()
+}
+
+func All[T starlark.Iterable](v T) iter.Seq[starlark.Value] {
+	return func(yield func(starlark.Value) bool) {
+		it := v.Iterate()
+		defer it.Done()
+		var e starlark.Value
+		for it.Next(&e) {
+			if !yield(e) {
+				return
+			}
+		}
+	}
 }

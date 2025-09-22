@@ -7,6 +7,7 @@ import (
 )
 
 func TestCleanPath(t *testing.T) {
+	t.Parallel()
 	cases := [][2]string{
 		{"foo", "foo"},
 		{"./foo/bar/../baz", "foo/baz"},

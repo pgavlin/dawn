@@ -18,7 +18,7 @@ var initCmd = &cobra.Command{
 			return err
 		}
 
-		f, err := os.OpenFile("dawn.toml", os.O_CREATE|os.O_EXCL, 0644)
+		f, err := os.OpenFile("dawn.toml", os.O_CREATE|os.O_EXCL, 0o600)
 		if err != nil {
 			if os.IsExist(err) {
 				return fmt.Errorf("%v already contains a dawn project", wd)

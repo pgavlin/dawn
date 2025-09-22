@@ -10,15 +10,18 @@ func (g graph) dot(w io.Writer, filter func(n *node) bool) error {
 	builder := &dotBuilder{w}
 
 	// Begin constructing DOT by adding a title and legend.
-	builder.start()
-	defer builder.finish()
+	if err := builder.start(); err != nil {
+		return err
+	}
 
 	// Add nodes to DOT builder.
 	nodeIDMap := make(map[*node]int, len(g))
 	for _, n := range g {
 		if filter(n) {
 			id := len(nodeIDMap) + 1
-			builder.addNode(n, id)
+			if err := builder.addNode(n, id); err != nil {
+				return err
+			}
 			nodeIDMap[n] = id
 		}
 	}
@@ -27,12 +30,14 @@ func (g graph) dot(w io.Writer, filter func(n *node) bool) error {
 	for _, n := range g {
 		for _, d := range n.dependencies {
 			if filter(n) && filter(d) {
-				builder.addEdge(nodeIDMap[n], nodeIDMap[d])
+				if err := builder.addEdge(nodeIDMap[n], nodeIDMap[d]); err != nil {
+					return err
+				}
 			}
 		}
 	}
 
-	return nil
+	return builder.finish()
 }
 
 // builder wraps an io.Writer and understands how to compose DOT formatted elements.
@@ -41,24 +46,30 @@ type dotBuilder struct {
 }
 
 // start generates a title and initial node in DOT format.
-func (b *dotBuilder) start() {
-	fmt.Fprintln(b, "digraph \"project\" {")
-	fmt.Fprintln(b, `node [style=filled fillcolor="#f8f8f8"]`)
+func (b *dotBuilder) start() error {
+	if _, err := fmt.Fprintln(b, "digraph \"project\" {"); err != nil {
+		return err
+	}
+	_, err := fmt.Fprintln(b, `node [style=filled fillcolor="#f8f8f8"]`)
+	return err
 }
 
 // finish closes the opening curly bracket in the constructed DOT buffer.
-func (b *dotBuilder) finish() {
-	fmt.Fprintln(b, "}")
+func (b *dotBuilder) finish() error {
+	_, err := fmt.Fprintln(b, "}")
+	return err
 }
 
 // addNode generates a graph node in DOT format.
-func (b *dotBuilder) addNode(node *node, nodeID int) {
-	fmt.Fprintf(b, "N%d [label=\"%s\", id=\"node%d\", shape=\"box\"]\n", nodeID, escapeForDot(node.label.String()), nodeID)
+func (b *dotBuilder) addNode(node *node, nodeID int) error {
+	_, err := fmt.Fprintf(b, "N%d [label=\"%s\", id=\"node%d\", shape=\"box\"]\n", nodeID, escapeForDot(node.label.String()), nodeID)
+	return err
 }
 
 // addEdge generates a graph edge in DOT format.
-func (b *dotBuilder) addEdge(from, to int) {
-	fmt.Fprintf(b, "N%d -> N%d\n", from, to)
+func (b *dotBuilder) addEdge(from, to int) error {
+	_, err := fmt.Fprintf(b, "N%d -> N%d\n", from, to)
+	return err
 }
 
 // escapeForDot escapes double quotes and backslashes, and replaces Graphviz's

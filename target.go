@@ -16,7 +16,7 @@ import (
 	"github.com/pgavlin/starlark-go/starlark"
 )
 
-var DependenciesFailedError = errors.New("dependencies failed")
+var ErrDependenciesFailed = errors.New("dependencies failed")
 
 // A Target represents a build target within a Project.
 type Target interface {
@@ -149,7 +149,7 @@ func (t *runTarget) Evaluate(ctx context.Context, engine runner.Engine) error {
 
 	// Check for failed deps.
 	if hasFailedDeps {
-		return DependenciesFailedError
+		return ErrDependenciesFailed
 	}
 
 	// Check whether the target is up-to-date.
@@ -192,12 +192,12 @@ func (t *runTarget) Evaluate(ctx context.Context, engine runner.Engine) error {
 		proj.events.TargetFailed(label, err)
 
 		// If the target fails, record that it must be re-run on the next build.
-		proj.saveTargetInfo(label, targetInfo{
+		saveErr := proj.saveTargetInfo(label, targetInfo{
 			Doc:          t.target.Doc(),
 			Dependencies: depData,
 			Rerun:        true,
 		})
-		return err
+		return errors.Join(saveErr, err)
 	}
 
 	// Save the target's metadata.

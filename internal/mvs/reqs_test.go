@@ -27,6 +27,8 @@ func (d testDialer) dialRepository(ctx context.Context, kind, address string) (v
 }
 
 func TestMVS(t *testing.T) {
+	t.Parallel()
+
 	const sandbox = "github.com/pgavlin/sandbox"
 	m := func(project string, version int) module.Version {
 		return module.Version{Path: path.Join(sandbox, project), Version: fmt.Sprintf("v1.%v.0", version)}
@@ -38,7 +40,7 @@ func TestMVS(t *testing.T) {
 
 	dialer := testDialer{
 		repos: map[string]*testRepository{
-			sandbox: &testRepository{
+			sandbox: {
 				path:       sandbox,
 				defaultRef: "main",
 				refs: map[string]string{
@@ -127,6 +129,7 @@ func TestMVS(t *testing.T) {
 	}
 
 	t.Run("Reqs", func(t *testing.T) {
+		t.Parallel()
 		root := &mvsProject{
 			Version:      module.Version{},
 			Requirements: []module.Version{m("b", 1), m("c", 2)},
@@ -136,6 +139,7 @@ func TestMVS(t *testing.T) {
 		reqs := newReqs(root, NewResolver(cacheDir, dialer, nil))
 
 		t.Run("BuildList", func(t *testing.T) {
+			t.Parallel()
 			versions, err := mvs.BuildList(context.Background(), []module.Version{root.Version}, reqs)
 			require.NoError(t, err)
 
@@ -143,6 +147,7 @@ func TestMVS(t *testing.T) {
 			assert.Equal(t, expected, versions)
 		})
 		t.Run("UpgradeAll", func(t *testing.T) {
+			t.Parallel()
 			versions, err := mvs.UpgradeAll(context.Background(), root.Version, reqs)
 			require.NoError(t, err)
 
@@ -150,6 +155,7 @@ func TestMVS(t *testing.T) {
 			assert.Equal(t, expected, versions)
 		})
 		t.Run("Upgrade", func(t *testing.T) {
+			t.Parallel()
 			versions, err := mvs.Upgrade(context.Background(), root.Version, reqs, m("c", 4))
 			require.NoError(t, err)
 
@@ -157,6 +163,7 @@ func TestMVS(t *testing.T) {
 			assert.Equal(t, expected, versions)
 		})
 		t.Run("Downgrade", func(t *testing.T) {
+			t.Parallel()
 			versions, err := mvs.Downgrade(context.Background(), root.Version, reqs, m("c", 1))
 			require.NoError(t, err)
 
@@ -166,6 +173,7 @@ func TestMVS(t *testing.T) {
 	})
 
 	t.Run("Get", func(t *testing.T) {
+		t.Parallel()
 		root := &project.Config{
 			Requirements: map[string]project.RequirementConfig{
 				"b": r("b", 1),
@@ -177,6 +185,7 @@ func TestMVS(t *testing.T) {
 		resolver := NewResolver(cacheDir, dialer, nil)
 
 		t.Run("BuildList", func(t *testing.T) {
+			t.Parallel()
 			versions, err := BuildList(context.Background(), root, resolver)
 			require.NoError(t, err)
 
@@ -192,6 +201,7 @@ func TestMVS(t *testing.T) {
 		})
 
 		t.Run("UpgradeAll", func(t *testing.T) {
+			t.Parallel()
 			reqs, err := UpgradeAll(context.Background(), root, resolver)
 			require.NoError(t, err)
 
@@ -213,6 +223,7 @@ func TestMVS(t *testing.T) {
 		})
 
 		t.Run("Add", func(t *testing.T) {
+			t.Parallel()
 			reqs, err := Get(context.Background(), root, resolver, "github.com/pgavlin/sandbox/g")
 			require.NoError(t, err)
 
@@ -225,6 +236,7 @@ func TestMVS(t *testing.T) {
 		})
 
 		t.Run("Add ref", func(t *testing.T) {
+			t.Parallel()
 			reqs, err := Get(context.Background(), root, resolver, "github.com/pgavlin/sandbox/g@main")
 			require.NoError(t, err)
 
@@ -237,6 +249,7 @@ func TestMVS(t *testing.T) {
 		})
 
 		t.Run("Upgrade upgrade", func(t *testing.T) {
+			t.Parallel()
 			reqs, err := Get(context.Background(), root, resolver, "github.com/pgavlin/sandbox/d@upgrade")
 			require.NoError(t, err)
 
@@ -249,6 +262,7 @@ func TestMVS(t *testing.T) {
 		})
 
 		t.Run("Upgrade latest", func(t *testing.T) {
+			t.Parallel()
 			reqs, err := Get(context.Background(), root, resolver, "github.com/pgavlin/sandbox/d@latest")
 			require.NoError(t, err)
 
@@ -261,6 +275,7 @@ func TestMVS(t *testing.T) {
 		})
 
 		t.Run("Upgrade patch", func(t *testing.T) {
+			t.Parallel()
 			reqs, err := Get(context.Background(), root, resolver, "github.com/pgavlin/sandbox/d@patch")
 			require.NoError(t, err)
 
@@ -272,6 +287,7 @@ func TestMVS(t *testing.T) {
 		})
 
 		t.Run("Upgrade semver prefix", func(t *testing.T) {
+			t.Parallel()
 			reqs, err := Get(context.Background(), root, resolver, "github.com/pgavlin/sandbox/c@v1.4")
 			require.NoError(t, err)
 
@@ -284,6 +300,7 @@ func TestMVS(t *testing.T) {
 		})
 
 		t.Run("Upgrade semver GT", func(t *testing.T) {
+			t.Parallel()
 			reqs, err := Get(context.Background(), root, resolver, "github.com/pgavlin/sandbox/c@>v1.3")
 			require.NoError(t, err)
 
@@ -296,6 +313,7 @@ func TestMVS(t *testing.T) {
 		})
 
 		t.Run("Upgrade semver GTE", func(t *testing.T) {
+			t.Parallel()
 			reqs, err := Get(context.Background(), root, resolver, "github.com/pgavlin/sandbox/c@>=v1.3")
 			require.NoError(t, err)
 
@@ -308,6 +326,7 @@ func TestMVS(t *testing.T) {
 		})
 
 		t.Run("Upgrade semver LT", func(t *testing.T) {
+			t.Parallel()
 			reqs, err := Get(context.Background(), root, resolver, "github.com/pgavlin/sandbox/c@<v1.4")
 			require.NoError(t, err)
 
@@ -320,6 +339,7 @@ func TestMVS(t *testing.T) {
 		})
 
 		t.Run("Upgrade semver LTE", func(t *testing.T) {
+			t.Parallel()
 			reqs, err := Get(context.Background(), root, resolver, "github.com/pgavlin/sandbox/c@<=v1.3")
 			require.NoError(t, err)
 
@@ -330,6 +350,5 @@ func TestMVS(t *testing.T) {
 			}
 			assert.Equal(t, expected, reqs)
 		})
-
 	})
 }

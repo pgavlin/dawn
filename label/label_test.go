@@ -7,6 +7,7 @@ import (
 )
 
 func TestParseLabel(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		input    string
 		expected *Label
@@ -138,6 +139,7 @@ func TestParseLabel(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.input, func(t *testing.T) {
+			t.Parallel()
 			l, err := Parse(c.input)
 			if c.expected == nil {
 				assert.Error(t, err)

@@ -7,6 +7,7 @@ require (
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fatih/color v1.11.0
 	github.com/go-git/go-git/v5 v5.16.2
+	github.com/gofrs/flock v0.12.1
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/otiai10/copy v1.6.0
 	github.com/pelletier/go-toml/v2 v2.2.4
@@ -18,6 +19,7 @@ require (
 	github.com/spf13/cobra v1.1.3
 	github.com/spf13/pflag v1.0.10
 	github.com/stretchr/testify v1.10.0
+	github.com/test-go/testify v1.1.4
 	golang.org/x/mod v0.28.0
 	golang.org/x/sys v0.36.0
 	golang.org/x/term v0.35.0

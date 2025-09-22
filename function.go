@@ -155,7 +155,7 @@ func (f *function) diffEnv() (bool, string, diff.ValueDiff, error) {
 	}
 	md, ok := d.(*diff.MappingDiff)
 	if !ok {
-		panic(fmt.Errorf("expected a diff in unequal environments"))
+		panic(errors.New("expected a diff in unequal environments"))
 	}
 
 	reasons := slices.Collect(fxs.FMap(functionEnvKeys, func(k starlark.String) (string, bool) {
@@ -250,7 +250,7 @@ func (f *function) evaluate(ctx context.Context) (data string, changed bool, err
 	if err := pickle.NewEncoder(b64, pickle.PicklerFunc(envPickler)).Encode(f.function); err != nil {
 		return "", false, err
 	}
-	b64.Close()
+	util.Must(b64.Close())
 
 	f.oldEnv = f.newEnv
 	return buf.String(), true, nil
@@ -350,13 +350,13 @@ func envUnpickler(module, name string, args starlark.Tuple) (starlark.Value, err
 		names, constants, predeclared, universals, functions := module[0], module[1], module[2], module[3], module[4]
 
 		dict := starlark.NewDict(7)
-		dict.SetKey(starlark.String("names"), names)
-		dict.SetKey(starlark.String("constant values"), constants)
-		dict.SetKey(starlark.String("predeclared values"), makeDictFromAssociationList(predeclared))
-		dict.SetKey(starlark.String("universal values"), makeDictFromAssociationList(universals))
-		dict.SetKey(starlark.String("function values"), functions)
-		dict.SetKey(starlark.String("global values"), makeDictFromAssociationList(globals))
-		dict.SetKey(starlark.String("code"), bytecode)
+		util.Must(dict.SetKey(starlark.String("names"), names))
+		util.Must(dict.SetKey(starlark.String("constant values"), constants))
+		util.Must(dict.SetKey(starlark.String("predeclared values"), makeDictFromAssociationList(predeclared)))
+		util.Must(dict.SetKey(starlark.String("universal values"), makeDictFromAssociationList(universals)))
+		util.Must(dict.SetKey(starlark.String("function values"), functions))
+		util.Must(dict.SetKey(starlark.String("global values"), makeDictFromAssociationList(globals)))
+		util.Must(dict.SetKey(starlark.String("code"), bytecode))
 		return dict, nil
 	case "Function":
 		if len(args) != 3 {
@@ -364,8 +364,8 @@ func envUnpickler(module, name string, args starlark.Tuple) (starlark.Value, err
 		}
 		defaults, freeVars, funcode := args[0], args[1], args[2].(*starlark.Dict)
 
-		funcode.SetKey(starlark.String("default parameter values"), makeDictFromAssociationList(defaults))
-		funcode.SetKey(starlark.String("free variables"), makeDictFromAssociationList(freeVars))
+		util.Must(funcode.SetKey(starlark.String("default parameter values"), makeDictFromAssociationList(defaults)))
+		util.Must(funcode.SetKey(starlark.String("free variables"), makeDictFromAssociationList(freeVars)))
 		return funcode, nil
 	default:
 		return nil, fmt.Errorf("cannot unpickle value of type %s.%s", module, name)
@@ -381,7 +381,7 @@ func makeDictFromAssociationList(al starlark.Value) starlark.Value {
 	dict := starlark.NewDict(len(pairs))
 	for _, pv := range pairs {
 		pair := pv.(starlark.Tuple)
-		dict.SetKey(pair[0].(starlark.String), pair[1])
+		util.Must(dict.SetKey(pair[0].(starlark.String), pair[1]))
 	}
 	return dict
 }

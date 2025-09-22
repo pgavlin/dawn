@@ -143,6 +143,9 @@ func (m *module) loadModule(ctx context.Context, proj *Project, rawLabel string)
 	}
 	if label.Project == "" {
 		label.Project = m.label.Project
+		if label.Name == "" {
+			label.Name = "BUILD.dawn"
+		}
 	} else if label.IsAlias() {
 		req, ok := m.requirements[label.Project]
 		if !ok {

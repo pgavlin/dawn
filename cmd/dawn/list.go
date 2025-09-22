@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"slices"
@@ -99,9 +100,7 @@ var flagsCmd = &cobra.Command{
 		if err := work.loadProject(args, true, listJSON); err != nil {
 			return err
 		}
-		work.renderer.Close()
-
-		return printFlagList(work.project.Flags())
+		return errors.Join(work.renderer.Close(), printFlagList(work.project.Flags()))
 	},
 }
 
@@ -113,9 +112,7 @@ var targetsCmd = &cobra.Command{
 		if err := work.loadProject(args, true, listJSON); err != nil {
 			return err
 		}
-		work.renderer.Close()
-
-		return printTargetList(work.project.Targets())
+		return errors.Join(work.renderer.Close(), printTargetList(work.project.Targets()))
 	},
 }
 
@@ -126,7 +123,9 @@ var dependsCmd = newTargetCommand(&targetCommand{
 		if err := work.loadProject(args, true, listJSON); err != nil {
 			return err
 		}
-		work.renderer.Close()
+		if err := work.renderer.Close(); err != nil {
+			return err
+		}
 		labels, err := work.depends(label)
 		if err != nil {
 			return err
@@ -142,7 +141,9 @@ var whatDependsCmd = newTargetCommand(&targetCommand{
 		if err := work.loadProject(args, true, listJSON); err != nil {
 			return err
 		}
-		work.renderer.Close()
+		if err := work.renderer.Close(); err != nil {
+			return err
+		}
 		labels, err := work.whatDepends(label)
 		if err != nil {
 			return err
@@ -158,7 +159,9 @@ var sourcesCmd = newTargetCommand(&targetCommand{
 		if err := work.loadProject(args, true, listJSON); err != nil {
 			return err
 		}
-		work.renderer.Close()
+		if err := work.renderer.Close(); err != nil {
+			return err
+		}
 		paths, err := work.sources(label)
 		if err != nil {
 			return err

@@ -15,7 +15,7 @@ import (
 	"golang.org/x/mod/module"
 )
 
-func decompressRepo(t *testing.T) string {
+func dialRepo(t *testing.T) Repository {
 	t.Helper()
 
 	f, err := os.Open(filepath.Join(".", "testdata", "repo.tar.gz"))
@@ -27,27 +27,34 @@ func decompressRepo(t *testing.T) string {
 	err = extract.Gz(context.Background(), f, repoPath, nil)
 	require.NoError(t, err)
 
-	return filepath.Join(repoPath, "repo")
-}
-
-func TestGitRepository(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skipf("skipped on windows due to issues in CI/CD")
-	}
-
-	repoPath := decompressRepo(t)
+	repoPath = filepath.Join(repoPath, "repo")
 
 	repo, err := DialGitRepository(context.Background(), filepath.ToSlash(repoPath), &DialGitOptions{AllowFile: true})
 	require.NoError(t, err)
 
+	return repo
+}
+
+func TestGitRepository(t *testing.T) {
+	t.Parallel()
+	if runtime.GOOS == "windows" {
+		t.Skipf("skipped on windows due to issues in CI/CD")
+	}
+
 	t.Run("DefaultRef", func(t *testing.T) {
-		defaultRef, err := repo.DefaultRef(context.Background())
+		t.Parallel()
+
+		defaultRef, err := dialRepo(t).DefaultRef(context.Background())
 		require.NoError(t, err)
 
 		assert.Equal(t, "main", defaultRef)
 	})
 
 	t.Run("Versions", func(t *testing.T) {
+		t.Parallel()
+
+		repo := dialRepo(t)
+
 		versions, err := repo.Versions(context.Background())
 		require.NoError(t, err)
 
@@ -74,6 +81,7 @@ func TestGitRepository(t *testing.T) {
 	})
 
 	t.Run("Refs", func(t *testing.T) {
+		t.Parallel()
 		refs := map[string]string{
 			"subdir/v0.0.1": "7c34061b3388a83d7a8bc323f4bf479b2862211f",
 			"v0.1.0":        "b7f0897e2ca01b82e8bf1ddfaaff47f5680570f6",
@@ -82,6 +90,10 @@ func TestGitRepository(t *testing.T) {
 		}
 		for r, expected := range refs {
 			t.Run(r, func(t *testing.T) {
+				t.Parallel()
+
+				repo := dialRepo(t)
+
 				refID, err := repo.ResolveRef(context.Background(), r)
 				require.NoError(t, err)
 				assert.Equal(t, expected, refID)
@@ -95,7 +107,13 @@ func TestGitRepository(t *testing.T) {
 	})
 
 	t.Run("FetchRevision", func(t *testing.T) {
+		t.Parallel()
+
 		t.Run("v0.1.0", func(t *testing.T) {
+			t.Parallel()
+
+			repo := dialRepo(t)
+
 			rev, err := repo.GetRevision(context.Background(), "b7f0897e2ca01b82e8bf1ddfaaff47f5680570f6")
 			require.NoError(t, err)
 
@@ -104,12 +122,16 @@ func TestGitRepository(t *testing.T) {
 			require.NoError(t, err)
 
 			const expected = "# Test\n\nA test repo for the Git dialer.\n"
-			actual, err := os.ReadFile(filepath.Join(temp, "README.md"))
+			actual, err := os.ReadFile(filepath.Join(temp, "README.md")) //nolint:gosec
 			require.NoError(t, err)
 			assert.Equal(t, expected, string(actual))
 		})
 
 		t.Run("subdir/v0.0.1", func(t *testing.T) {
+			t.Parallel()
+
+			repo := dialRepo(t)
+
 			rev, err := repo.GetRevision(context.Background(), "7c34061b3388a83d7a8bc323f4bf479b2862211f")
 			require.NoError(t, err)
 
@@ -118,15 +140,16 @@ func TestGitRepository(t *testing.T) {
 			require.NoError(t, err)
 
 			const expected = "# Subdirectory\n"
-			actual, err := os.ReadFile(filepath.Join(temp, "subdir", "README.md"))
+			actual, err := os.ReadFile(filepath.Join(temp, "subdir", "README.md")) //nolint:gosec
 			require.NoError(t, err)
 			assert.Equal(t, expected, string(actual))
 		})
 	})
 
 	t.Run("History", func(t *testing.T) {
-		repo, err := DialGitRepository(context.Background(), filepath.ToSlash(repoPath), &DialGitOptions{AllowFile: true})
-		require.NoError(t, err)
+		t.Parallel()
+
+		repo := dialRepo(t)
 
 		refID, err := repo.ResolveRef(context.Background(), "main")
 		require.NoError(t, err)

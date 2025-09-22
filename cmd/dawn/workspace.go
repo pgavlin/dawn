@@ -55,7 +55,8 @@ func (w *workspace) init() error {
 		return err
 	}
 
-	rootDir, file := wd, ""
+	rootDir := wd
+	var file string
 	for {
 		if _, err := os.Stat(filepath.Join(rootDir, "dawn.toml")); err == nil {
 			file = "dawn.toml"
@@ -173,8 +174,7 @@ func (w *workspace) loadProject(args []string, index, quiet bool) error {
 	}
 	project, err := dawn.Load(w.context, w.root, options)
 	if err != nil {
-		renderer.Close()
-		return err
+		return errors.Join(renderer.Close(), err)
 	}
 	w.project = project
 	w.graph = buildGraph(w.project)
@@ -245,12 +245,10 @@ func (w *workspace) labelOrNearestDefault(l *label.Label) *label.Label {
 
 func (w *workspace) run(label *label.Label, opts dawn.RunOptions) error {
 	err := w.project.Run(w.context, w.labelOrNearestDefault(label), &opts)
-	w.renderer.Close()
-	return err
+	return errors.Join(w.renderer.Close(), err)
 }
 
 func (w *workspace) watch(label *label.Label) error {
 	err := w.project.Watch(w.context, w.labelOrNearestDefault(label))
-	w.renderer.Close()
-	return err
+	return errors.Join(w.renderer.Close(), err)
 }

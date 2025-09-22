@@ -1,31 +1,23 @@
 load("golang//:go_binary.dawn", "go_binary")
+load("//cmd/dawn-gen-builtins", "gen_builtins")
 
 version = "0.1.0"
 
 debug = parse_flag("debug", type=bool, help="True to run a debug build")
 
-dawn_gen_builtins = go_binary(
-    name="dawn-gen-builtins",
-	dir_label="//cmd/dawn-gen-builtins",
-    docs="Builds the dawn-gen-builtins tool for generating Starlark builtin wrappers.",
-)
+all_go_sources=os.glob(include=["**/*.go"], exclude=[".dawn/**"])
 
-@target(deps=[dawn_gen_builtins], sources=["./cmd/dawn/repl_builtins.go"], generates=["./cmd/dawn/builtins.go"])
-def dawn_cli_builtins():
-    """
-    Generates wrappers + documentation for CLI-only builtin functions.
-    """
+@target(sources=all_go_sources)
+def format():
+    for f in all_go_sources:
+        sh.exec(f"gofumpt -w {f}")
 
-    sh.exec("dawn-gen-builtins ./cmd/dawn ./cmd/dawn/builtins.go ./docs/source/modules")
+@target(sources=all_go_sources)
+def lint():
+    sh.exec("golangci-lint run")
 
-
-@target(deps=[dawn_gen_builtins], sources=["project.go", "project_builtins.go"], generates=["builtins.go", "docs/source/modules"])
-def dawn_builtins():
-    """
-    Generates wrappers + documentation for builtin functions.
-    """
-
-    sh.exec("dawn-gen-builtins . builtins.go docs/source/modules")
+gen_builtins("cli_builtins", "./cmd/dawn", "./cmd/dawn/builtins.go")
+gen_builtins()
 
 ldflags = f"-X main.version={version}"
 
@@ -51,7 +43,7 @@ def dawn_goreleaser():
     results to the location expected by Goreleaser.
     """
 
-@target(deps=[":dawn", "docs:site"])
+@target(deps=[":lint", ":dawn", "docs:site"])
 def default():
     """
     Builds the dawn CLI and docs.

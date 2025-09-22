@@ -88,7 +88,7 @@
 
 .. py:function:: label(path)
 
-    Returns the label that corresponds to the given OS path, if any.
+    Returns the label that corresponds to the given project-relative path, if any.
     
 
 .. py:function:: contains(path)

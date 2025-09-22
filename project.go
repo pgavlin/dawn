@@ -129,7 +129,7 @@ func (proj *Project) load(ctx context.Context, index bool) (err error) {
 		}
 	}
 
-	if err := os.MkdirAll(proj.temp, 0755); err != nil {
+	if err := os.MkdirAll(proj.temp, 0o750); err != nil {
 		return err
 	}
 
@@ -146,8 +146,7 @@ func (proj *Project) load(ctx context.Context, index bool) (err error) {
 		return err
 	}
 
-	proj.saveIndex()
-	return nil
+	return proj.saveIndex()
 }
 
 func (proj *Project) Reload(ctx context.Context) (err error) {
@@ -216,7 +215,7 @@ func (proj *Project) Watch(ctx context.Context, label *label.Label) error {
 				}
 
 				// Project's run events are responsible for logging the error.
-				proj.Run(ctx, label, nil)
+				_ = proj.Run(ctx, label, nil)
 			}
 			close(buildsDone)
 		}()
@@ -428,6 +427,7 @@ func (proj *Project) targetInfoPath(l *label.Label) string {
 func (proj *Project) loadTargetInfo(label *label.Label) (targetInfo, error) {
 	path := proj.targetInfoPath(label)
 
+	//nolint:gosec
 	f, err := os.Open(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -447,7 +447,7 @@ func (proj *Project) loadTargetInfo(label *label.Label) (targetInfo, error) {
 func (proj *Project) saveTargetInfo(label *label.Label, info targetInfo) error {
 	path := proj.targetInfoPath(label)
 
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
 		return err
 	}
 
@@ -472,7 +472,6 @@ func (proj *Project) ignored(path string) bool {
 }
 
 func (proj *Project) loadPackage(ctx context.Context, wg *sync.WaitGroup, path string) error {
-
 	if proj.ignored(path[2:]) {
 		return nil
 	}
@@ -491,7 +490,7 @@ func (proj *Project) loadPackage(ctx context.Context, wg *sync.WaitGroup, path s
 	if slices.ContainsFunc(entries, func(e os.DirEntry) bool { return e.Name() == "BUILD.dawn" }) {
 		wg.Add(1)
 		go func() {
-			proj.loadModule(ctx, nil, &label.Label{Kind: "module", Package: path, Name: "BUILD.dawn"})
+			_, _ = proj.loadModule(ctx, nil, &label.Label{Kind: "module", Package: path, Name: "BUILD.dawn"})
 			wg.Done()
 		}()
 	}

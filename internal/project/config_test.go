@@ -1,3 +1,4 @@
+//nolint:gosec
 package project
 
 import (
@@ -10,6 +11,7 @@ import (
 )
 
 func TestRoundTripConfigFile(t *testing.T) {
+	t.Parallel()
 	in := filepath.Join("testdata", "conf.toml")
 	config, err := LoadConfigFile(in)
 	require.NoError(t, err)

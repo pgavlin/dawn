@@ -2,16 +2,11 @@
 
 package dawn
 
-
 import (
-	
 	util "github.com/pgavlin/dawn/util"
-	
+
 	starlark "github.com/pgavlin/starlark-go/starlark"
-	
 )
-
-
 
 func (c *cache) newOnce() *starlark.Builtin {
 	const doc = `
@@ -24,27 +19,22 @@ func (c *cache) newOnce() *starlark.Builtin {
 	return starlark.NewBuiltin("once", c.starlark_once).WithDoc(doc)
 }
 
-
 func (c *cache) starlark_once(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	
 	var (
-		
 		key string
-		
+
 		function starlark.Callable
-		
 	)
 	if err := starlark.UnpackArgs(fn.Name(), args, kwargs, "key", &key, "callable", &function); err != nil {
 		return nil, err
 	}
-	
+
 	val, err := c.once(thread, fn, key, function)
 	if err != nil {
 		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
 	}
 	return val, nil
 }
-
 
 func (proj *Project) newBuiltin_path() *starlark.Builtin {
 	const doc = `
@@ -53,18 +43,12 @@ func (proj *Project) newBuiltin_path() *starlark.Builtin {
 	return starlark.NewBuiltin("path", proj.starlark_builtin_path).WithDoc(doc)
 }
 
-
 func (proj *Project) starlark_builtin_path(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	
-	var (
-		
-		rawlabel string
-		
-	)
+	var rawlabel string
 	if err := starlark.UnpackArgs(fn.Name(), args, kwargs, "label", &rawlabel); err != nil {
 		return nil, err
 	}
-	
+
 	val, err := proj.builtin_path(thread, fn, rawlabel)
 	if err != nil {
 		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
@@ -72,33 +56,25 @@ func (proj *Project) starlark_builtin_path(thread *starlark.Thread, fn *starlark
 	return val, nil
 }
 
-
 func (proj *Project) newBuiltin_label() *starlark.Builtin {
 	const doc = `
-    Returns the label that corresponds to the given OS path, if any.
+    Returns the label that corresponds to the given project-relative path, if any.
     `
 	return starlark.NewBuiltin("label", proj.starlark_builtin_label).WithDoc(doc)
 }
 
-
 func (proj *Project) starlark_builtin_label(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	
-	var (
-		
-		path string
-		
-	)
+	var path string
 	if err := starlark.UnpackArgs(fn.Name(), args, kwargs, "path", &path); err != nil {
 		return nil, err
 	}
-	
+
 	val, err := proj.builtin_label(thread, fn, path)
 	if err != nil {
 		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
 	}
 	return val, nil
 }
-
 
 func (proj *Project) newBuiltin_contains() *starlark.Builtin {
 	const doc = `
@@ -109,25 +85,18 @@ func (proj *Project) newBuiltin_contains() *starlark.Builtin {
 	return starlark.NewBuiltin("contains", proj.starlark_builtin_contains).WithDoc(doc)
 }
 
-
 func (proj *Project) starlark_builtin_contains(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	
-	var (
-		
-		path string
-		
-	)
+	var path string
 	if err := starlark.UnpackArgs(fn.Name(), args, kwargs, "path", &path); err != nil {
 		return nil, err
 	}
-	
+
 	val, err := proj.builtin_contains(thread, fn, path)
 	if err != nil {
 		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
 	}
 	return val, nil
 }
-
 
 func (proj *Project) newBuiltin_parse_flag() *starlark.Builtin {
 	const doc = `
@@ -145,35 +114,30 @@ func (proj *Project) newBuiltin_parse_flag() *starlark.Builtin {
 	return starlark.NewBuiltin("parse_flag", proj.starlark_builtin_parse_flag).WithDoc(doc)
 }
 
-
 func (proj *Project) starlark_builtin_parse_flag(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	
 	var (
-		
 		name string
-		
+
 		default_ starlark.Value
-		
+
 		type_ starlark.Callable
-		
+
 		choices []starlark.Value
-		
+
 		required bool
-		
+
 		help string
-		
 	)
 	if err := starlark.UnpackArgs(fn.Name(), args, kwargs, "name", &name, "default??", &default_, "type??", &type_, "choices??", &choices, "required??", &required, "help??", &help); err != nil {
 		return nil, err
 	}
-	
+
 	val, err := proj.builtin_parse_flag(thread, fn, name, default_, type_, choices, required, help)
 	if err != nil {
 		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
 	}
 	return val, nil
 }
-
 
 func (proj *Project) newBuiltin_target() *starlark.Builtin {
 	const doc = `
@@ -203,32 +167,28 @@ func (proj *Project) newBuiltin_target() *starlark.Builtin {
 	return starlark.NewBuiltin("target", proj.starlark_builtin_target).WithDoc(doc)
 }
 
-
 func (proj *Project) starlark_builtin_target(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	
 	var (
-		
 		name string
-		
+
 		deps starlark.Sequence
-		
+
 		sources util.StringList
-		
+
 		generates util.StringList
-		
+
 		function *starlark.Function
-		
+
 		default_ bool
-		
+
 		always bool
-		
+
 		docs string
-		
 	)
 	if err := starlark.UnpackArgs(fn.Name(), args, kwargs, "name??", &name, "deps??", &deps, "sources??", &sources, "generates??", &generates, "function??", &function, "default??", &default_, "always??", &always, "docs??", &docs); err != nil {
 		return nil, err
 	}
-	
+
 	val, err := proj.builtin_target(thread, fn, name, deps, sources, generates, function, default_, always, docs)
 	if err != nil {
 		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
@@ -236,16 +196,15 @@ func (proj *Project) starlark_builtin_target(thread *starlark.Thread, fn *starla
 	return val, nil
 }
 
-
 func (proj *Project) newBuiltin_glob() *starlark.Builtin {
 	const doc = `
     Return a list of paths relative to the calling module's directory that match
     the given include and exclude patterns. Typically passed to the sources parameter
     of target.
 
-    - `+"`"+`*`+"`"+` matches any number of non-path-separator characters
-    - `+"`"+`**`+"`"+` matches any number of any characters
-    - `+"`"+`?`+"`"+` matches a single character
+    - ` + "`" + `*` + "`" + ` matches any number of non-path-separator characters
+    - ` + "`" + `**` + "`" + ` matches any number of any characters
+    - ` + "`" + `?` + "`" + ` matches a single character
 
     :param include: the patterns to include.
     :param exclude: the patterns to exclude.
@@ -255,27 +214,22 @@ func (proj *Project) newBuiltin_glob() *starlark.Builtin {
 	return starlark.NewBuiltin("glob", proj.starlark_builtin_glob).WithDoc(doc)
 }
 
-
 func (proj *Project) starlark_builtin_glob(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	
 	var (
-		
 		include util.StringList
-		
+
 		exclude util.StringList
-		
 	)
 	if err := starlark.UnpackArgs(fn.Name(), args, kwargs, "include", &include, "exclude??", &exclude); err != nil {
 		return nil, err
 	}
-	
+
 	val, err := proj.builtin_glob(thread, fn, include, exclude)
 	if err != nil {
 		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
 	}
 	return val, nil
 }
-
 
 func (proj *Project) newBuiltin_run() *starlark.Builtin {
 	const doc = `
@@ -290,31 +244,26 @@ func (proj *Project) newBuiltin_run() *starlark.Builtin {
 	return starlark.NewBuiltin("run", proj.starlark_builtin_run).WithDoc(doc)
 }
 
-
 func (proj *Project) starlark_builtin_run(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	
 	var (
-		
 		labelOrTarget starlark.Value
-		
+
 		always bool
-		
+
 		dryRun bool
-		
+
 		callback starlark.Callable
-		
 	)
 	if err := starlark.UnpackArgs(fn.Name(), args, kwargs, "label_or_target", &labelOrTarget, "always??", &always, "dry_run??", &dryRun, "callback??", &callback); err != nil {
 		return nil, err
 	}
-	
+
 	val, err := proj.builtin_run(thread, fn, labelOrTarget, always, dryRun, callback)
 	if err != nil {
 		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
 	}
 	return val, nil
 }
-
 
 func (proj *Project) newBuiltin_get_target() *starlark.Builtin {
 	const doc = `
@@ -327,25 +276,18 @@ func (proj *Project) newBuiltin_get_target() *starlark.Builtin {
 	return starlark.NewBuiltin("get_target", proj.starlark_builtin_get_target).WithDoc(doc)
 }
 
-
 func (proj *Project) starlark_builtin_get_target(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	
-	var (
-		
-		rawlabel string
-		
-	)
+	var rawlabel string
 	if err := starlark.UnpackArgs(fn.Name(), args, kwargs, "label", &rawlabel); err != nil {
 		return nil, err
 	}
-	
+
 	val, err := proj.builtin_get_target(thread, fn, rawlabel)
 	if err != nil {
 		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
 	}
 	return val, nil
 }
-
 
 func (proj *Project) newBuiltin_flags() *starlark.Builtin {
 	const doc = `
@@ -354,20 +296,17 @@ func (proj *Project) newBuiltin_flags() *starlark.Builtin {
 	return starlark.NewBuiltin("flags", proj.starlark_builtin_flags).WithDoc(doc)
 }
 
-
 func (proj *Project) starlark_builtin_flags(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	
 	if err := starlark.UnpackPositionalArgs(fn.Name(), args, kwargs, 0); err != nil {
 		return nil, err
 	}
-	
+
 	val, err := proj.builtin_flags(thread, fn)
 	if err != nil {
 		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
 	}
 	return val, nil
 }
-
 
 func (proj *Project) newBuiltin_targets() *starlark.Builtin {
 	const doc = `
@@ -376,20 +315,17 @@ func (proj *Project) newBuiltin_targets() *starlark.Builtin {
 	return starlark.NewBuiltin("targets", proj.starlark_builtin_targets).WithDoc(doc)
 }
 
-
 func (proj *Project) starlark_builtin_targets(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	
 	if err := starlark.UnpackPositionalArgs(fn.Name(), args, kwargs, 0); err != nil {
 		return nil, err
 	}
-	
+
 	val, err := proj.builtin_targets(thread, fn)
 	if err != nil {
 		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
 	}
 	return val, nil
 }
-
 
 func (proj *Project) newBuiltin_sources() *starlark.Builtin {
 	const doc = `
@@ -398,20 +334,17 @@ func (proj *Project) newBuiltin_sources() *starlark.Builtin {
 	return starlark.NewBuiltin("sources", proj.starlark_builtin_sources).WithDoc(doc)
 }
 
-
 func (proj *Project) starlark_builtin_sources(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	
 	if err := starlark.UnpackPositionalArgs(fn.Name(), args, kwargs, 0); err != nil {
 		return nil, err
 	}
-	
+
 	val, err := proj.builtin_sources(thread, fn)
 	if err != nil {
 		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
 	}
 	return val, nil
 }
-
 
 func (proj *Project) newBuiltin_fail() *starlark.Builtin {
 	const doc = `
@@ -420,23 +353,15 @@ func (proj *Project) newBuiltin_fail() *starlark.Builtin {
 	return starlark.NewBuiltin("fail", proj.starlark_builtin_fail).WithDoc(doc)
 }
 
-
 func (proj *Project) starlark_builtin_fail(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	
-	var (
-		
-		message string
-		
-	)
+	var message string
 	if err := starlark.UnpackArgs(fn.Name(), args, kwargs, "message", &message); err != nil {
 		return nil, err
 	}
-	
+
 	val, err := proj.builtin_fail(thread, fn, message)
 	if err != nil {
 		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
 	}
 	return val, nil
 }
-
-

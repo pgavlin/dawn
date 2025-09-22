@@ -18,6 +18,7 @@ import (
 	"github.com/pgavlin/dawn/internal/project"
 	"github.com/pgavlin/dawn/label"
 	"github.com/pgavlin/dawn/runner"
+	"github.com/pgavlin/dawn/util"
 	starlarkjson "github.com/pgavlin/starlark-go/lib/json"
 	starlark "github.com/pgavlin/starlark-go/starlark"
 )
@@ -144,6 +145,7 @@ type dotRenderer struct {
 	next renderer
 	dest io.WriteCloser
 	work *workspace
+	err  error
 }
 
 func newDOTRenderer(dest io.WriteCloser, work *workspace, next renderer) renderer {
@@ -151,8 +153,7 @@ func newDOTRenderer(dest io.WriteCloser, work *workspace, next renderer) rendere
 }
 
 func (e *dotRenderer) Close() error {
-	e.dest.Close()
-	return e.next.Close()
+	return errors.Join(e.err, e.dest.Close(), e.next.Close())
 }
 
 func (e *dotRenderer) Print(label *label.Label, line string) {
@@ -212,7 +213,7 @@ func (e *dotRenderer) TargetSucceeded(label *label.Label, changed bool) {
 }
 
 func (e *dotRenderer) RunDone(err error) {
-	e.work.graph.dot(e.dest, func(n *node) bool { return n.status != "" && n.status != "up-to-date" })
+	e.err = e.work.graph.dot(e.dest, func(n *node) bool { return n.status != "" && n.status != "up-to-date" })
 	e.next.RunDone(err)
 }
 
@@ -235,6 +236,7 @@ type jsonRenderer struct {
 	next   renderer
 	enc    *json.Encoder
 	closer io.Closer
+	err    error
 }
 
 func newJSONRenderer(dest io.WriteCloser, next renderer) renderer {
@@ -244,8 +246,7 @@ func newJSONRenderer(dest io.WriteCloser, next renderer) renderer {
 }
 
 func (e *jsonRenderer) Close() error {
-	e.closer.Close()
-	return e.next.Close()
+	return errors.Join(e.err, e.closer.Close(), e.next.Close())
 }
 
 func (e *jsonRenderer) Print(label *label.Label, line string) {
@@ -340,7 +341,7 @@ func (e *jsonRenderer) event(kind string, label *label.Label, pairs ...interface
 	for i := 0; i < len(pairs); i += 2 {
 		event[pairs[i].(string)] = pairs[i+1]
 	}
-	e.enc.Encode(event)
+	e.err = errors.Join(e.err, e.enc.Encode(event))
 }
 
 // default renderer:
@@ -574,11 +575,7 @@ func printMappingDiff(w io.Writer, indent string, d *diff.MappingDiff) {
 	fmt.Fprintf(w, "{\n")
 	indent += "  "
 
-	it := tryStarlarkSorted(d.Edits()).Iterate()
-	defer it.Done()
-
-	var key starlark.Value
-	for it.Next(&key) {
+	for key := range util.All(d.Edits()) {
 		if val, ok, _ := d.Edits().Get(key); ok {
 			edit := val.(*diff.Edit)
 			switch edit.Kind() {
@@ -588,7 +585,7 @@ func printMappingDiff(w io.Writer, indent string, d *diff.MappingDiff) {
 				fmt.Fprintf(w, "%s%s,\n", indent, colorGreen.Sprintf("%v: %v", key, edit.Index(0)))
 			case diff.EditKindReplace:
 				fmt.Fprintf(w, "%s%s", indent, colorYellow.Sprintf("%v: ", key))
-				printDiff(w, indent, edit.Sliceable.Index(0).(diff.ValueDiff))
+				printDiff(w, indent, edit.Index(0).(diff.ValueDiff))
 				fmt.Fprint(w, ",\n")
 			}
 		}
@@ -602,11 +599,7 @@ func printSetDiff(w io.Writer, indent string, d *diff.SetDiff) {
 	fmt.Fprintf(w, "set(\n")
 	indent += "  "
 
-	it := d.Edits().Iterate()
-	defer it.Done()
-
-	var val starlark.Value
-	for it.Next(&val) {
+	for val := range util.All(d.Edits()) {
 		edit := val.(*diff.Edit)
 		switch edit.Kind() {
 		case diff.EditKindDelete:
@@ -647,7 +640,7 @@ func printStringDiff(w io.Writer, d *diff.SliceableDiff) {
 		edit := val.(*diff.Edit)
 		switch edit.Kind() {
 		case diff.EditKindDelete:
-			colorRed.Fprint(&old, quote(string(edit.Sliceable.(starlark.String))))
+			_, _ = colorRed.Fprint(&old, quote(string(edit.Sliceable.(starlark.String))))
 		case diff.EditKindCommon:
 			s := string(edit.Sliceable.(starlark.String))
 
@@ -668,11 +661,11 @@ func printStringDiff(w io.Writer, d *diff.SliceableDiff) {
 				}
 			}
 		case diff.EditKindAdd:
-			colorGreen.Fprint(&new, quote(string(edit.Sliceable.(starlark.String))))
+			_, _ = colorGreen.Fprint(&new, quote(string(edit.Sliceable.(starlark.String))))
 		case diff.EditKindReplace:
 			lit := edit.Index(0).(*diff.LiteralDiff)
-			colorRed.Fprint(&old, quote(string(lit.Old().(starlark.String))))
-			colorGreen.Fprint(&new, quote(string(lit.New().(starlark.String))))
+			_, _ = colorRed.Fprint(&old, quote(string(lit.Old().(starlark.String))))
+			_, _ = colorGreen.Fprint(&new, quote(string(lit.New().(starlark.String))))
 		}
 	}
 
@@ -680,7 +673,7 @@ func printStringDiff(w io.Writer, d *diff.SliceableDiff) {
 }
 
 func printBytesDiff(w io.Writer) {
-	colorYellow.Fprint(w, "<binary data differs>")
+	_, _ = colorYellow.Fprint(w, "<binary data differs>")
 }
 
 func printSliceDiff(w io.Writer, indent string, d *diff.SliceableDiff) {

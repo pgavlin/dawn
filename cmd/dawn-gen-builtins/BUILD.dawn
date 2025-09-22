@@ -1,0 +1,25 @@
+load("golang//:go_binary.dawn", "go_binary")
+
+dawn_gen_builtins = go_binary(
+    name="dawn-gen-builtins",
+    dir_label="",
+    output="/bin/dawn-gen-builtins",
+    docs="Builds the dawn-gen-builtins tool for generating Starlark builtin wrappers.",
+)
+
+def gen_builtins(name="gen_builtins", dir=".", output="builtins.go"):
+    """
+    Returns a target that generates Starlark wrappers and docs for all files in the caller's working directory.
+
+    :param output the file to write the wrappers to.
+    """
+
+    go_files = os.glob([os.path.join(dir, "/*.go")])
+
+    @target(name=name, deps=[dawn_gen_builtins], sources=go_files, generates=[output])
+    def gen():
+        bin_path = path("//bin:dawn-gen-builtins")
+        docs_path = path("//docs/source/modules")
+        sh.exec(f"{bin_path} {dir} {output} {docs_path}")
+        sh.exec(f"gofumpt -w {output}")
+    return gen

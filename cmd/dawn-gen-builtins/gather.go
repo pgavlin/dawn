@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"go/ast"
 	"go/doc/comment"
@@ -140,11 +141,11 @@ func parseObjectDecl(def *syntax.DefStmt) (*objectDecl, error) {
 	for _, s := range body {
 		def, ok := s.(*syntax.DefStmt)
 		if !ok {
-			return nil, fmt.Errorf("module declarations must only contain def statements")
+			return nil, errors.New("module declarations must only contain def statements")
 		}
 
 		if len(def.Decorators) != 1 {
-			return nil, fmt.Errorf("module members must be decorated as either constructors, attributes, functions, or methods")
+			return nil, errors.New("module members must be decorated as either constructors, attributes, functions, or methods")
 		}
 
 		kind, args := "", ([]syntax.Expr)(nil)
@@ -158,7 +159,7 @@ func parseObjectDecl(def *syntax.DefStmt) (*objectDecl, error) {
 		switch kind {
 		case "constructor":
 			if len(args) != 0 {
-				return nil, fmt.Errorf("constructor decorator expects no arguments")
+				return nil, errors.New("constructor decorator expects no arguments")
 			}
 			class, err := parseObjectDecl(def)
 			if err != nil {
@@ -168,14 +169,14 @@ func parseObjectDecl(def *syntax.DefStmt) (*objectDecl, error) {
 			children = append(children, *class)
 		case "module":
 			if len(args) != 0 {
-				return nil, fmt.Errorf("module decorator expects no arguyments")
+				return nil, errors.New("module decorator expects no arguyments")
 			}
 			docstring, _ := getDocstring(def)
 			module := objectDecl{name: def.Name.Name, kind: "module", doc: docstring}
 			children = append(children, module)
 		case "attribute":
 			if len(args) != 0 {
-				return nil, fmt.Errorf("attribute decorator expects no arguments")
+				return nil, errors.New("attribute decorator expects no arguments")
 			}
 			docstring, _ := getDocstring(def)
 			attributes = append(attributes, &attribute{
@@ -184,15 +185,15 @@ func parseObjectDecl(def *syntax.DefStmt) (*objectDecl, error) {
 			})
 		case "function", "method":
 			if len(args) != 1 {
-				return nil, fmt.Errorf("function decorator expects a single string literal argument")
+				return nil, errors.New("function decorator expects a single string literal argument")
 			}
 			lit, ok := args[0].(*syntax.Literal)
 			if !ok {
-				return nil, fmt.Errorf("function decorator expects a single string literal argument")
+				return nil, errors.New("function decorator expects a single string literal argument")
 			}
 			str, ok := lit.Value.(string)
 			if !ok {
-				return nil, fmt.Errorf("function decorator expects a single string literal argument")
+				return nil, errors.New("function decorator expects a single string literal argument")
 			}
 			methods = append(methods, str)
 		}
@@ -238,12 +239,12 @@ func parseModuleDecl(text string) (*objectDecl, error) {
 	}
 
 	if len(f.Stmts) != 1 {
-		return nil, fmt.Errorf("module declaration must be of the form `def module(): ...`")
+		return nil, errors.New("module declaration must be of the form `def module(): ...`")
 	}
 
 	def, ok := f.Stmts[0].(*syntax.DefStmt)
 	if !ok {
-		return nil, fmt.Errorf("module declaration must be of the form `def module(): ...`")
+		return nil, errors.New("module declaration must be of the form `def module(): ...`")
 	}
 
 	module, err := parseObjectDecl(def)

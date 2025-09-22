@@ -61,8 +61,7 @@ func (c *gitCommit) History() iter.Seq[Revision] {
 				}
 
 				iter = object.NewCommitPreorderIter(at, nil, nil)
-				next, err = iter.Next()
-				if err != nil {
+				if _, err = iter.Next(); err != nil {
 					return
 				}
 				next, err = iter.Next()
@@ -122,7 +121,9 @@ func DialGitRepository(ctx context.Context, repoPath string, options *DialGitOpt
 	}
 
 	dial := func(address string) ([]*plumbing.Reference, error) {
-		r.DeleteRemote("origin")
+		if err := r.DeleteRemote("origin"); err != nil && !errors.Is(err, git.ErrRemoteNotFound) {
+			return nil, fmt.Errorf("deleting remote: %w", err)
+		}
 
 		origin, err := r.CreateRemote(&config.RemoteConfig{Name: "origin", URLs: []string{address}})
 		if err != nil {
@@ -180,7 +181,7 @@ func DialGitRepository(ctx context.Context, repoPath string, options *DialGitOpt
 		}
 	}
 	if defaultBranch == "" {
-		return nil, fmt.Errorf("no default branch")
+		return nil, errors.New("no default branch")
 	}
 
 	slices.SortStableFunc(versions, func(a, b *Version) int {

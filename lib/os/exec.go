@@ -158,8 +158,10 @@ func command(
 
 			pairs = append(pairs, fmt.Sprintf("%v=%v", key, value))
 		}
+		env = pairs
 	}
 
+	//nolint:gosec
 	cmd := exec.Command(command[0], command[1:]...)
 	cmd.Dir = cwd
 	cmd.Env = env

@@ -2,14 +2,9 @@
 
 package path
 
-
 import (
-	
 	starlark "github.com/pgavlin/starlark-go/starlark"
-	
 )
-
-
 
 func NewAbs() *starlark.Builtin {
 	const doc = `
@@ -21,25 +16,18 @@ func NewAbs() *starlark.Builtin {
 	return starlark.NewBuiltin("abs", Abs).WithDoc(doc)
 }
 
-
 func Abs(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	
-	var (
-		
-		path string
-		
-	)
+	var path string
 	if err := starlark.UnpackArgs(fn.Name(), args, kwargs, "path", &path); err != nil {
 		return nil, err
 	}
-	
+
 	val, err := abs(thread, fn, path)
 	if err != nil {
 		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
 	}
 	return val, nil
 }
-
 
 func NewIsAbs() *starlark.Builtin {
 	const doc = `
@@ -48,25 +36,18 @@ func NewIsAbs() *starlark.Builtin {
 	return starlark.NewBuiltin("is_abs", IsAbs).WithDoc(doc)
 }
 
-
 func IsAbs(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	
-	var (
-		
-		path string
-		
-	)
+	var path string
 	if err := starlark.UnpackArgs(fn.Name(), args, kwargs, "path", &path); err != nil {
 		return nil, err
 	}
-	
+
 	val, err := isAbs(thread, fn, path)
 	if err != nil {
 		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
 	}
 	return val, nil
 }
-
 
 func NewBase() *starlark.Builtin {
 	const doc = `
@@ -78,25 +59,18 @@ func NewBase() *starlark.Builtin {
 	return starlark.NewBuiltin("base", Base).WithDoc(doc)
 }
 
-
 func Base(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	
-	var (
-		
-		path string
-		
-	)
+	var path string
 	if err := starlark.UnpackArgs(fn.Name(), args, kwargs, "path", &path); err != nil {
 		return nil, err
 	}
-	
+
 	val, err := base(thread, fn, path)
 	if err != nil {
 		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
 	}
 	return val, nil
 }
-
 
 func NewDir() *starlark.Builtin {
 	const doc = `
@@ -108,25 +82,18 @@ func NewDir() *starlark.Builtin {
 	return starlark.NewBuiltin("dir", Dir).WithDoc(doc)
 }
 
-
 func Dir(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	
-	var (
-		
-		path string
-		
-	)
+	var path string
 	if err := starlark.UnpackArgs(fn.Name(), args, kwargs, "path", &path); err != nil {
 		return nil, err
 	}
-	
+
 	val, err := dir(thread, fn, path)
 	if err != nil {
 		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
 	}
 	return val, nil
 }
-
 
 func NewJoin() *starlark.Builtin {
 	const doc = `
@@ -135,8 +102,6 @@ func NewJoin() *starlark.Builtin {
     `
 	return starlark.NewBuiltin("join", Join).WithDoc(doc)
 }
-
-
 
 func NewSplit() *starlark.Builtin {
 	const doc = `
@@ -147,25 +112,18 @@ func NewSplit() *starlark.Builtin {
 	return starlark.NewBuiltin("split", Split).WithDoc(doc)
 }
 
-
 func Split(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	
-	var (
-		
-		path string
-		
-	)
+	var path string
 	if err := starlark.UnpackArgs(fn.Name(), args, kwargs, "path", &path); err != nil {
 		return nil, err
 	}
-	
+
 	val, err := split(thread, fn, path)
 	if err != nil {
 		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
 	}
 	return val, nil
 }
-
 
 func NewSplitext() *starlark.Builtin {
 	const doc = `
@@ -177,23 +135,15 @@ func NewSplitext() *starlark.Builtin {
 	return starlark.NewBuiltin("splitext", Splitext).WithDoc(doc)
 }
 
-
 func Splitext(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	
-	var (
-		
-		path string
-		
-	)
+	var path string
 	if err := starlark.UnpackArgs(fn.Name(), args, kwargs, "path", &path); err != nil {
 		return nil, err
 	}
-	
+
 	val, err := splitext(thread, fn, path)
 	if err != nil {
 		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
 	}
 	return val, nil
 }
-
-
