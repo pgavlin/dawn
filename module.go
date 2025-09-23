@@ -123,6 +123,7 @@ func (m *module) env(proj *Project) (*starlark.Thread, starlark.StringDict, erro
 	builtins["host"] = builtin_host
 
 	builtins["Cache"] = builtin_cache
+	builtins["Volatile"] = builtin_volatile
 	builtins["path"] = proj.newBuiltin_path()
 	builtins["label"] = proj.newBuiltin_label()
 	builtins["contains"] = proj.newBuiltin_contains()
