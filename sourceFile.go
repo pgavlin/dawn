@@ -152,7 +152,7 @@ func fileSum(ctx context.Context, path string) (string, error) {
 	}
 
 	h := sha256.New()
-	buf := make([]byte, min(64<<20, stat.Size()))
+	buf := make([]byte, max(min(64<<20, stat.Size()), 1))
 	for {
 		if err := ctx.Err(); err != nil {
 			return "", err
@@ -160,13 +160,12 @@ func fileSum(ctx context.Context, path string) (string, error) {
 		n, err := f.Read(buf)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
-				break
+				return hex.EncodeToString(h.Sum(nil)), nil
 			}
 			return "", err
 		}
 		h.Write(buf[:n])
 	}
-	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
 func dirSum(ctx context.Context, path string, dir *os.File) (string, error) {
