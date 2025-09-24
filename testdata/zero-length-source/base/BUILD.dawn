@@ -1,0 +1,3 @@
+@target(sources=["empty"])
+def default():
+    pass

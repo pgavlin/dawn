@@ -1,0 +1,7 @@
+@target(name="my/target")
+def foo():
+    pass
+
+@target(deps=[foo])
+def default():
+    pass

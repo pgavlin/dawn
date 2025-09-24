@@ -2,9 +2,11 @@ package dawn
 
 import (
 	"errors"
+	"slices"
 
 	"github.com/pgavlin/dawn/diff"
 	"github.com/pgavlin/dawn/label"
+	fxs "github.com/pgavlin/fx/v2/slices"
 	"github.com/pgavlin/starlark-go/starlark"
 	"github.com/pgavlin/starlark-go/starlarkstruct"
 )
@@ -32,6 +34,8 @@ type Events interface {
 
 	// TargetUpToDate is called when a target is found to be up-to-date.
 	TargetUpToDate(label *label.Label)
+	// TargetWaiting is called when a target begins waiting for dependencies.
+	TargetWaiting(label *label.Label, dependencies []string)
 	// TargetEvaluating is called when a target begins executing.
 	TargetEvaluating(label *label.Label, reason string, diff diff.ValueDiff)
 	// TargetFailed is called when a target fails.
@@ -59,6 +63,7 @@ func (discardEventsT) ModuleLoaded(label *label.Label)                          
 func (discardEventsT) ModuleLoadFailed(label *label.Label, err error)                          {}
 func (discardEventsT) LoadDone(err error)                                                      {}
 func (discardEventsT) TargetUpToDate(label *label.Label)                                       {}
+func (discardEventsT) TargetWaiting(label *label.Label, dependencies []string)                 {}
 func (discardEventsT) TargetEvaluating(label *label.Label, reason string, diff diff.ValueDiff) {}
 func (discardEventsT) TargetFailed(label *label.Label, err error)                              {}
 func (discardEventsT) TargetSucceeded(label *label.Label, changed bool)                        {}
@@ -103,6 +108,15 @@ func (e *runEvents) TargetUpToDate(label *label.Label) {
 	e.c <- starlarkstruct.FromStringDict(starlarkstruct.Default, starlark.StringDict{
 		"kind":  starlark.String("TargetUpToDate"),
 		"label": starlark.String(label.String()),
+	})
+}
+
+func (e *runEvents) TargetWaiting(label *label.Label, dependencies []string) {
+	deps := slices.Collect(fxs.Map(dependencies, func(s string) starlark.Value { return starlark.String(s) }))
+	e.c <- starlarkstruct.FromStringDict(starlarkstruct.Default, starlark.StringDict{
+		"kind":         starlark.String("TargetWaiting"),
+		"label":        starlark.String(label.String()),
+		"dependencies": starlark.NewList(deps),
 	})
 }
 

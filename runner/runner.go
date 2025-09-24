@@ -74,7 +74,7 @@ func newTarget(label string) *target {
 	return tt
 }
 
-func (t *target) start(ctx context.Context, r *runner) {
+func (t *target) start(ctx context.Context, r *Runner) {
 	t.m.Lock()
 	if t.status != statusIdle {
 		t.m.Unlock()
@@ -100,7 +100,7 @@ func (t *target) wait() error {
 	return t.err
 }
 
-func (t *target) run(ctx context.Context, r *runner) {
+func (t *target) run(ctx context.Context, r *Runner) {
 	unlock := func() {
 		t.m.Unlock()
 		t.c.Broadcast()
@@ -133,7 +133,7 @@ func (t *target) run(ctx context.Context, r *runner) {
 
 type engine struct {
 	root   *target
-	runner *runner
+	runner *Runner
 }
 
 func (e *engine) check(set fx.Set[*target], path []string, dep *target) error {
@@ -195,6 +195,8 @@ type gate struct {
 	m        sync.Mutex
 	cond     *sync.Cond
 	capacity int
+	running  int
+	waiting  int
 }
 
 func newGate(capacity int) *gate {
@@ -207,34 +209,55 @@ func (g *gate) enter() {
 	g.m.Lock()
 	defer g.m.Unlock()
 
+	g.waiting++
 	for g.capacity == 0 {
 		g.cond.Wait()
 	}
+	g.waiting--
 	g.capacity--
+	g.running++
 }
 
 func (g *gate) exit() {
 	g.m.Lock()
 	defer g.m.Unlock()
 
+	g.running--
 	g.capacity++
 	g.cond.Signal()
 }
 
-type runner struct {
+func (g *gate) metrics() (running, waiting int) {
+	g.m.Lock()
+	defer g.m.Unlock()
+
+	return g.running, g.waiting
+}
+
+type Runner struct {
 	targetLoader Targets
 	targetMap    sync.Map // map[string]*target
 	gate         *gate
 }
 
-func (r *runner) getTarget(label string) *target {
+func NewRunner(targets Targets, maxParallelism int) *Runner {
+	if maxParallelism <= 0 {
+		maxParallelism = runtime.NumCPU()
+	}
+	return &Runner{targetLoader: targets, gate: newGate(maxParallelism)}
+}
+
+func (r *Runner) getTarget(label string) *target {
 	tv, _ := r.targetMap.LoadOrStore(label, newTarget(label))
 	return tv.(*target)
 }
 
-func Run(ctx context.Context, targets Targets, label string) error {
-	r := runner{targetLoader: targets, gate: newGate(runtime.NumCPU())}
+func (r *Runner) Run(ctx context.Context, label string) error {
 	t := r.getTarget(label)
-	t.start(ctx, &r)
+	t.start(ctx, r)
 	return t.wait()
+}
+
+func (r *Runner) Metrics() (running, waiting int) {
+	return r.gate.metrics()
 }

@@ -64,30 +64,33 @@ func (t *runTarget) Evaluate(ctx context.Context, engine runner.Engine) error {
 	var missingDeps []string
 	var hasFailedDeps bool
 	var outOfDateDeps []string
-	for i, dep := range engine.EvaluateTargets(ctx, deps...) {
-		if dep.Error != nil {
-			switch err := dep.Error.(type) {
-			case UnknownTargetError:
-				missingDeps = append(missingDeps, err.Error())
-			case *runner.CyclicDependencyError:
-				if cyclicDepErr == nil || cyclicDepErr.On >= err.On {
-					cyclicDepErr = err
+	if len(deps) != 0 {
+		proj.events.TargetWaiting(label, deps)
+		for i, dep := range engine.EvaluateTargets(ctx, deps...) {
+			if dep.Error != nil {
+				switch err := dep.Error.(type) {
+				case UnknownTargetError:
+					missingDeps = append(missingDeps, err.Error())
+				case *runner.CyclicDependencyError:
+					if cyclicDepErr == nil || cyclicDepErr.On >= err.On {
+						cyclicDepErr = err
+					}
+				default:
+					hasFailedDeps = true
 				}
-			default:
-				hasFailedDeps = true
+				continue
 			}
-			continue
-		}
 
-		label := deps[i]
+			label := deps[i]
 
-		newData := dep.Target.(*runTarget).data
-		depData[label] = newData
+			newData := dep.Target.(*runTarget).data
+			depData[label] = newData
 
-		prevData, ok := info.Dependencies[label]
-		if !ok || dep.Target.(*runTarget).changed || newData != prevData {
-			outOfDateDeps = append(outOfDateDeps, label)
-			depsUpToDate = false
+			prevData, ok := info.Dependencies[label]
+			if !ok || dep.Target.(*runTarget).changed || newData != prevData {
+				outOfDateDeps = append(outOfDateDeps, label)
+				depsUpToDate = false
+			}
 		}
 	}
 

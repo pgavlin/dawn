@@ -70,6 +70,10 @@ func (e *testEvents) TargetUpToDate(label *label.Label) {
 	e.event("TargetUpToDate", label)
 }
 
+func (e *testEvents) TargetWaiting(label *label.Label, dependencies []string) {
+	e.event("TargetWaiting", label, "dependencies", dependencies)
+}
+
 func (e *testEvents) TargetEvaluating(label *label.Label, reason string, diff diff.ValueDiff) {
 	e.event("TargetEvaluating", label, "reason", reason, "diff", diff)
 }
@@ -309,6 +313,15 @@ func TestInvalidTargetName(t *testing.T) {
 	pt := projectTest{
 		path:    "testdata/invalid-target-name",
 		loadErr: "invalid name",
+	}
+	pt.run(t)
+}
+
+func TestZeroLengthSource(t *testing.T) {
+	t.Parallel()
+	pt := projectTest{
+		path:     "testdata/zero-length-source",
+		validate: func(t *testing.T, _ string, _ []testEvent) {},
 	}
 	pt.run(t)
 }

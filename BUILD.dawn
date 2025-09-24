@@ -38,7 +38,7 @@ dawn = go_binary(
 all_dawn_deps = []
 for goos in ["darwin", "linux", "windows"]:
     for goarch in ["amd64", "arm64"]:
-        output = os.path.join("dist", f"dawn_{goos}_{goarch}", "dawn")
+        output = f"dist/dawn_{goos}_{goarch}/dawn"
         bin = go_binary(name="dawn", dir_label="//cmd/dawn", ldflags=ldflags, output=output, docs=f"Builds the dawn CLI for {goos}/{goarch}.", goos=goos, goarch=goarch, disable_cgo=True)
         all_dawn_deps.append(bin)
 

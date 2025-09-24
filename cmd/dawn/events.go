@@ -97,6 +97,10 @@ func (e *lineRenderer) TargetUpToDate(label *label.Label) {
 	e.print(label, "up-to-date")
 }
 
+func (e *lineRenderer) TargetWaiting(label *label.Label, dependencies []string) {
+	e.print(label, "waiting on dependencies: "+strings.Join(dependencies, ", "))
+}
+
 func (e *lineRenderer) TargetEvaluating(label *label.Label, reason string, diff diff.ValueDiff) {
 	e.print(label, "evaluating...")
 }
@@ -191,6 +195,10 @@ func (e *dotRenderer) LoadDone(err error) {
 func (e *dotRenderer) TargetUpToDate(label *label.Label) {
 	e.decorateNode(label, func(n *node) { n.status = "up-to-date" })
 	e.next.TargetUpToDate(label)
+}
+
+func (e *dotRenderer) TargetWaiting(label *label.Label, dependencies []string) {
+	e.next.TargetWaiting(label, dependencies)
 }
 
 func (e *dotRenderer) TargetEvaluating(label *label.Label, reason string, diff diff.ValueDiff) {
@@ -295,6 +303,11 @@ func (e *jsonRenderer) TargetUpToDate(label *label.Label) {
 }
 
 var starlarkJSONEncode = starlarkjson.Module.Members["encode"]
+
+func (e *jsonRenderer) TargetWaiting(label *label.Label, dependencies []string) {
+	e.event("TargetWaiting", label, "dependencies", dependencies)
+	e.next.TargetWaiting(label, dependencies)
+}
 
 func (e *jsonRenderer) TargetEvaluating(label *label.Label, reason string, diff diff.ValueDiff) {
 	var diffJSON starlark.Value = starlark.String("null")
@@ -420,8 +433,10 @@ type statusRenderer struct {
 	ticker  *time.Ticker
 	stats   systemStats
 	targets map[string]*target
+	work    *workspace
 
-	maxWidth int
+	maxWidth  int
+	maxHeight int
 
 	verbose bool
 	diff    bool
@@ -434,6 +449,7 @@ type statusRenderer struct {
 	done       targetList
 	statusLine string
 	loaded     bool
+	running    bool
 
 	onLoaded func()
 
@@ -498,8 +514,18 @@ func (e *statusRenderer) render(now time.Time, closed bool) {
 	}
 	e.done = targetList{}
 
+	statusLineHeight := 0
+	if !closed && e.statusLine != "" {
+		statusLineHeight = 1
+	}
+	statsLineHeight := 0
+	if !closed && e.evaluating.head != nil {
+		statsLineHeight = 1
+	}
+	maxTargets := e.maxHeight - statusLineHeight - statsLineHeight
+
 	// Render in-progress targets.
-	for t := e.evaluating.head; t != nil; t = t.next {
+	for i, t := 0, e.evaluating.head; i < maxTargets && t != nil; t = t.next {
 		e.line(t.stamp(now))
 	}
 
@@ -509,7 +535,13 @@ func (e *statusRenderer) render(now time.Time, closed bool) {
 	}
 
 	if !closed && e.evaluating.head != nil {
-		e.line(e.stats.line())
+		suffix := ""
+		if e.running {
+			if _, waiting := e.work.project.Metrics(); waiting != 0 {
+				suffix = fmt.Sprintf(" (%v waiting)", waiting)
+			}
+		}
+		e.line(e.stats.line() + suffix)
 	}
 
 	// If the project finished loading during the last quantum, inform any waiters.
@@ -780,7 +812,7 @@ func (e *statusRenderer) LoadDone(err error) {
 	e.m.Lock()
 	defer e.m.Unlock()
 
-	e.loaded, e.dirty = true, true
+	e.running, e.loaded, e.dirty = true, true, true
 }
 
 func (e *statusRenderer) TargetUpToDate(label *label.Label) {
@@ -789,6 +821,9 @@ func (e *statusRenderer) TargetUpToDate(label *label.Label) {
 
 	e.statusLine = color.WhiteString("[%s] up-to-date", label)
 	e.dirty = true
+}
+
+func (e *statusRenderer) TargetWaiting(label *label.Label, dependencies []string) {
 }
 
 func (e *statusRenderer) TargetEvaluating(label *label.Label, reason string, diff diff.ValueDiff) {
@@ -864,7 +899,7 @@ func newRenderer(verbose, diff bool, onLoaded func()) (renderer, error) {
 			return &lineRenderer{stdout: os.Stdout, stderr: os.Stderr, onLoaded: onLoaded}
 		}
 
-		width, _, err := term.GetSize(os.Stdout)
+		width, height, err := term.GetSize(os.Stdout)
 		if err != nil {
 			return &lineRenderer{stdout: os.Stdout, stderr: os.Stderr, onLoaded: onLoaded}
 		}
@@ -872,7 +907,9 @@ func newRenderer(verbose, diff bool, onLoaded func()) (renderer, error) {
 		events := &statusRenderer{
 			ticker:     time.NewTicker(16 * time.Millisecond),
 			targets:    map[string]*target{},
+			work:       work,
 			maxWidth:   width,
+			maxHeight:  height,
 			verbose:    verbose,
 			diff:       diff,
 			stdout:     os.Stdout,

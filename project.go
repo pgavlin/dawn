@@ -11,6 +11,7 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"sync"
@@ -67,6 +68,8 @@ type Project struct {
 	flags   map[string]*Flag
 	modules map[string]*module
 	targets map[string]*runTarget
+
+	runner *runner.Runner
 }
 
 type LoadOptions struct {
@@ -113,6 +116,8 @@ func Load(ctx context.Context, root string, options *LoadOptions) (proj *Project
 	if err := proj.loadConfig(); err != nil {
 		return nil, err
 	}
+
+	proj.runner = runner.NewRunner(proj, runtime.NumCPU())
 
 	if err := proj.load(ctx, preferIndex); err != nil {
 		return nil, err
@@ -177,9 +182,13 @@ func (opts *RunOptions) apply(proj *Project) {
 func (proj *Project) Run(ctx context.Context, label *label.Label, options *RunOptions) error {
 	options.apply(proj)
 
-	err := runner.Run(ctx, proj, label.String())
+	err := proj.runner.Run(ctx, label.String())
 	proj.events.RunDone(err)
 	return err
+}
+
+func (proj *Project) Metrics() (running, waiting int) {
+	return proj.runner.Metrics()
 }
 
 // LoadTarget implements runner.Host.

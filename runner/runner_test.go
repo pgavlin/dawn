@@ -32,10 +32,10 @@ func TestCyclicDependency(t *testing.T) {
 		return engine.EvaluateTargets(t.Context(), "foo")[0].Error
 	})
 
-	err := Run(t.Context(), testTargets{
+	err := NewRunner(testTargets{
 		"foo": foo,
 		"bar": bar,
-	}, "foo")
+	}, 0).Run(t.Context(), "foo")
 	require.Error(t, err)
 }
 
@@ -51,10 +51,10 @@ func TestCyclicDependency_Inner(t *testing.T) {
 		return engine.EvaluateTargets(t.Context(), "bar")[0].Error
 	})
 
-	err := Run(t.Context(), testTargets{
+	err := NewRunner(testTargets{
 		"foo": foo,
 		"bar": bar,
 		"baz": baz,
-	}, "foo")
+	}, 0).Run(t.Context(), "foo")
 	require.Error(t, err)
 }
