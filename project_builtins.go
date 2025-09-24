@@ -5,7 +5,6 @@ import (
 	"cmp"
 	"errors"
 	"fmt"
-	"io/fs"
 	"maps"
 	"os"
 	"path/filepath"
@@ -18,6 +17,7 @@ import (
 	"github.com/pgavlin/dawn/util"
 	"github.com/pgavlin/fx/v2"
 	fxs "github.com/pgavlin/fx/v2/slices"
+	"github.com/pgavlin/glob"
 	"github.com/pgavlin/starlark-go/starlark"
 	"github.com/pgavlin/starlark-go/starlarkstruct"
 	"github.com/pgavlin/starlark-go/syntax"
@@ -427,18 +427,40 @@ func (proj *Project) builtin_target(
 
 // starlark
 //
-//	def glob(include, exclude=None):
+//	def glob(include, exclude=None, dirs=None):
 //	    """
 //	    Return a list of paths relative to the calling module's directory that match
 //	    the given include and exclude patterns. Typically passed to the sources parameter
 //	    of target.
 //
-//	    - `*` matches any number of non-path-separator characters
-//	    - `**` matches any number of any characters
-//	    - `?` matches a single character
+//	    A particular path matches if any of the include patterns matches and none of the exclude patterns match.
+//
+//	    The pattern syntax is:
+//
+//	    pattern:
+//	        pathTerm { '/' pathTerm }
+//
+//	    pathTerm:
+//	        '**'        matches any sequence of directory names, including the empty sequence
+//	        { term }    matches a sequence of terms against a name
+//
+//	    term:
+//	        '*'         matches any sequence of non-/ characters
+//	        '?'         matches any single non-/ character
+//	        '[' [ '^' ] { character-range } ']' character class (must be non-empty)
+//	        c           matches character c (c != '*', '?', '\\', '[')
+//	        '\\' c      matches character c
+//
+//	    character-range:
+//	        c           matches character c (c != '\\', '-', ']')
+//	        '\\' c      matches character c
+//	        lo '-' hi   matches character c for lo <= c <= hi
+//
+//	    Patterns require that path terms match all of a component, not just a substring.
 //
 //	    :param include: the patterns to include.
 //	    :param exclude: the patterns to exclude.
+//	    :param dirs: True to include directory names in the result.
 //
 //	    :returns: the matched paths
 //	    """
@@ -449,50 +471,26 @@ func (proj *Project) builtin_glob(
 	fn *starlark.Builtin,
 	include util.StringList,
 	exclude util.StringList,
+	dirs bool,
 ) (starlark.Value, error) {
-	includeRE, err := util.CompileGlobs([]string(include))
-	if err != nil {
-		return nil, fmt.Errorf("%s: %w", fn.Name(), err)
-	}
-
-	excludeRE, err := util.CompileGlobs([]string(exclude))
-	if err != nil {
-		return nil, fmt.Errorf("%s: %w", fn.Name(), err)
-	}
-
 	m := thread.Local("module").(*module)
 	dir := filepath.Dir(m.path)
 
-	sources := starlark.NewList(nil)
-	err = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
+	exclude = append(exclude, ".dawn/build")
 
-		path = path[len(dir):]
-		if len(path) == 0 {
-			return nil
-		}
-		path = filepath.ToSlash(path)
-
-		if path == "/.dawn/build" {
-			return fs.SkipDir
-		}
-
-		if d.IsDir() {
-			return nil
-		}
-
-		path = path[1:]
-		if includeRE.MatchString(path) && !excludeRE.MatchString(path) {
-			util.Must(sources.Append(starlark.String(path)))
-		}
-		return nil
-	})
+	g, err := glob.New([]string(include), []string(exclude))
 	if err != nil {
 		return nil, err
 	}
-	return sources, nil
+
+	var matches []starlark.Value //nolint:prealloc
+	for p, err := range g.Match(os.DirFS(dir), ".", dirs) {
+		if err != nil {
+			return nil, err
+		}
+		matches = append(matches, starlark.String(p))
+	}
+	return starlark.NewList(matches), nil
 }
 
 // starlark

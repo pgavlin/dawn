@@ -9,11 +9,11 @@ import (
 
 	"github.com/pgavlin/dawn/internal/mvs"
 	"github.com/pgavlin/dawn/internal/project"
-	"github.com/pgavlin/dawn/util"
+	"github.com/pgavlin/glob"
 )
 
-func (proj *Project) loadConfigFile(path string) error {
-	c, err := project.LoadConfigFile(path)
+func (proj *Project) loadConfigFile(p string) error {
+	c, err := project.LoadConfigFile(p)
 	if err != nil {
 		return err
 	}
@@ -21,7 +21,7 @@ func (proj *Project) loadConfigFile(path string) error {
 	if len(c.Ignore) == 0 {
 		proj.ignore = nil
 	} else {
-		ignore, err := util.CompileGlobs(c.Ignore)
+		ignore, err := glob.New(c.Ignore, nil)
 		if err != nil {
 			return fmt.Errorf("invalid ignores: %w", err)
 		}

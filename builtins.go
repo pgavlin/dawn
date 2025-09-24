@@ -202,12 +202,34 @@ func (proj *Project) newBuiltin_glob() *starlark.Builtin {
     the given include and exclude patterns. Typically passed to the sources parameter
     of target.
 
-    - ` + "`" + `*` + "`" + ` matches any number of non-path-separator characters
-    - ` + "`" + `**` + "`" + ` matches any number of any characters
-    - ` + "`" + `?` + "`" + ` matches a single character
+    A particular path matches if any of the include patterns matches and none of the exclude patterns match.
+
+    The pattern syntax is:
+
+    pattern:
+        pathTerm { '/' pathTerm }
+
+    pathTerm:
+        '**'        matches any sequence of directory names, including the empty sequence
+        { term }    matches a sequence of terms against a name
+
+    term:
+        '*'         matches any sequence of non-/ characters
+        '?'         matches any single non-/ character
+        '[' [ '^' ] { character-range } ']' character class (must be non-empty)
+        c           matches character c (c != '*', '?', '\', '[')
+        '\' c      matches character c
+
+    character-range:
+        c           matches character c (c != '\', '-', ']')
+        '\' c      matches character c
+        lo '-' hi   matches character c for lo <= c <= hi
+
+    Patterns require that path terms match all of a component, not just a substring.
 
     :param include: the patterns to include.
     :param exclude: the patterns to exclude.
+    :param dirs: True to include directory names in the result.
 
     :returns: the matched paths
     `
@@ -219,12 +241,14 @@ func (proj *Project) starlark_builtin_glob(thread *starlark.Thread, fn *starlark
 		include util.StringList
 
 		exclude util.StringList
+
+		dirs bool
 	)
-	if err := starlark.UnpackArgs(fn.Name(), args, kwargs, "include", &include, "exclude??", &exclude); err != nil {
+	if err := starlark.UnpackArgs(fn.Name(), args, kwargs, "include", &include, "exclude??", &exclude, "dirs??", &dirs); err != nil {
 		return nil, err
 	}
 
-	val, err := proj.builtin_glob(thread, fn, include, exclude)
+	val, err := proj.builtin_glob(thread, fn, include, exclude, dirs)
 	if err != nil {
 		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
 	}

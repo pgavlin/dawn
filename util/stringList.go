@@ -19,21 +19,23 @@ func (l StringList) List() *starlark.List {
 }
 
 func (l *StringList) Unpack(v starlark.Value) error {
-	seq, ok := v.(starlark.Sequence)
-	if !ok {
-		return errors.New("expected a sequence of strings")
-	}
-
-	strings, err := fxs.TryCollect(fx.MapUnpack(All(seq), func(v starlark.Value) (string, error) {
-		s, ok := starlark.AsString(v)
-		if !ok {
-			return "", errors.New("expected a sequence of strings")
+	if seq, ok := v.(starlark.Sequence); ok {
+		strings, err := fxs.TryCollect(fx.MapUnpack(All(seq), func(v starlark.Value) (string, error) {
+			s, ok := starlark.AsString(v)
+			if !ok {
+				return "", errors.New("expected a sequence of strings")
+			}
+			return s, nil
+		}))
+		if err != nil {
+			return err
 		}
-		return s, nil
-	}))
-	if err != nil {
-		return err
+		*l = strings
+		return nil
 	}
-	*l = strings
-	return nil
+	if s, ok := starlark.AsString(v); ok {
+		*l = StringList{s}
+		return nil
+	}
+	return errors.New("expected a sequence of strings or a single string")
 }

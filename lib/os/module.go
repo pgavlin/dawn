@@ -46,10 +46,6 @@ import (
 //	    def getcwd():
 //	        pass
 //
-//	    @function("glob")
-//	    def glob():
-//	        pass
-//
 //	    @function("mkdir")
 //	    def mkdir():
 //	        pass
@@ -70,7 +66,6 @@ var Module = &starlarkstruct.Module{
 		"output":    NewOutput(),
 		"exists":    NewExists(),
 		"getcwd":    NewGetcwd(),
-		"glob":      NewGlob(),
 		"mkdir":     NewMkdir(),
 		"makedirs":  NewMakedirs(),
 	},

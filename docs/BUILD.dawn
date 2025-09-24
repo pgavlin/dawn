@@ -2,7 +2,7 @@ load("python//:venv.dawn", "pip_venv", "run_in_venv")
 
 venv = pip_venv("venv", "", docs="Creates a venv for the docs build.")
 
-@target(deps=[venv], sources=os.glob(["../README.rst", "source/**", "conf.py"]), generates=["build"])
+@target(deps=[venv], sources=glob("source/**") + ["../README.rst", "conf.py"], generates=["build"])
 def site():
     """
     Builds the dawn docs site using sphinx.

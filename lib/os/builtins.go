@@ -227,37 +227,3 @@ func Makedirs(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple
 	}
 	return val, nil
 }
-
-func NewGlob() *starlark.Builtin {
-	const doc = `
-    Return a list of paths rooted in the current directory that match the
-    given include and exclude patterns.
-
-    - ` + "`" + `*` + "`" + ` matches any number of non-path-separator characters
-    - ` + "`" + `**` + "`" + ` matches any number of any characters
-    - ` + "`" + `?` + "`" + ` matches a single character
-
-    :param include: the patterns to include.
-    :param exclude: the patterns to exclude.
-
-    :returns: the matched paths
-    `
-	return starlark.NewBuiltin("glob", Glob).WithDoc(doc)
-}
-
-func Glob(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-	var (
-		include util.StringList
-
-		exclude util.StringList
-	)
-	if err := starlark.UnpackArgs(fn.Name(), args, kwargs, "include", &include, "exclude??", &exclude); err != nil {
-		return nil, err
-	}
-
-	val, err := glob(thread, fn, include, exclude)
-	if err != nil {
-		return nil, &starlark.EvalError{Msg: err.Error(), CallStack: thread.CallStack()}
-	}
-	return val, nil
-}

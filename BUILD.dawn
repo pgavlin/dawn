@@ -5,7 +5,7 @@ version = "0.1.0"
 
 debug = parse_flag("debug", type=bool, help="True to run a debug build")
 
-all_go_sources=os.glob(include=["**.go"], exclude=[".dawn/**"])
+all_go_sources=glob("**/*.go")
 
 @target(sources=all_go_sources)
 def format():

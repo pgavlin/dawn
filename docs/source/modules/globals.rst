@@ -138,18 +138,40 @@
     :returns: the new build target object or a decorator if function is None.
     
 
-.. py:function:: glob(include, exclude=None)
+.. py:function:: glob(include, exclude=None, dirs=None)
 
     Return a list of paths relative to the calling module's directory that match
     the given include and exclude patterns. Typically passed to the sources parameter
     of target.
 
-    - `*` matches any number of non-path-separator characters
-    - `**` matches any number of any characters
-    - `?` matches a single character
+    A particular path matches if any of the include patterns matches and none of the exclude patterns match.
+
+    The pattern syntax is:
+
+    pattern:
+        pathTerm { '/' pathTerm }
+
+    pathTerm:
+        '**'        matches any sequence of directory names, including the empty sequence
+        { term }    matches a sequence of terms against a name
+
+    term:
+        '*'         matches any sequence of non-/ characters
+        '?'         matches any single non-/ character
+        '[' [ '^' ] { character-range } ']' character class (must be non-empty)
+        c           matches character c (c != '*', '?', '\', '[')
+        '\' c      matches character c
+
+    character-range:
+        c           matches character c (c != '\', '-', ']')
+        '\' c      matches character c
+        lo '-' hi   matches character c for lo <= c <= hi
+
+    Patterns require that path terms match all of a component, not just a substring.
 
     :param include: the patterns to include.
     :param exclude: the patterns to exclude.
+    :param dirs: True to include directory names in the result.
 
     :returns: the matched paths
     

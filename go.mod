@@ -5,20 +5,21 @@ go 1.24.0
 require (
 	github.com/codeclysm/extract/v4 v4.0.0
 	github.com/dustin/go-humanize v1.0.0
-	github.com/fatih/color v1.11.0
+	github.com/fatih/color v1.18.0
 	github.com/go-git/go-git/v5 v5.16.2
 	github.com/gofrs/flock v0.12.1
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/otiai10/copy v1.6.0
 	github.com/pelletier/go-toml/v2 v2.2.4
 	github.com/pgavlin/fx/v2 v2.0.11
+	github.com/pgavlin/glob v0.0.0-20250924034531-68797d8d9100
 	github.com/pgavlin/mvs v0.0.0-20250123095647-090776a03765
 	github.com/pgavlin/starlark-go v0.0.0-20250918081209-6d07710dbf05
 	github.com/rjeczalik/notify v0.9.3
 	github.com/shirou/gopsutil/v3 v3.22.8
 	github.com/spf13/cobra v1.1.3
 	github.com/spf13/pflag v1.0.10
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	github.com/sugawarayuuta/sonnet v0.0.0-20231004000330-239c7b6e4ce8
 	github.com/test-go/testify v1.1.4
 	golang.org/x/mod v0.28.0
@@ -50,8 +51,8 @@ require (
 	github.com/klauspost/compress v1.15.13 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
-	github.com/mattn/go-colorable v0.1.8 // indirect
-	github.com/mattn/go-isatty v0.0.12 // indirect
+	github.com/mattn/go-colorable v0.1.14 // indirect
+	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/pjbgf/sha1cd v0.5.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect

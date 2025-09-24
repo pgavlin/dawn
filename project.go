@@ -11,7 +11,6 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
-	"regexp"
 	"slices"
 	"strings"
 	"sync"
@@ -26,6 +25,7 @@ import (
 	"github.com/pgavlin/dawn/util"
 	"github.com/pgavlin/fx/v2"
 	fxs "github.com/pgavlin/fx/v2/slices"
+	"github.com/pgavlin/glob"
 	"github.com/pgavlin/starlark-go/starlark"
 	"github.com/pgavlin/starlark-go/syntax"
 	"github.com/rjeczalik/notify"
@@ -51,7 +51,7 @@ type Project struct {
 	work string
 	temp string
 
-	ignore *regexp.Regexp
+	ignore glob.Glob
 
 	configPath   string
 	resolver     *mvs.Resolver
@@ -476,7 +476,8 @@ func (proj *Project) saveTargetInfo(label *label.Label, info targetInfo) error {
 }
 
 func (proj *Project) ignored(path string) bool {
-	return proj.ignore != nil && proj.ignore.MatchString(path)
+	path = filepath.ToSlash(path)
+	return proj.ignore != nil && proj.ignore.MatchPath(path)
 }
 
 func (proj *Project) loadPackage(ctx context.Context, wg *sync.WaitGroup, path string) error {

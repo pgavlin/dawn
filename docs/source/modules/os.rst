@@ -85,21 +85,6 @@
     the directory containing the root module on the callstack.
     
 
-.. py:function:: glob(include, exclude=None)
-
-    Return a list of paths rooted in the current directory that match the
-    given include and exclude patterns.
-
-    - `*` matches any number of non-path-separator characters
-    - `**` matches any number of any characters
-    - `?` matches a single character
-
-    :param include: the patterns to include.
-    :param exclude: the patterns to exclude.
-
-    :returns: the matched paths
-    
-
 .. py:function:: mkdir(path, mode=None)
 
     Create a directory named path with numeric mode mode.
