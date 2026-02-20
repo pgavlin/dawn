@@ -10,6 +10,7 @@ import (
 	"io/fs"
 	"maps"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"slices"
@@ -615,28 +616,146 @@ func (proj *Project) loadSourceFile(l *label.Label) (*sourceFile, error) {
 	return f, nil
 }
 
+func (proj *Project) setGenerator(relPath string, generator *label.Label) error {
+	label, err := sourceLabel("//", relPath)
+	if err != nil {
+		return err
+	}
+	if f, ok := proj.targets[label.String()]; ok {
+		generated := f.target.(*sourceFile)
+		if generated.generator != nil && generated.generator != generator {
+			return fmt.Errorf("multiple generators for %v: %v, %v", label, generator, generated.generator)
+		}
+		generated.generator = generator
+	}
+	return nil
+}
+
 // link adds dependencies between targets that generate source files and the source files themselves.
 func (proj *Project) link() error {
+	var sources fs.FS
 	for _, t := range proj.targets {
+		var include []string
 		for _, g := range t.target.generates() {
 			g = g[len(proj.root)+1:]
 
-			label, err := sourceLabel("//", g)
-			if err != nil {
-				return err
-			}
-			f, ok := proj.targets[label.String()]
-			if !ok {
+			if hasMeta := strings.ContainsAny(g, "*?[\\"); hasMeta {
+				include = append(include, g)
 				continue
 			}
-			generated := f.target.(*sourceFile)
-			if generated.generator != nil {
-				return fmt.Errorf("multiple generators for %v: %v, %v", label, t.target.Label(), generated.generator)
+
+			if err := proj.setGenerator(g, t.target.Label()); err != nil {
+				return err
 			}
-			generated.generator = t.target.Label()
+		}
+
+		if len(include) != 0 {
+			if sources == nil {
+				sources = newSourceFS(proj.targets)
+			}
+
+			// TODO: validate earlier, strongly type, etc.
+			gens, err := glob.New(include, nil)
+			if err != nil {
+				return fmt.Errorf("invalid generator patterns for target %v: %w", t.target.Label(), err)
+			}
+			for relPath := range gens.Match(sources, ".", false) {
+				if err := proj.setGenerator(relPath, t.target.Label()); err != nil {
+					return err
+				}
+			}
 		}
 	}
 	return nil
+}
+
+type sourceNode struct {
+	name     string
+	children map[string]*sourceNode
+}
+
+func (n *sourceNode) ModTime() time.Time         { panic("unimplemented") }
+func (n *sourceNode) Mode() fs.FileMode          { panic("unimplemented") }
+func (n *sourceNode) Size() int64                { panic("unimplemented") }
+func (n *sourceNode) Sys() any                   { panic("unimplemented") }
+func (n *sourceNode) Info() (fs.FileInfo, error) { panic("unimplemented") }
+func (n *sourceNode) Type() fs.FileMode          { panic("unimplemented") }
+
+func (n *sourceNode) IsDir() bool {
+	return len(n.children) != 0
+}
+
+func (n *sourceNode) Name() string {
+	return n.name
+}
+
+type sourceFS struct {
+	root *sourceNode
+}
+
+var (
+	_ = fs.ReadDirFS((*sourceFS)(nil))
+	_ = fs.StatFS((*sourceFS)(nil))
+)
+
+func newSourceFS(targets map[string]*runTarget) *sourceFS {
+	fs := &sourceFS{root: &sourceNode{name: "."}}
+	for _, t := range targets {
+		if sf, ok := t.target.(*sourceFile); ok {
+			relPath := path.Join(label.Split(sf.label.Package)[1:]...) + "/" + sf.label.Name
+			fs.create(relPath)
+		}
+	}
+	return fs
+}
+
+func (s *sourceFS) get(p string) *sourceNode {
+	p = path.Clean(p)
+	if p == "." || p == ".." || strings.HasPrefix(p, "../") {
+		return s.root
+	}
+	dir, base := path.Split(p)
+	dirn := s.get(dir)
+	if dirn == nil {
+		return nil
+	}
+	return dirn.children[base]
+}
+
+func (s *sourceFS) create(p string) *sourceNode {
+	p = path.Clean(p)
+	if p == "." || p == "/" || p == ".." || strings.HasPrefix(p, "../") {
+		return s.root
+	}
+	dir, base := path.Split(p)
+	dirn := s.create(dir)
+	if n, ok := dirn.children[base]; ok {
+		return n
+	}
+	if dirn.children == nil {
+		dirn.children = map[string]*sourceNode{}
+	}
+	n := &sourceNode{name: base}
+	dirn.children[base] = n
+	return n
+}
+
+func (*sourceFS) Open(name string) (fs.File, error) { panic("unimplemented") }
+
+func (s *sourceFS) Stat(name string) (fs.FileInfo, error) {
+	n := s.get(name)
+	if n == nil {
+		return nil, fs.ErrNotExist
+	}
+	return n, nil
+}
+
+func (s *sourceFS) ReadDir(name string) ([]fs.DirEntry, error) {
+	n := s.get(name)
+	if n == nil {
+		return nil, fs.ErrNotExist
+	}
+	return slices.Collect(fx.Map(maps.Values(n.children), func(n *sourceNode) fs.DirEntry { return n })), nil
 }
 
 func IsTarget(l *label.Label) bool {
