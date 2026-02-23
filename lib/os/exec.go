@@ -12,7 +12,7 @@ import (
 
 // starlark
 //
-//	def look_path(file):
+//	def look_path(file: str) -> str | None:
 //	    """
 //	    Search for an executable named file in the directories named by
 //	    the PATH environment variable. If file contains a slash, it is
@@ -39,7 +39,7 @@ func lookPath(
 
 // starlark
 //
-//	def exec(command, cwd=None, env=None, try_=None):
+//	def exec(command: list[str], cwd: str=None, env: dict=None, try_: bool=None) -> str | None:
 //	    """
 //	    Run an executable. If the process fails, the calling module will
 //	    abort unless `try_` is set to True, in which case the contents of
@@ -80,7 +80,7 @@ func execf(
 
 // starlark
 //
-//	def output(command, cwd=None, env=None, try_=None):
+//	def output(command: list[str], cwd: str=None, env: dict=None, try_: bool=None) -> str:
 //	    """
 //	    Run an executable and return its output. If the process fails, the
 //	    calling module will abort unless `try_` is set to True, in which case

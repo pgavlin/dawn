@@ -14,7 +14,7 @@ require (
 	github.com/pgavlin/fx/v2 v2.0.11
 	github.com/pgavlin/glob v0.0.0-20250924034531-68797d8d9100
 	github.com/pgavlin/mvs v0.0.0-20250123095647-090776a03765
-	github.com/pgavlin/starlark-go v0.0.0-20250918081209-6d07710dbf05
+	github.com/pgavlin/starlark-go v0.0.0-20260222213723-6c6ac095898b
 	github.com/rjeczalik/notify v0.9.3
 	github.com/shirou/gopsutil/v3 v3.22.8
 	github.com/spf13/cobra v1.1.3

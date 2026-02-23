@@ -255,6 +255,44 @@ func parseModuleDecl(text string) (*objectDecl, error) {
 	return module, nil
 }
 
+func writeExpr(w *strings.Builder, expr syntax.Expr) {
+	switch expr := expr.(type) {
+	case *syntax.Ident:
+		w.WriteString(expr.Name)
+	case *syntax.Literal:
+		w.WriteString(expr.Raw)
+	case *syntax.TypeAnnotatedExpr:
+		writeExpr(w, expr.X)
+		w.WriteString(": ")
+		writeExpr(w, expr.Type)
+	case *syntax.BinaryExpr:
+		writeExpr(w, expr.X)
+		if expr.Op == syntax.EQ {
+			w.WriteRune('=')
+		} else {
+			w.WriteString(" " + expr.Op.String() + " ")
+		}
+		writeExpr(w, expr.Y)
+	case *syntax.IndexExpr:
+		writeExpr(w, expr.X)
+		w.WriteRune('[')
+		writeExpr(w, expr.Y)
+		w.WriteRune(']')
+	case *syntax.UnaryExpr:
+		w.WriteString(expr.Op.String())
+		if expr.X != nil {
+			writeExpr(w, expr.X)
+		}
+	case *syntax.TupleExpr:
+		for i, e := range expr.List {
+			if i > 0 {
+				w.WriteString(", ")
+			}
+			writeExpr(w, e)
+		}
+	}
+}
+
 func methodFunction(f *function) *method {
 	var sig strings.Builder
 	sig.WriteRune('(')
@@ -262,19 +300,13 @@ func methodFunction(f *function) *method {
 		if i > 0 {
 			sig.WriteString(", ")
 		}
-		switch p := p.(type) {
-		case *syntax.Ident:
-			sig.WriteString(p.Name)
-		case *syntax.BinaryExpr:
-			name := p.X.(*syntax.Ident).Name
-			if value, ok := p.Y.(*syntax.Ident); ok {
-				sig.WriteString(name)
-				sig.WriteRune('=')
-				sig.WriteString(value.Name)
-			}
-		}
+		writeExpr(&sig, p)
 	}
 	sig.WriteRune(')')
+	if f.def.ResultType != nil {
+		sig.WriteString(" -> ")
+		writeExpr(&sig, f.def.ResultType)
+	}
 
 	docstring, _ := getDocstring(f.def)
 	return &method{

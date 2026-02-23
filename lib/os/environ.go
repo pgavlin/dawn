@@ -24,7 +24,7 @@ func init() {
 
 // starlark
 //
-//	def environ():
+//	def environ() -> dict:
 //	    """
 //	    Returns a mapping object where keys and values are strings that represent
 //	    the process environment. This mapping is captured at startup time.

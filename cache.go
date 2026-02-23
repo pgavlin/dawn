@@ -31,7 +31,7 @@ func (c *cache) get(key string) (starlark.Value, bool) {
 
 // starlark
 //
-//	def once(key, callable):
+//	def once(key: str, callable: callable):
 //	    """
 //	    once calls the given callable if and only if key is not present in the cache.
 //

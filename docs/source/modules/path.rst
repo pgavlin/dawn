@@ -17,12 +17,12 @@
         
 
 
-.. py:function:: is_abs(path)
+.. py:function:: is_abs(path: str) -> bool
 
     Returns True if path is absolute.
     
 
-.. py:function:: abs(path)
+.. py:function:: abs(path: str) -> str
 
     Returns an absolute representation of path. If the path is not absolute
     it will be joined with the current working directory (usually the
@@ -30,7 +30,7 @@
     absolute path.
     
 
-.. py:function:: base(path)
+.. py:function:: base(path: str) -> str
 
     Returns the last element of path. Trailing path separators are removed
     before extracting the last element. If the path is empty, Base returns
@@ -38,7 +38,7 @@
     separator.
     
 
-.. py:function:: dir(path)
+.. py:function:: dir(path: str) -> str
 
     Returns all but the last element of path. If the path is empty, dir
     returns ".". If the path consists entirely of separators, dir returns a
@@ -46,20 +46,20 @@
     it is the root directory.
     
 
-.. py:function:: join(components)
+.. py:function:: join(*components: str) -> str
 
     Joins any number of path elements into a single path, separating them
     with a host-specific separator. Empty elements are ignored.
     
 
-.. py:function:: split(path)
+.. py:function:: split(path: str) -> tuple[str, str]
 
     Splits path immediately following the final separator, separating it into
     a directory and file name component. If there is no separator in path,
     split returns an empty dir and file set to path.
     
 
-.. py:function:: splitext(path)
+.. py:function:: splitext(path: str) -> tuple[str, str]
 
     Splits the pathname path into a pair (root, ext) such that
     root + ext == path, and ext is empty or begins with a period and contains

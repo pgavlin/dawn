@@ -181,8 +181,14 @@ func genFunctionWrapper(imports importSet, pkg *packages.Package, f *function) (
 		switch p := p.(type) {
 		case *syntax.Ident:
 			name = p.Name
+		case *syntax.TypeAnnotatedExpr:
+			name = paramIdent(p.X).Name
+		case *syntax.UnaryExpr:
+			if ident := paramIdent(p); ident != nil {
+				name = ident.Name
+			}
 		case *syntax.BinaryExpr:
-			name = p.X.(*syntax.Ident).Name
+			name = paramIdent(p.X).Name
 			value, ok := p.Y.(*syntax.Ident)
 			if !ok || value.Name != "None" {
 				return nil, fmt.Errorf("default value for parameter %v in function %v must be None", name, data.Name)
@@ -223,6 +229,22 @@ func genFunctionWrappers(w io.Writer, pkg *packages.Package, fns []*function) er
 
 	data.Package = pkg.Types.Name()
 	return functionWrappersTemplate.Execute(w, data)
+}
+
+func paramIdent(expr syntax.Expr) *syntax.Ident {
+	switch expr := expr.(type) {
+	case *syntax.Ident:
+		return expr
+	case *syntax.TypeAnnotatedExpr:
+		return paramIdent(expr.X)
+	case *syntax.UnaryExpr:
+		if expr.X != nil {
+			return paramIdent(expr.X)
+		}
+		return nil
+	default:
+		return nil
+	}
 }
 
 func genModuleDocs(w io.Writer, m *object) error {

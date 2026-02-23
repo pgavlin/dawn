@@ -17,7 +17,7 @@ import (
 
 // starlark
 //
-//	def exec(command, cwd=None, env=None, try_=None):
+//	def exec(command: str, cwd: str=None, env: dict=None, try_: bool=None) -> str | None:
 //	    """
 //	    Execute a shell command. The command must be a valid POSIX Shell, Bash,
 //	    or mksh command. Any commands that are not shell builtins must be
@@ -58,7 +58,7 @@ func exec(thread *starlark.Thread, fn *starlark.Builtin, cmd, cwd string, env st
 
 // starlark
 //
-//	def output(command, cwd=None, env=None, try_=None):
+//	def output(command: str, cwd: str=None, env: dict=None, try_: bool=None) -> str | tuple:
 //	    """
 //	    Execute a shell command and return its output. The command must be a
 //	    valid POSIX Shell, Bash, or mksh command. Any commands that are not

@@ -10,7 +10,7 @@ import (
 
 // starlark
 //
-//	def abs(path):
+//	def abs(path: str) -> str:
 //	    """
 //	    Returns an absolute representation of path. If the path is not absolute
 //	    it will be joined with the current working directory (usually the
@@ -34,7 +34,7 @@ func abs(thread *starlark.Thread, fn *starlark.Builtin, path string) (starlark.V
 
 // starlark
 //
-//	def is_abs(path):
+//	def is_abs(path: str) -> bool:
 //	    """
 //	    Returns True if path is absolute.
 //	    """
@@ -46,7 +46,7 @@ func isAbs(thread *starlark.Thread, fn *starlark.Builtin, path string) (starlark
 
 // starlark
 //
-//	def base(path):
+//	def base(path: str) -> str:
 //	    """
 //	    Returns the last element of path. Trailing path separators are removed
 //	    before extracting the last element. If the path is empty, Base returns
@@ -61,7 +61,7 @@ func base(thread *starlark.Thread, fn *starlark.Builtin, path string) (starlark.
 
 // starlark
 //
-//	def dir(path):
+//	def dir(path: str) -> str:
 //	    """
 //	    Returns all but the last element of path. If the path is empty, dir
 //	    returns ".". If the path consists entirely of separators, dir returns a
@@ -76,7 +76,7 @@ func dir(thread *starlark.Thread, fn *starlark.Builtin, path string) (starlark.V
 
 // starlark
 //
-//	def join(components):
+//	def join(*components: str) -> str:
 //	    """
 //	    Joins any number of path elements into a single path, separating them
 //	    with a host-specific separator. Empty elements are ignored.
@@ -98,7 +98,7 @@ func Join(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kw
 
 // starlark
 //
-//	def split(path):
+//	def split(path: str) -> tuple[str, str]:
 //	    """
 //	    Splits path immediately following the final separator, separating it into
 //	    a directory and file name component. If there is no separator in path,
@@ -113,7 +113,7 @@ func split(thread *starlark.Thread, fn *starlark.Builtin, path string) (starlark
 
 // starlark
 //
-//	def splitext(path):
+//	def splitext(path: str) -> tuple[str, str]:
 //	    """
 //	    Splits the pathname path into a pair (root, ext) such that
 //	    root + ext == path, and ext is empty or begins with a period and contains

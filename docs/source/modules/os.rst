@@ -18,13 +18,13 @@
 
 
 
-.. py:function:: environ()
+.. py:function:: environ() -> dict
 
     Returns a mapping object where keys and values are strings that represent
     the process environment. This mapping is captured at startup time.
     
 
-.. py:function:: look_path(file)
+.. py:function:: look_path(file: str) -> str | None
 
     Search for an executable named file in the directories named by
     the PATH environment variable. If file contains a slash, it is
@@ -36,7 +36,7 @@
     :returns: the absolute path to file if found or None if not found.
     
 
-.. py:function:: exec(command, cwd=None, env=None, try_=None)
+.. py:function:: exec(command: list[str], cwd: str=None, env: dict=None, try_: bool=None) -> str | None
 
     Run an executable. If the process fails, the calling module will
     abort unless `try_` is set to True, in which case the contents of
@@ -54,7 +54,7 @@
               otherwise. To capture the process's output, use output.
     
 
-.. py:function:: output(command, cwd=None, env=None, try_=None)
+.. py:function:: output(command: list[str], cwd: str=None, env: dict=None, try_: bool=None) -> str
 
     Run an executable and return its output. If the process fails, the
     calling module will abort unless `try_` is set to True, in which case
@@ -74,23 +74,23 @@
               if the process fails.
     
 
-.. py:function:: exists(path)
+.. py:function:: exists(path: str) -> bool
 
     Returns true if a file exists at the given path.
     
 
-.. py:function:: getcwd()
+.. py:function:: getcwd() -> str
 
     Returns the current OS working directory. This is typically the path of
     the directory containing the root module on the callstack.
     
 
-.. py:function:: mkdir(path, mode=None)
+.. py:function:: mkdir(path: str, mode: int=None) -> None
 
     Create a directory named path with numeric mode mode.
     
 
-.. py:function:: makedirs(path, mode=None)
+.. py:function:: makedirs(path: str, mode: int=None) -> None
 
     Recursive directory creation function. Like mkdir(), but makes all
     intermediate-level directories needed to contain the leaf directory.

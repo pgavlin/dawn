@@ -10,7 +10,7 @@
 
 
 
-.. py:function:: depends(label_or_target)
+.. py:function:: depends(label_or_target) -> list[str]
 
     Returns the transitive closure of targets depended on by the given
     target.
@@ -20,7 +20,7 @@
     :rtype: List[str]
     
 
-.. py:function:: what_depends(label_or_target)
+.. py:function:: what_depends(label_or_target) -> list[str]
 
     Returns the transitive closure of target that depend on the given target.
 

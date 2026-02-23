@@ -10,7 +10,7 @@ import (
 
 // starlark
 //
-//	def exists(path):
+//	def exists(path: str) -> bool:
 //	    """
 //	    Returns true if a file exists at the given path.
 //	    """
@@ -35,7 +35,7 @@ func exists(thread *starlark.Thread, fn *starlark.Builtin, path string) (starlar
 
 // starlark
 //
-//	def getcwd():
+//	def getcwd() -> str:
 //	    """
 //	    Returns the current OS working directory. This is typically the path of
 //	    the directory containing the root module on the callstack.
@@ -48,7 +48,7 @@ func getcwd(thread *starlark.Thread, fn *starlark.Builtin) (starlark.Value, erro
 
 // starlark
 //
-//	def mkdir(path, mode=None):
+//	def mkdir(path: str, mode: int=None) -> None:
 //	    """
 //	    Create a directory named path with numeric mode mode.
 //	    """
@@ -73,7 +73,7 @@ func mkdir(thread *starlark.Thread, fn *starlark.Builtin, path string, mode int)
 
 // starlark
 //
-//	def makedirs(path, mode=None):
+//	def makedirs(path: str, mode: int=None) -> None:
 //	    """
 //	    Recursive directory creation function. Like mkdir(), but makes all
 //	    intermediate-level directories needed to contain the leaf directory.

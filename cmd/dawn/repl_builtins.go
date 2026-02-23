@@ -32,7 +32,7 @@ func getLabel(thread *starlark.Thread, fn *starlark.Builtin, labelOrTarget starl
 
 // starlark
 //
-//	def depends(label_or_target):
+//	def depends(label_or_target) -> list[str]:
 //	    """
 //	    Returns the transitive closure of targets depended on by the given
 //	    target.
@@ -58,7 +58,7 @@ func (w *workspace) builtin_depends(thread *starlark.Thread, fn *starlark.Builti
 
 // starlark
 //
-//	def what_depends(label_or_target):
+//	def what_depends(label_or_target) -> list[str]:
 //	    """
 //	    Returns the transitive closure of target that depend on the given target.
 //

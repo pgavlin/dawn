@@ -15,7 +15,7 @@
 
 
 
-.. py:function:: exec(command, cwd=None, env=None, try_=None)
+.. py:function:: exec(command: str, cwd: str=None, env: dict=None, try_: bool=None) -> str | None
 
     Execute a shell command. The command must be a valid POSIX Shell, Bash,
     or mksh command. Any commands that are not shell builtins must be
@@ -34,7 +34,7 @@
               otherwise. To capture the command's output, use output.
     
 
-.. py:function:: output(command, cwd=None, env=None, try_=None)
+.. py:function:: output(command: str, cwd: str=None, env: dict=None, try_: bool=None) -> str | tuple
 
     Execute a shell command and return its output. The command must be a
     valid POSIX Shell, Bash, or mksh command. Any commands that are not

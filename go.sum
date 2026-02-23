@@ -254,6 +254,8 @@ github.com/pgavlin/mvs v0.0.0-20250123095647-090776a03765 h1:/HgcjkeTWBaURvJT1Dz
 github.com/pgavlin/mvs v0.0.0-20250123095647-090776a03765/go.mod h1:W28LY2nUddQsVDvie8Lb9n/ITqoHQWg0tUK5gZZQlkQ=
 github.com/pgavlin/starlark-go v0.0.0-20250918081209-6d07710dbf05 h1:v77cDhOpsAwNzVOJIneY8P3qkX4s/6eKA0gG6E3mBDU=
 github.com/pgavlin/starlark-go v0.0.0-20250918081209-6d07710dbf05/go.mod h1:sc6W1VosKi/LIb+5qXbHgj1Hsoky0tRyimQpJKCDrS4=
+github.com/pgavlin/starlark-go v0.0.0-20260222213723-6c6ac095898b h1:3Ymsg66WpPAaTG0ceHBa4ffjaFqWwxG7ZivgsF+tDXU=
+github.com/pgavlin/starlark-go v0.0.0-20260222213723-6c6ac095898b/go.mod h1:sc6W1VosKi/LIb+5qXbHgj1Hsoky0tRyimQpJKCDrS4=
 github.com/pjbgf/sha1cd v0.5.0 h1:a+UkboSi1znleCDUNT3M5YxjOnN1fz2FhN48FlwCxs0=
 github.com/pjbgf/sha1cd v0.5.0/go.mod h1:lhpGlyHLpQZoxMv8HcgXvZEhcGs0PG/vsZnEJ7H0iCM=
 github.com/pkg/errors v0.8.0/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=

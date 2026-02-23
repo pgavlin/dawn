@@ -62,7 +62,7 @@ func (a *flagValue) Type() string {
 
 // starlark
 //
-//	def path(label):
+//	def path(label: str) -> str:
 //	    """
 //	    Returns the absolute OS path that corresponds to the given label.
 //	    """
@@ -86,7 +86,7 @@ func (proj *Project) builtin_path(thread *starlark.Thread, fn *starlark.Builtin,
 
 // starlark
 //
-//	def label(path):
+//	def label(path: str) -> str:
 //	    """
 //	    Returns the label that corresponds to the given project-relative path, if any.
 //	    """
@@ -113,7 +113,7 @@ var parentDir = string([]rune{'.', '.', os.PathSeparator})
 
 // starlark
 //
-//	def contains(path):
+//	def contains(path: str) -> tuple[str | None, bool]:
 //	    """
 //	    Returns the label that corresponds to the given OS path if the path is
 //	    contained in the current project. If the path is not contained in the
@@ -151,7 +151,7 @@ func (proj *Project) builtin_contains(thread *starlark.Thread, fn *starlark.Buil
 
 // starlark
 //
-//	def parse_flag(name, default=None, type=None, choices=None, required=None, help=None):
+//	def parse_flag(name: str, default=None, type: callable=None, choices: list=None, required: bool=None, help: str=None):
 //	    """
 //	    Defines and parses a new project flag in the current package.
 //
@@ -268,7 +268,7 @@ func (proj *Project) builtin_targetDecorator(thread *starlark.Thread, fn *starla
 
 // starlark
 //
-//	def target(name=None, deps=None, sources=None, generates=None, function=None, default=None, always=None, docs=None):
+//	def target(name: str=None, deps: list=None, sources: list[str]=None, generates: list[str]=None, function: function=None, default: bool=None, always: bool=None, docs: str=None) -> Target:
 //	    """
 //	    Defines a new build target in the current package. Typically used as a
 //	    decorator, in which case the decorated function is treated as the value
@@ -427,7 +427,7 @@ func (proj *Project) builtin_target(
 
 // starlark
 //
-//	def glob(include, exclude=None, dirs=None):
+//	def glob(include: list[str], exclude: list[str]=None, dirs: bool=None) -> list[str]:
 //	    """
 //	    Return a list of paths relative to the calling module's directory that match
 //	    the given include and exclude patterns. Typically passed to the sources parameter
@@ -495,7 +495,7 @@ func (proj *Project) builtin_glob(
 
 // starlark
 //
-//	def run(label_or_target, always=None, dry_run=None, callback=None):
+//	def run(label_or_target, always: bool=None, dry_run: bool=None, callback: callable=None) -> None:
 //	    """
 //	    Builds a target.
 //
@@ -568,7 +568,7 @@ func (proj *Project) builtin_run(
 
 // starlark
 //
-//	def get_target(label):
+//	def get_target(label: str) -> Target:
 //	    """
 //	    Gets the target with the given label, if it exists.
 //
@@ -607,7 +607,7 @@ const flagsDoc = `
 
 // starlark
 //
-//	def flags():
+//	def flags() -> list[Flag]:
 //	    """
 //	    Lists the project's flags.
 //	    """
@@ -625,7 +625,7 @@ func (proj *Project) builtin_flags(thread *starlark.Thread, fn *starlark.Builtin
 
 // starlark
 //
-//	def targets():
+//	def targets() -> list[Target]:
 //	    """
 //	    Lists the project's targets.
 //	    """
@@ -650,7 +650,7 @@ func (proj *Project) builtin_targets(thread *starlark.Thread, fn *starlark.Built
 
 // starlark
 //
-//	def sources():
+//	def sources() -> list[str]:
 //	    """
 //	    Lists the project's sources.
 //	    """
@@ -678,7 +678,7 @@ func (err failError) Error() string {
 
 // starlark
 //
-//	def fail(message):
+//	def fail(message: str):
 //	    """
 //	    Fails the calling target with the given message.
 //	    """

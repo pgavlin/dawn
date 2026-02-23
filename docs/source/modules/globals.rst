@@ -15,7 +15,7 @@
 
 
 
-.. py:method:: Cache.once(key, callable)
+.. py:method:: Cache.once(key: str, callable: callable)
 
     once calls the given callable if and only if key is not present in the cache.
 
@@ -81,24 +81,24 @@
         
 
 
-.. py:function:: path(label)
+.. py:function:: path(label: str) -> str
 
     Returns the absolute OS path that corresponds to the given label.
     
 
-.. py:function:: label(path)
+.. py:function:: label(path: str) -> str
 
     Returns the label that corresponds to the given project-relative path, if any.
     
 
-.. py:function:: contains(path)
+.. py:function:: contains(path: str) -> tuple[str | None, bool]
 
     Returns the label that corresponds to the given OS path if the path is
     contained in the current project. If the path is not contained in the
     current project, contains returns (None, False).
     
 
-.. py:function:: parse_flag(name, default=None, type=None, choices=None, required=None, help=None)
+.. py:function:: parse_flag(name: str, default=None, type: callable=None, choices: list=None, required: bool=None, help: str=None)
 
     Defines and parses a new project flag in the current package.
 
@@ -112,7 +112,7 @@
     :returns: the flag's value.
     
 
-.. py:function:: target(name=None, deps=None, sources=None, generates=None, function=None, default=None, always=None, docs=None)
+.. py:function:: target(name: str=None, deps: list=None, sources: list[str]=None, generates: list[str]=None, function: function=None, default: bool=None, always: bool=None, docs: str=None) -> Target
 
     Defines a new build target in the current package. Typically used as a
     decorator, in which case the decorated function is treated as the value
@@ -138,7 +138,7 @@
     :returns: the new build target object or a decorator if function is None.
     
 
-.. py:function:: glob(include, exclude=None, dirs=None)
+.. py:function:: glob(include: list[str], exclude: list[str]=None, dirs: bool=None) -> list[str]
 
     Return a list of paths relative to the calling module's directory that match
     the given include and exclude patterns. Typically passed to the sources parameter
@@ -176,12 +176,12 @@
     :returns: the matched paths
     
 
-.. py:function:: fail(message)
+.. py:function:: fail(message: str)
 
     Fails the calling target with the given message.
     
 
-.. py:function:: get_target(label)
+.. py:function:: get_target(label: str) -> Target
 
     Gets the target with the given label, if it exists.
 
@@ -190,22 +190,22 @@
     :returns: the target with the given label.
     
 
-.. py:function:: flags()
+.. py:function:: flags() -> list[Flag]
 
     Lists the project's flags.
     
 
-.. py:function:: targets()
+.. py:function:: targets() -> list[Target]
 
     Lists the project's targets.
     
 
-.. py:function:: sources()
+.. py:function:: sources() -> list[str]
 
     Lists the project's sources.
     
 
-.. py:function:: run(label_or_target, always=None, dry_run=None, callback=None)
+.. py:function:: run(label_or_target, always: bool=None, dry_run: bool=None, callback: callable=None) -> None
 
     Builds a target.
 
