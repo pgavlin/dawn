@@ -26,10 +26,10 @@ import (
 	"github.com/pgavlin/dawn/runner"
 	"github.com/pgavlin/dawn/util"
 	"github.com/pgavlin/fx/v2"
-	fxs "github.com/pgavlin/fx/v2/slices"
 	"github.com/pgavlin/glob"
 	"github.com/pgavlin/starlark-go/starlark"
 	"github.com/pgavlin/starlark-go/syntax"
+	"github.com/pgavlin/starlark-go/typecheck"
 	"github.com/rjeczalik/notify"
 	"github.com/sugawarayuuta/sonnet"
 )
@@ -62,6 +62,7 @@ type Project struct {
 	buildList    map[string]string // maps project path to version
 
 	builtins starlark.StringDict
+	baseEnv  *typecheck.Env
 
 	always bool
 	dryrun bool
@@ -131,7 +132,7 @@ func Open(ctx context.Context, root string, options *OpenOptions) (*Project, err
 		proj.preferIndex = options.PreferIndex
 	}
 
-	results, err := proj.typeCheckAll(ctx)
+	results, err := proj.openModules(ctx)
 	if err != nil {
 		proj.events.OpenDone(nil, err)
 		return nil, err
@@ -172,9 +173,18 @@ func (proj *Project) eval(ctx context.Context, index bool) (err error) {
 		return err
 	}
 
-	if err = proj.loadPackage(ctx, nil, "//"); err != nil {
-		return err
+	// Evaluate all modules discovered during Open, concurrently.
+	var wg sync.WaitGroup
+	for _, m := range proj.modules {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			// loadModule handles claiming (evaluating flag) and dedup
+			proj.loadModule(ctx, nil, m.label)
+		}()
 	}
+	wg.Wait()
+
 	for _, m := range proj.modules {
 		if m.err != nil {
 			return m.err
@@ -189,8 +199,11 @@ func (proj *Project) eval(ctx context.Context, index bool) (err error) {
 }
 
 func (proj *Project) Reload(ctx context.Context) (err error) {
-	// Re-typecheck
-	results, err := proj.typeCheckAll(ctx)
+	proj.flags = map[string]*Flag{}
+	proj.modules = map[string]*module{}
+	proj.targets = map[string]*runTarget{}
+
+	results, err := proj.openModules(ctx)
 	if err != nil {
 		proj.events.OpenDone(results, err)
 		return err
@@ -198,10 +211,6 @@ func (proj *Project) Reload(ctx context.Context) (err error) {
 	proj.checkResults = results
 	proj.events.OpenDone(results, nil)
 
-	// Re-evaluate modules
-	proj.flags = map[string]*Flag{}
-	proj.modules = map[string]*module{}
-	proj.targets = map[string]*runTarget{}
 	return proj.eval(ctx, false)
 }
 
@@ -531,43 +540,42 @@ func (proj *Project) ignored(path string) bool {
 	return proj.ignore != nil && proj.ignore.MatchPath(path)
 }
 
-func (proj *Project) loadPackage(ctx context.Context, wg *sync.WaitGroup, path string) error {
-	if proj.ignored(path[2:]) {
-		return nil
-	}
-
-	if wg == nil {
-		wg = &sync.WaitGroup{}
-		defer wg.Wait()
-	}
-
-	dir := filepath.Join(proj.root, path[2:])
-
+func (proj *Project) walkPackages(root, rel string, fn func(pkg string)) error {
+	dir := filepath.Join(root, rel)
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return err
 	}
-	if slices.ContainsFunc(entries, func(e os.DirEntry) bool { return e.Name() == "BUILD.dawn" }) {
-		wg.Add(1)
-		go func() {
-			_, _ = proj.loadModule(ctx, nil, &label.Label{Kind: "module", Package: path, Name: "BUILD.dawn"})
-			wg.Done()
-		}()
+
+	pkg := "//"
+	if rel != "." {
+		pkg = "//" + filepath.ToSlash(rel)
 	}
-	dirs := fxs.Filter(entries, func(e os.DirEntry) bool { return e.IsDir() && e.Name() != ".dawn" })
-	for d := range dirs {
-		pkg, _ := label.Join(path, d.Name())
-		if err := proj.loadPackage(ctx, wg, pkg); err != nil {
+
+	if slices.ContainsFunc(entries, func(e os.DirEntry) bool { return e.Name() == "BUILD.dawn" }) {
+		fn(pkg)
+	}
+
+	for _, e := range entries {
+		if !e.IsDir() || e.Name() == ".dawn" {
+			continue
+		}
+		childRel := filepath.Join(rel, e.Name())
+		if proj.ignored(childRel) {
+			continue
+		}
+		if err := proj.walkPackages(root, childRel, fn); err != nil {
 			return err
 		}
 	}
-
 	return nil
 }
 
-func (proj *Project) loadModule(ctx context.Context, waiter *module, label *label.Label) (starlark.StringDict, error) {
+
+func (proj *Project) loadModule(ctx context.Context, waiter *module, l *label.Label) (starlark.StringDict, error) {
 	proj.m.Lock()
-	if m, ok := proj.modules[label.String()]; ok {
+	m, exists := proj.modules[l.String()]
+	if exists && (m.loaded || m.evaluating) {
 		proj.m.Unlock()
 
 		if waiter != nil {
@@ -577,10 +585,12 @@ func (proj *Project) loadModule(ctx context.Context, waiter *module, label *labe
 
 		return m.wait(waiter)
 	}
-
-	m := &module{label: label, out: newLineWriter(label, proj.events)}
-	m.cond = sync.NewCond(&m.m)
-	proj.modules[label.String()] = m
+	if !exists {
+		m = &module{label: l, out: newLineWriter(l, proj.events)}
+		m.cond = sync.NewCond(&m.m)
+		proj.modules[l.String()] = m
+	}
+	m.evaluating = true
 	proj.m.Unlock()
 
 	if waiter != nil {

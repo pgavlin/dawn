@@ -2,7 +2,9 @@ package dawn
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"slices"
 	"sync"
@@ -10,7 +12,10 @@ import (
 	"github.com/pgavlin/dawn/label"
 	"github.com/pgavlin/dawn/runner"
 	"github.com/pgavlin/dawn/util"
+	"github.com/pgavlin/starlark-go/resolve"
 	"github.com/pgavlin/starlark-go/starlark"
+	"github.com/pgavlin/starlark-go/syntax"
+	"github.com/pgavlin/starlark-go/typecheck"
 )
 
 // A module is the runtime representation of a Starlark module.
@@ -26,6 +31,13 @@ type module struct {
 	path         string
 	projectPath  string
 	requirements map[string]string
+
+	// Type-check state (populated during Open)
+	checkErrs   []typecheck.Error
+	exportTypes map[string]typecheck.Type
+
+	// Eval state — true once a goroutine has claimed this module for evaluation
+	evaluating bool
 
 	loaded bool
 	data   starlark.StringDict
@@ -92,11 +104,13 @@ func (m *module) wait(waiter *module) (starlark.StringDict, error) {
 
 // env returns a thread and builtins appropriate for running this module's code.
 func (m *module) env(proj *Project) (*starlark.Thread, starlark.StringDict, error) {
-	path, moduleReqs, err := proj.fetchModule(context.TODO(), m.label)
-	if err != nil {
-		return nil, nil, err
+	if m.path == "" {
+		path, moduleReqs, err := proj.fetchModule(context.TODO(), m.label)
+		if err != nil {
+			return nil, nil, err
+		}
+		m.path, m.requirements = path, moduleReqs
 	}
-	m.path, m.requirements = path, moduleReqs
 
 	t := starlark.Thread{
 		Name: m.label.String(),
@@ -136,28 +150,87 @@ func (m *module) env(proj *Project) (*starlark.Thread, starlark.StringDict, erro
 	return &t, builtins, nil
 }
 
-func (m *module) loadModule(ctx context.Context, proj *Project, rawLabel string) (starlark.StringDict, error) {
-	label, err := label.Parse(rawLabel)
+func (m *module) resolveLabel(rawLabel string) (*label.Label, error) {
+	l, err := label.Parse(rawLabel)
 	if err != nil {
 		return nil, err
 	}
-	if label.Project == "" {
-		label.Project = m.label.Project
-		if label.Name == "" {
-			label.Name = "BUILD.dawn"
+	if l.Project == "" {
+		l.Project = m.label.Project
+		if l.Name == "" {
+			l.Name = "BUILD.dawn"
 		}
-	} else if label.IsAlias() {
-		req, ok := m.requirements[label.Project]
+	} else if l.IsAlias() {
+		req, ok := m.requirements[l.Project]
 		if !ok {
-			return nil, fmt.Errorf("no project with alias %q", label.Project)
+			return nil, fmt.Errorf("no project with alias %q", l.Project)
 		}
-		label.Project = req
+		l.Project = req
 	}
-	label, _ = label.RelativeTo(m.label.Package)
-	label.Kind = "module"
+	l, _ = l.RelativeTo(m.label.Package)
+	l.Kind = "module"
+	return l, nil
+}
 
-	m.dependencies = append(m.dependencies, label.String())
-	return proj.loadModule(ctx, m, label)
+func (m *module) typeCheck(ctx context.Context, proj *Project, baseEnv *typecheck.Env, opening map[string]bool) {
+	src, err := os.ReadFile(m.path)
+	if err != nil {
+		m.checkErrs = []typecheck.Error{{Msg: err.Error()}}
+		return
+	}
+
+	f, err := syntax.Parse(m.path, src, 0)
+	if err != nil {
+		var synErr syntax.Error
+		if errors.As(err, &synErr) {
+			m.checkErrs = []typecheck.Error{{Pos: synErr.Pos, Msg: synErr.Msg}}
+		} else {
+			m.checkErrs = []typecheck.Error{{Msg: err.Error()}}
+		}
+		return
+	}
+
+	env := &typecheck.Env{
+		Predeclared: baseEnv.Predeclared,
+		Load: func(rawModule string) map[string]typecheck.Type {
+			l, err := m.resolveLabel(rawModule)
+			if err != nil {
+				return nil
+			}
+			dep := proj.openModule(ctx, l, opening)
+			if dep == nil {
+				return nil
+			}
+			return dep.exportTypes
+		},
+	}
+
+	if err := resolve.File(f, isPredeclared(env), isUniversal); err != nil {
+		var resolveErrs resolve.ErrorList
+		if errors.As(err, &resolveErrs) {
+			m.checkErrs = make([]typecheck.Error, len(resolveErrs))
+			for i, e := range resolveErrs {
+				m.checkErrs[i] = typecheck.Error{Pos: e.Pos, Msg: e.Msg}
+			}
+		} else {
+			m.checkErrs = []typecheck.Error{{Msg: err.Error()}}
+		}
+		return
+	}
+
+	info := &typecheck.Info{Defs: make(map[*syntax.Ident]*typecheck.Binding)}
+	m.checkErrs = typecheck.Check(f, env, info)
+	m.exportTypes = extractExports(f, info)
+}
+
+func (m *module) loadModule(ctx context.Context, proj *Project, rawLabel string) (starlark.StringDict, error) {
+	l, err := m.resolveLabel(rawLabel)
+	if err != nil {
+		return nil, err
+	}
+
+	m.dependencies = append(m.dependencies, l.String())
+	return proj.loadModule(ctx, m, l)
 }
 
 // load executes the module's code.
