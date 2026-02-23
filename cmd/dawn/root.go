@@ -71,6 +71,7 @@ func init() {
 	rootCmd.AddCommand(graphCmd)
 	rootCmd.AddCommand(newGetCommand())
 	rootCmd.AddCommand(tidyCmd)
+	rootCmd.AddCommand(checkCmd)
 
 	rootCmd.SetHelpCommand(helpCmd)
 }
