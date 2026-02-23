@@ -34,7 +34,7 @@ func newGetCommand() *cobra.Command {
 			}
 			moduleCache := filepath.Join(home, ".dawn", "modules", "cache")
 
-			renderer, err := newRenderer(work.verbose, work.diff, func() {})
+			renderer, err := newRenderer(work.verbose, work.diff, func() {}, func() {})
 			if err != nil {
 				return err
 			}

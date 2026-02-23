@@ -1,10 +1,13 @@
 package main
 
 import (
-	"fmt"
-	"os"
+	"errors"
 
 	"github.com/pgavlin/dawn"
+	starlark_os "github.com/pgavlin/dawn/lib/os"
+	starlark_sh "github.com/pgavlin/dawn/lib/sh"
+	starlark_json "github.com/pgavlin/starlark-go/lib/json"
+	"github.com/pgavlin/starlark-go/starlark"
 	"github.com/spf13/cobra"
 )
 
@@ -12,27 +15,30 @@ var checkCmd = &cobra.Command{
 	Use:   "check",
 	Short: "Type-check all BUILD.dawn files in the project.",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		renderer := &lineRenderer{stdout: os.Stdout, stderr: os.Stderr}
-
-		proj, err := dawn.Open(work.context, work.root, &dawn.OpenOptions{
-			Events: renderer,
-		})
+		rendered := make(chan bool)
+		renderer, err := newRenderer(work.verbose, work.diff, func() {
+			close(rendered)
+		}, func() {})
 		if err != nil {
 			return err
 		}
-		results := proj.CheckResults()
-		if len(results) == 0 {
-			return nil
+		work.renderer = renderer
+
+		events := dawn.Events(work.renderer)
+		_, err = dawn.Open(work.context, work.root, &dawn.OpenOptions{
+			Args:   args,
+			Events: events,
+			Builtins: starlark.StringDict{
+				"json": starlark_json.Module,
+				"os":   starlark_os.Module,
+				"sh":   starlark_sh.Module,
+			},
+		})
+		if err != nil {
+			return errors.Join(renderer.Close(), err)
 		}
-		for _, r := range results {
-			for _, e := range r.Errors {
-				if e.Pos.IsValid() {
-					fmt.Fprintf(os.Stderr, "%s: %s\n", e.Pos, e.Msg)
-				} else {
-					fmt.Fprintf(os.Stderr, "%s: %s\n", r.Path, e.Msg)
-				}
-			}
-		}
-		return fmt.Errorf("type-check failed")
+
+		<-rendered
+		return nil
 	},
 }

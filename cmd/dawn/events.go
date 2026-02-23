@@ -43,6 +43,7 @@ type lineRenderer struct {
 	m        sync.Mutex
 	stdout   io.Writer
 	stderr   io.Writer
+	onOpened func()
 	onLoaded func()
 }
 
@@ -117,6 +118,10 @@ func (e *lineRenderer) OpenDone(results []dawn.CheckResult, err error) {
 				fmt.Fprintf(e.stderr, "%s: %s\n", r.Path, ce.Msg)
 			}
 		}
+	}
+
+	if e.onOpened != nil {
+		e.onOpened()
 	}
 }
 
@@ -512,8 +517,10 @@ type statusRenderer struct {
 	done       targetList
 	statusLine string
 	loaded     bool
+	opened     bool
 	running    bool
 
+	onOpened func()
 	onLoaded func()
 
 	stdout io.Writer
@@ -605,6 +612,14 @@ func (e *statusRenderer) render(now time.Time, closed bool) {
 			}
 		}
 		e.line(e.stats.line() + suffix)
+	}
+
+	// If the project finished opening during the last quantum, inform any waiters.
+	if e.opened {
+		if e.onOpened != nil {
+			e.onOpened()
+		}
+		e.opened = false
 	}
 
 	// If the project finished loading during the last quantum, inform any waiters.
@@ -903,6 +918,7 @@ func (e *statusRenderer) OpenDone(results []dawn.CheckResult, err error) {
 			}
 		}
 	}
+	e.opened = true
 	e.dirty = true
 }
 
@@ -984,15 +1000,15 @@ func (e *statusRenderer) Close() error {
 	return nil
 }
 
-func newRenderer(verbose, diff bool, onLoaded func()) (renderer, error) {
+func newRenderer(verbose, diff bool, onOpened, onLoaded func()) (renderer, error) {
 	new := func(_ renderer) renderer {
 		if !term.IsTerminal(os.Stdout) {
-			return &lineRenderer{stdout: os.Stdout, stderr: os.Stderr, onLoaded: onLoaded}
+			return &lineRenderer{stdout: os.Stdout, stderr: os.Stderr, onOpened: onOpened, onLoaded: onLoaded}
 		}
 
 		width, height, err := term.GetSize(os.Stdout)
 		if err != nil {
-			return &lineRenderer{stdout: os.Stdout, stderr: os.Stderr, onLoaded: onLoaded}
+			return &lineRenderer{stdout: os.Stdout, stderr: os.Stderr, onOpened: onOpened, onLoaded: onLoaded}
 		}
 
 		events := &statusRenderer{
@@ -1005,6 +1021,7 @@ func newRenderer(verbose, diff bool, onLoaded func()) (renderer, error) {
 			diff:       diff,
 			stdout:     os.Stdout,
 			lastUpdate: time.Now(),
+			onOpened:   onOpened,
 			onLoaded:   onLoaded,
 		}
 

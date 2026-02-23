@@ -144,7 +144,7 @@ func (w *workspace) loadProject(args []string, index, quiet bool) error {
 	rendered := make(chan bool)
 	firstLoad := true
 
-	renderer, err := newRenderer(w.verbose, w.diff, func() {
+	renderer, err := newRenderer(w.verbose, w.diff, func() {}, func() {
 		// We only care about the first onload event.
 		if firstLoad {
 			close(rendered)
