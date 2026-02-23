@@ -12,7 +12,11 @@ var checkCmd = &cobra.Command{
 	Use:   "check",
 	Short: "Type-check all BUILD.dawn files in the project.",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		proj, err := dawn.Open(work.context, work.root, nil)
+		renderer := &lineRenderer{stdout: os.Stdout, stderr: os.Stderr}
+
+		proj, err := dawn.Open(work.context, work.root, &dawn.OpenOptions{
+			Events: renderer,
+		})
 		if err != nil {
 			return err
 		}
