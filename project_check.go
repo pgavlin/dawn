@@ -68,12 +68,12 @@ func (proj *Project) openModule(ctx context.Context, l *label.Label, opening map
 	m.path, m.requirements = path, reqs
 	proj.modules[key] = m
 
-	proj.events.ModuleLoading(l)
+	proj.events.ModuleOpening(l)
 	m.typeCheck(ctx, proj, proj.baseEnv, opening)
 	if len(m.checkErrs) > 0 {
-		proj.events.ModuleLoadFailed(l, fmt.Errorf("%d type-check error(s)", len(m.checkErrs)))
+		proj.events.ModuleOpenFailed(l, fmt.Errorf("%d type-check error(s)", len(m.checkErrs)))
 	} else {
-		proj.events.ModuleLoaded(l)
+		proj.events.ModuleOpened(l)
 	}
 	return m
 }

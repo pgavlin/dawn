@@ -66,6 +66,18 @@ func (e *lineRenderer) RequirementLoadFailed(label *label.Label, version string,
 	e.printe(label, fmt.Sprintf("failed: %v", errMessage(err)))
 }
 
+func (e *lineRenderer) ModuleOpening(label *label.Label) {
+	e.print(label, "opening")
+}
+
+func (e *lineRenderer) ModuleOpened(label *label.Label) {
+	e.print(label, "opened")
+}
+
+func (e *lineRenderer) ModuleOpenFailed(label *label.Label, err error) {
+	e.printe(label, fmt.Sprintf("open failed: %v", errMessage(err)))
+}
+
 func (e *lineRenderer) ModuleLoading(label *label.Label) {
 	e.print(label, "loading")
 }
@@ -191,6 +203,18 @@ func (e *dotRenderer) RequirementLoadFailed(label *label.Label, version string, 
 	e.next.RequirementLoadFailed(label, version, err)
 }
 
+func (e *dotRenderer) ModuleOpening(label *label.Label) {
+	e.next.ModuleOpening(label)
+}
+
+func (e *dotRenderer) ModuleOpened(label *label.Label) {
+	e.next.ModuleOpened(label)
+}
+
+func (e *dotRenderer) ModuleOpenFailed(label *label.Label, err error) {
+	e.next.ModuleOpenFailed(label, err)
+}
+
 func (e *dotRenderer) ModuleLoading(label *label.Label) {
 	e.next.ModuleLoading(label)
 }
@@ -294,6 +318,21 @@ func (e *jsonRenderer) RequirementLoaded(label *label.Label, version string) {
 func (e *jsonRenderer) RequirementLoadFailed(label *label.Label, version string, err error) {
 	e.event("RequirementLoadFailed", label, "version", version, "err", errMessage(err))
 	e.next.RequirementLoadFailed(label, version, err)
+}
+
+func (e *jsonRenderer) ModuleOpening(label *label.Label) {
+	e.event("ModuleOpening", label)
+	e.next.ModuleOpening(label)
+}
+
+func (e *jsonRenderer) ModuleOpened(label *label.Label) {
+	e.event("ModuleOpened", label)
+	e.next.ModuleOpened(label)
+}
+
+func (e *jsonRenderer) ModuleOpenFailed(label *label.Label, err error) {
+	e.event("ModuleOpenFailed", label, "err", errMessage(err))
+	e.next.ModuleOpenFailed(label, err)
 }
 
 func (e *jsonRenderer) ModuleLoading(label *label.Label) {
@@ -818,6 +857,18 @@ func (e *statusRenderer) RequirementLoaded(label *label.Label, version string) {
 
 func (e *statusRenderer) RequirementLoadFailed(label *label.Label, version string, err error) {
 	e.targetDone(label, color.RedString("failed: %v", errMessage(err)), true, true)
+}
+
+func (e *statusRenderer) ModuleOpening(label *label.Label) {
+	e.targetStarted(label, "", nil, "opening...")
+}
+
+func (e *statusRenderer) ModuleOpened(label *label.Label) {
+	e.targetDone(label, "opened", false, false)
+}
+
+func (e *statusRenderer) ModuleOpenFailed(label *label.Label, err error) {
+	e.targetDone(label, color.RedString("open failed: %v", errMessage(err)), true, true)
 }
 
 func (e *statusRenderer) ModuleLoading(label *label.Label) {

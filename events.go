@@ -23,7 +23,14 @@ type Events interface {
 	// RequirementLoadFailed is called when a referenced project fails to load.
 	RequirementLoadFailed(label *label.Label, version string, err error)
 
-	// ModuleLoading is called when the given module begins loading.
+	// ModuleOpening is called when a module begins being opened (discovered + type-checked).
+	ModuleOpening(label *label.Label)
+	// ModuleOpened is called when a module finishes opening successfully.
+	ModuleOpened(label *label.Label)
+	// ModuleOpenFailed is called when a module fails to open.
+	ModuleOpenFailed(label *label.Label, err error)
+
+	// ModuleLoading is called when the given module begins loading (Starlark evaluation).
 	ModuleLoading(label *label.Label)
 	// ModuleLoaded is called when the given module finishes loading successfully.
 	ModuleLoaded(label *label.Label)
@@ -61,6 +68,9 @@ func (discardEventsT) Print(label *label.Label, line string)                    
 func (discardEventsT) RequirementLoading(label *label.Label, version string)                   {}
 func (discardEventsT) RequirementLoaded(label *label.Label, version string)                    {}
 func (discardEventsT) RequirementLoadFailed(label *label.Label, version string, err error)     {}
+func (discardEventsT) ModuleOpening(label *label.Label)                                        {}
+func (discardEventsT) ModuleOpened(label *label.Label)                                         {}
+func (discardEventsT) ModuleOpenFailed(label *label.Label, err error)                          {}
 func (discardEventsT) ModuleLoading(label *label.Label)                                        {}
 func (discardEventsT) ModuleLoaded(label *label.Label)                                         {}
 func (discardEventsT) ModuleLoadFailed(label *label.Label, err error)                          {}
@@ -94,6 +104,9 @@ func (e *runEvents) process(thread *starlark.Thread) error {
 func (*runEvents) RequirementLoading(label *label.Label, version string)               {}
 func (*runEvents) RequirementLoaded(label *label.Label, version string)                {}
 func (*runEvents) RequirementLoadFailed(label *label.Label, version string, err error) {}
+func (*runEvents) ModuleOpening(label *label.Label)                                    {}
+func (*runEvents) ModuleOpened(label *label.Label)                                     {}
+func (*runEvents) ModuleOpenFailed(label *label.Label, err error)                      {}
 func (*runEvents) ModuleLoading(label *label.Label)                                    {}
 func (*runEvents) ModuleLoaded(label *label.Label)                                     {}
 func (*runEvents) ModuleLoadFailed(label *label.Label, err error)                      {}

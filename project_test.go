@@ -50,6 +50,18 @@ func (e *testEvents) RequirementLoadFailed(label *label.Label, version string, e
 	e.event("RequirementLoadFailed", label, "version", version, "err", err)
 }
 
+func (e *testEvents) ModuleOpening(label *label.Label) {
+	e.event("ModuleOpening", label)
+}
+
+func (e *testEvents) ModuleOpened(label *label.Label) {
+	e.event("ModuleOpened", label)
+}
+
+func (e *testEvents) ModuleOpenFailed(label *label.Label, err error) {
+	e.event("ModuleOpenFailed", label, "err", err)
+}
+
 func (e *testEvents) ModuleLoading(label *label.Label) {
 	e.event("ModuleLoading", label)
 }
