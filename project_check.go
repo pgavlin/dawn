@@ -14,32 +14,10 @@ import (
 	"github.com/pgavlin/starlark-go/typecheck"
 )
 
-// CheckOptions configures project type-checking.
-type CheckOptions struct {
-	Events Events
-}
-
 // CheckResult holds type-checking errors for a single file.
 type CheckResult struct {
 	Path   string
 	Errors []typecheck.Error
-}
-
-// Check type-checks all BUILD.dawn files in the project at root.
-// Module loads are resolved using the same logic as Project.Load,
-// including MVS dependency resolution and project alias handling.
-func Check(ctx context.Context, root string, options *CheckOptions) ([]CheckResult, error) {
-	var events Events
-	if options != nil {
-		events = options.Events
-	}
-
-	proj, err := newProjectForCheck(root, events)
-	if err != nil {
-		return nil, err
-	}
-
-	return proj.openModules(ctx)
 }
 
 // openModule creates or retrieves a module in proj.modules, populates its
@@ -92,7 +70,7 @@ func (proj *Project) openModule(ctx context.Context, l *label.Label, opening map
 // openModules walks the project tree, creates module structs, and type-checks them.
 // This is the sole source of module discovery — Load() does not walk the filesystem.
 func (proj *Project) openModules(ctx context.Context) ([]CheckResult, error) {
-	proj.baseEnv = DawnEnv()
+	proj.baseEnv = proj.buildTypeEnv()
 	proj.cyclicErr = nil
 	opening := make(map[string]bool)
 
