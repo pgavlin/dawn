@@ -94,29 +94,50 @@ func (options *LoadOptions) apply(p *Project, preferIndex *bool) {
 	}
 }
 
-func Load(ctx context.Context, root string, options *LoadOptions) (proj *Project, err error) {
+// newProjectForCheck creates a minimally-initialized Project with config loaded.
+// It sets up root, ignore patterns, requirements, buildList, and MVS resolver,
+// but does not create a runner, temp dirs, or execute any modules.
+func newProjectForCheck(root string, events Events) (*Project, error) {
 	home, err := homedir.Dir()
 	if err != nil {
 		return nil, fmt.Errorf("getting home directory: %w", err)
 	}
 	moduleCache := filepath.Join(home, ".dawn", "modules", "cache")
 
-	proj = &Project{
+	proj := &Project{
 		root:        root,
-		work:        filepath.Join(root, ".dawn", "build"),
-		temp:        filepath.Join(root, ".dawn", "build", "temp"),
 		moduleCache: moduleCache,
-		flags:       map[string]*Flag{},
+		events:      events,
 		modules:     map[string]*module{},
 		targets:     map[string]*runTarget{},
+		flags:       map[string]*Flag{},
 	}
-	preferIndex := false
-	options.apply(proj, &preferIndex)
-
+	if proj.events == nil {
+		proj.events = DiscardEvents
+	}
 	proj.resolver = mvs.NewResolver(moduleCache, mvs.DefaultDialer, resolveEvents{proj.events})
 	if err := proj.loadConfig(); err != nil {
 		return nil, err
 	}
+	return proj, nil
+}
+
+func Load(ctx context.Context, root string, options *LoadOptions) (proj *Project, err error) {
+	var events Events
+	if options != nil {
+		events = options.Events
+	}
+
+	proj, err = newProjectForCheck(root, events)
+	if err != nil {
+		return nil, err
+	}
+
+	proj.work = filepath.Join(root, ".dawn", "build")
+	proj.temp = filepath.Join(root, ".dawn", "build", "temp")
+
+	preferIndex := false
+	options.apply(proj, &preferIndex)
 
 	proj.runner = runner.NewRunner(proj, runtime.NumCPU())
 
