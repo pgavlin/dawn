@@ -6,11 +6,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"slices"
 	"sync"
 
 	"github.com/pgavlin/dawn/label"
-	"github.com/pgavlin/dawn/runner"
 	"github.com/pgavlin/dawn/util"
 	"github.com/pgavlin/starlark-go/resolve"
 	"github.com/pgavlin/starlark-go/starlark"
@@ -22,8 +20,6 @@ import (
 type module struct {
 	m    sync.Mutex
 	cond *sync.Cond
-
-	loading *module
 
 	dependencies []string
 
@@ -46,20 +42,6 @@ type module struct {
 	out *lineWriter
 }
 
-// getLoading returns the module (if any) being loaded by the receiver.
-func (m *module) getLoading() *module {
-	m.m.Lock()
-	defer m.m.Unlock()
-	return m.loading
-}
-
-// setLoading marks the receiver as waiting on the given module.
-func (m *module) setLoading(other *module) {
-	m.m.Lock()
-	m.loading = other
-	m.m.Unlock()
-}
-
 // done marks the receiver as done.
 func (m *module) done(data starlark.StringDict, err error) (starlark.StringDict, error) {
 	m.data, m.err = data, err
@@ -72,28 +54,10 @@ func (m *module) done(data starlark.StringDict, err error) (starlark.StringDict,
 	return data, err
 }
 
-// wait waits for the receiver to finish loading. It returns an error if the module fails
-// to load or if the wait would result in a cyclic dependency.
-func (m *module) wait(waiter *module) (starlark.StringDict, error) {
+// wait waits for the receiver to finish loading.
+func (m *module) wait() (starlark.StringDict, error) {
 	m.m.Lock()
 	defer m.m.Unlock()
-
-	if waiter != nil {
-		loading := m.loading
-		path := []string{waiter.label.String()}
-		for loading != nil {
-			if loading == waiter {
-				path = append(path, m.label.String())
-				slices.Reverse(path)
-				return nil, &runner.CyclicDependencyError{
-					On:   m.label.String(),
-					Path: path,
-				}
-			}
-			path = append(path, loading.label.String())
-			loading = loading.getLoading()
-		}
-	}
 
 	for !m.loaded {
 		m.cond.Wait()
@@ -230,7 +194,7 @@ func (m *module) loadModule(ctx context.Context, proj *Project, rawLabel string)
 	}
 
 	m.dependencies = append(m.dependencies, l.String())
-	return proj.loadModule(ctx, m, l)
+	return proj.loadModule(ctx, l)
 }
 
 // load executes the module's code.

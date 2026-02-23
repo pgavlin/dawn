@@ -69,6 +69,7 @@ type Project struct {
 
 	preferIndex  bool
 	checkResults []CheckResult
+	cyclicErr    error
 
 	flags   map[string]*Flag
 	modules map[string]*module
@@ -180,7 +181,7 @@ func (proj *Project) eval(ctx context.Context, index bool) (err error) {
 		go func() {
 			defer wg.Done()
 			// loadModule handles claiming (evaluating flag) and dedup
-			proj.loadModule(ctx, nil, m.label)
+			proj.loadModule(ctx, m.label)
 		}()
 	}
 	wg.Wait()
@@ -571,19 +572,12 @@ func (proj *Project) walkPackages(root, rel string, fn func(pkg string)) error {
 	return nil
 }
 
-
-func (proj *Project) loadModule(ctx context.Context, waiter *module, l *label.Label) (starlark.StringDict, error) {
+func (proj *Project) loadModule(ctx context.Context, l *label.Label) (starlark.StringDict, error) {
 	proj.m.Lock()
 	m, exists := proj.modules[l.String()]
 	if exists && (m.loaded || m.evaluating) {
 		proj.m.Unlock()
-
-		if waiter != nil {
-			waiter.setLoading(m)
-			defer waiter.setLoading(nil)
-		}
-
-		return m.wait(waiter)
+		return m.wait()
 	}
 	if !exists {
 		m = &module{label: l, out: newLineWriter(l, proj.events)}
@@ -592,11 +586,6 @@ func (proj *Project) loadModule(ctx context.Context, waiter *module, l *label.La
 	}
 	m.evaluating = true
 	proj.m.Unlock()
-
-	if waiter != nil {
-		waiter.setLoading(m)
-		defer waiter.setLoading(nil)
-	}
 
 	return m.load(ctx, proj)
 }

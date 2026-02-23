@@ -47,12 +47,23 @@ func Check(ctx context.Context, root string, options *CheckOptions) ([]CheckResu
 // map provides cycle detection (single-threaded during Open).
 func (proj *Project) openModule(ctx context.Context, l *label.Label, opening map[string]bool) *module {
 	key := l.String()
+
+	// Cycle detection: a module in the opening set is currently being
+	// type-checked in our call stack, so loading it creates a cycle.
+	// Check this before proj.modules because modules are added to
+	// proj.modules before their type-check completes.
+	if opening[key] {
+		proj.cyclicErr = fmt.Errorf("cyclic dependency on %v", key)
+		if m, ok := proj.modules[key]; ok {
+			return m
+		}
+		return nil
+	}
+
 	if m, ok := proj.modules[key]; ok {
 		return m
 	}
-	if opening[key] {
-		return nil // Cycle — break gracefully
-	}
+
 	opening[key] = true
 	defer delete(opening, key)
 
@@ -82,6 +93,7 @@ func (proj *Project) openModule(ctx context.Context, l *label.Label, opening map
 // This is the sole source of module discovery — Load() does not walk the filesystem.
 func (proj *Project) openModules(ctx context.Context) ([]CheckResult, error) {
 	proj.baseEnv = DawnEnv()
+	proj.cyclicErr = nil
 	opening := make(map[string]bool)
 
 	err := proj.walkPackages(proj.root, ".", func(pkg string) {
@@ -90,6 +102,9 @@ func (proj *Project) openModules(ctx context.Context) ([]CheckResult, error) {
 	})
 	if err != nil {
 		return nil, err
+	}
+	if proj.cyclicErr != nil {
+		return nil, proj.cyclicErr
 	}
 
 	// Collect check results from all opened modules (including transitive deps)
