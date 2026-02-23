@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"sync"
 	"testing"
 
@@ -353,4 +354,67 @@ func TestZeroLengthSource(t *testing.T) {
 		validate: func(t *testing.T, _ string, _ []testEvent) {},
 	}
 	pt.run(t)
+}
+
+func TestTypeCheck(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		path       string
+		wantErrors int
+		wantMsgs   []string
+	}{
+		{"clean", "testdata/typecheck-clean", 0, nil},
+		{"errors", "testdata/typecheck-errors", 1, []string{"undefined"}},
+		{"load", "testdata/typecheck-load", 0, nil},
+		{"load-error", "testdata/typecheck-load-error", 1, []string{"undefined"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			temp := t.TempDir()
+
+			path, err := filepath.Abs(tt.path)
+			require.NoError(t, err)
+
+			err = copy.Copy(filepath.Join(path, "base"), temp, copy.Options{
+				OnDirExists: func(_, _ string) copy.DirExistsAction {
+					return copy.Merge
+				},
+			})
+			require.NoError(t, err)
+
+			ctx := t.Context()
+			proj, err := Open(ctx, temp, &OpenOptions{})
+			require.NoError(t, err)
+
+			results := proj.CheckResults()
+
+			var totalErrors int
+			for _, r := range results {
+				totalErrors += len(r.Errors)
+			}
+
+			assert.Equal(t, tt.wantErrors, totalErrors, "unexpected number of type-check errors")
+
+			for _, msg := range tt.wantMsgs {
+				found := false
+				for _, r := range results {
+					for _, e := range r.Errors {
+						if strings.Contains(e.Msg, msg) {
+							found = true
+							break
+						}
+					}
+					if found {
+						break
+					}
+				}
+				assert.True(t, found, "expected error message containing %q", msg)
+			}
+		})
+	}
 }

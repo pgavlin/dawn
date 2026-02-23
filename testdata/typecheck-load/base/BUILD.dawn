@@ -1,0 +1,7 @@
+load(":mod.dawn", "helper")
+
+result = helper()
+
+@target()
+def default():
+    pass
