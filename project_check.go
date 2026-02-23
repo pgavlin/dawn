@@ -39,6 +39,11 @@ func Check(ctx context.Context, root string, options *CheckOptions) ([]CheckResu
 		return nil, err
 	}
 
+	return proj.typeCheckAll(ctx)
+}
+
+// typeCheckAll type-checks all BUILD.dawn files in the project.
+func (proj *Project) typeCheckAll(ctx context.Context) ([]CheckResult, error) {
 	pc := &projectChecker{
 		proj:    proj,
 		baseEnv: DawnEnv(),
@@ -48,7 +53,7 @@ func Check(ctx context.Context, root string, options *CheckOptions) ([]CheckResu
 
 	walked := make(map[string]bool)
 	var results []CheckResult
-	err = pc.walkProject(proj.root, ".", func(path string) {
+	err := pc.walkProject(proj.root, ".", func(path string) {
 		walked[path] = true
 		pc.checkModule(ctx, path, "", proj.requirements)
 		if r := pc.cache[path]; r != nil && len(r.errs) > 0 {
@@ -111,7 +116,7 @@ type checkResult struct {
 // projectChecker coordinates type-checking across modules in a Dawn project.
 type projectChecker struct {
 	proj    *Project                // minimal project (config only) for fetchModule, root, ignore
-	baseEnv *typecheck.Env         // shared Names + TypeDescriptors from DawnEnv()
+	baseEnv *typecheck.Env         // shared Predeclared from DawnEnv()
 	cache   map[string]*checkResult // resolved filepath → cached result
 	loading map[string]bool         // filepath → currently being checked (cycle detection)
 }
@@ -188,13 +193,12 @@ func (pc *projectChecker) pathToPackage(filePath string) string {
 	return "//" + filepath.ToSlash(rel)
 }
 
-// envForModule creates a per-module env that shares Names and TypeDescriptors from
+// envForModule creates a per-module env that shares Predeclared from
 // baseEnv but has a Load closure capturing the module's package and requirements
 // for relative label and alias resolution.
 func (pc *projectChecker) envForModule(ctx context.Context, project, pkg string, requirements map[string]string) *typecheck.Env {
 	return &typecheck.Env{
-		Names:           pc.baseEnv.Names,
-		TypeDescriptors: pc.baseEnv.TypeDescriptors,
+		Predeclared: pc.baseEnv.Predeclared,
 		Load: func(module string) map[string]typecheck.Type {
 			return pc.resolveAndCheck(ctx, module, project, pkg, requirements)
 		},

@@ -2,35 +2,50 @@ package dawn
 
 import "github.com/pgavlin/starlark-go/typecheck"
 
-// DawnEnv returns a typecheck.Env that includes both the standard Starlark
-// built-ins and all Dawn-specific predeclared names and type descriptors.
+// cacheType is the Named type for Cache values.
+var cacheType = typecheck.NewNamed("Cache", typecheck.WithAttrs(map[string]typecheck.Type{
+	"once": &typecheck.Callable{
+		Name: "once",
+		Params: []typecheck.Param{
+			{Name: "key", Type: typecheck.String},
+			{Name: "callable", Type: typecheck.Any},
+		},
+		ReturnType: typecheck.Any,
+	},
+}))
+
+// targetType is the Named type for Target values.
+var targetType = typecheck.NewNamed("Target", typecheck.WithAttrs(map[string]typecheck.Type{
+	"label":        typecheck.String,
+	"always":       typecheck.Bool,
+	"function":     typecheck.Any,
+	"dependencies": &typecheck.List{Elem: typecheck.String},
+	"sources":      &typecheck.List{Elem: typecheck.String},
+	"generates":    &typecheck.List{Elem: typecheck.String},
+	"position":     typecheck.Any,
+}))
+
+// DawnEnv returns a typecheck.Env that includes all Dawn-specific predeclared
+// names. Universal builtins live in typecheck.Universe.
 func DawnEnv() *typecheck.Env {
-	std := typecheck.StandardEnv()
-
 	env := &typecheck.Env{
-		Names:           make(map[string]typecheck.Type),
-		TypeDescriptors: make(map[string]*typecheck.TypeDescriptor),
+		Predeclared: make(map[string]typecheck.Type),
 	}
 
-	// Copy standard env names.
-	for k, v := range std.Names {
-		env.Names[k] = v
-	}
-
-	// Also register struct and module as universals.
-	env.Names["struct"] = &typecheck.Callable{
+	// struct and module constructors (universals in Dawn)
+	env.Predeclared["struct"] = &typecheck.Callable{
 		Name:       "struct",
 		Params:     []typecheck.Param{{Name: "kwargs", Type: typecheck.Any, StarStar: true}},
 		ReturnType: typecheck.Any,
 	}
-	env.Names["module"] = &typecheck.Callable{
+	env.Predeclared["module"] = &typecheck.Callable{
 		Name:       "module",
 		Params:     []typecheck.Param{{Name: "name", Type: typecheck.String}, {Name: "kwargs", Type: typecheck.Any, StarStar: true}},
 		ReturnType: typecheck.Any,
 	}
 
 	// host object
-	env.Names["host"] = &typecheck.Object{
+	env.Predeclared["host"] = &typecheck.Object{
 		Name: "host",
 		Attrs: map[string]typecheck.Type{
 			"arch": typecheck.String,
@@ -39,27 +54,27 @@ func DawnEnv() *typecheck.Env {
 	}
 
 	// Cache constructor
-	env.Names["Cache"] = &typecheck.Callable{
+	env.Predeclared["Cache"] = &typecheck.Callable{
 		Name:       "Cache",
-		ReturnType: &typecheck.Named{Name: "Cache"},
+		ReturnType: cacheType,
 	}
 
 	// path(label: str) -> str
-	env.Names["path"] = &typecheck.Callable{
+	env.Predeclared["path"] = &typecheck.Callable{
 		Name:       "path",
 		Params:     []typecheck.Param{{Name: "label", Type: typecheck.String}},
 		ReturnType: typecheck.String,
 	}
 
 	// label(path: str) -> str
-	env.Names["label"] = &typecheck.Callable{
+	env.Predeclared["label"] = &typecheck.Callable{
 		Name:       "label",
 		Params:     []typecheck.Param{{Name: "path", Type: typecheck.String}},
 		ReturnType: typecheck.String,
 	}
 
 	// contains(path: str) -> tuple[str | None, bool]
-	env.Names["contains"] = &typecheck.Callable{
+	env.Predeclared["contains"] = &typecheck.Callable{
 		Name:   "contains",
 		Params: []typecheck.Param{{Name: "path", Type: typecheck.String}},
 		ReturnType: &typecheck.Tuple{Elems: []typecheck.Type{
@@ -69,7 +84,7 @@ func DawnEnv() *typecheck.Env {
 	}
 
 	// parse_flag(name, default=None, type=None, choices=None, required=None, help=None) -> any
-	env.Names["parse_flag"] = &typecheck.Callable{
+	env.Predeclared["parse_flag"] = &typecheck.Callable{
 		Name: "parse_flag",
 		Params: []typecheck.Param{
 			{Name: "name", Type: typecheck.String},
@@ -83,7 +98,7 @@ func DawnEnv() *typecheck.Env {
 	}
 
 	// target(...) -> Target
-	env.Names["target"] = &typecheck.Callable{
+	env.Predeclared["target"] = &typecheck.Callable{
 		Name: "target",
 		Params: []typecheck.Param{
 			{Name: "name", Type: typecheck.String, Optional: true},
@@ -95,16 +110,15 @@ func DawnEnv() *typecheck.Env {
 			{Name: "always", Type: typecheck.Bool, Optional: true},
 			{Name: "docs", Type: typecheck.String, Optional: true},
 		},
-		ReturnType: &typecheck.Named{Name: "Target"},
+		ReturnType: targetType,
 	}
 
 	// glob(include, exclude=None, dirs=None) -> list[str]
-	// include/exclude accept both str and list[str] (via util.StringList.Unpack)
 	stringOrStringList := &typecheck.Union{Types: []typecheck.Type{
 		typecheck.String,
 		&typecheck.List{Elem: typecheck.String},
 	}}
-	env.Names["glob"] = &typecheck.Callable{
+	env.Predeclared["glob"] = &typecheck.Callable{
 		Name: "glob",
 		Params: []typecheck.Param{
 			{Name: "include", Type: stringOrStringList},
@@ -115,14 +129,14 @@ func DawnEnv() *typecheck.Env {
 	}
 
 	// fail(message: str) -> None
-	env.Names["fail"] = &typecheck.Callable{
+	env.Predeclared["fail"] = &typecheck.Callable{
 		Name:       "fail",
 		Params:     []typecheck.Param{{Name: "message", Type: typecheck.String}},
 		ReturnType: typecheck.None,
 	}
 
 	// run(label_or_target, always=None, dry_run=None, callback=None) -> None
-	env.Names["run"] = &typecheck.Callable{
+	env.Predeclared["run"] = &typecheck.Callable{
 		Name: "run",
 		Params: []typecheck.Param{
 			{Name: "label_or_target", Type: typecheck.Any},
@@ -134,37 +148,37 @@ func DawnEnv() *typecheck.Env {
 	}
 
 	// get_target(label: str) -> Target
-	env.Names["get_target"] = &typecheck.Callable{
+	env.Predeclared["get_target"] = &typecheck.Callable{
 		Name:       "get_target",
 		Params:     []typecheck.Param{{Name: "label", Type: typecheck.String}},
-		ReturnType: &typecheck.Named{Name: "Target"},
+		ReturnType: targetType,
 	}
 
 	// flags() -> list[Flag]
-	env.Names["flags"] = &typecheck.Callable{
+	env.Predeclared["flags"] = &typecheck.Callable{
 		Name:       "flags",
-		ReturnType: &typecheck.List{Elem: &typecheck.Named{Name: "Flag"}},
+		ReturnType: &typecheck.List{Elem: typecheck.NewNamed("Flag")},
 	}
 
 	// targets() -> list[Target]
-	env.Names["targets"] = &typecheck.Callable{
+	env.Predeclared["targets"] = &typecheck.Callable{
 		Name:       "targets",
-		ReturnType: &typecheck.List{Elem: &typecheck.Named{Name: "Target"}},
+		ReturnType: &typecheck.List{Elem: targetType},
 	}
 
 	// sources() -> list[str]
-	env.Names["sources"] = &typecheck.Callable{
+	env.Predeclared["sources"] = &typecheck.Callable{
 		Name:       "sources",
 		ReturnType: &typecheck.List{Elem: typecheck.String},
 	}
 
 	// package is a string
-	env.Names["package"] = typecheck.String
+	env.Predeclared["package"] = typecheck.String
 
 	// Library modules: json, sh, os
 
 	// json module
-	env.Names["json"] = &typecheck.Object{
+	env.Predeclared["json"] = &typecheck.Object{
 		Name: "json",
 		Attrs: map[string]typecheck.Type{
 			"encode": &typecheck.Callable{
@@ -195,7 +209,7 @@ func DawnEnv() *typecheck.Env {
 	}
 
 	// sh module
-	env.Names["sh"] = &typecheck.Object{
+	env.Predeclared["sh"] = &typecheck.Object{
 		Name: "sh",
 		Attrs: map[string]typecheck.Type{
 			"exec": &typecheck.Callable{
@@ -264,7 +278,7 @@ func DawnEnv() *typecheck.Env {
 		},
 	}
 
-	env.Names["os"] = &typecheck.Object{
+	env.Predeclared["os"] = &typecheck.Object{
 		Name: "os",
 		Attrs: map[string]typecheck.Type{
 			"path": osPathObj,
@@ -325,35 +339,6 @@ func DawnEnv() *typecheck.Env {
 		},
 	}
 
-	// Type descriptors for named types
-
-	// Cache type descriptor
-	env.TypeDescriptors["Cache"] = &typecheck.TypeDescriptor{
-		Methods: map[string]*typecheck.Callable{
-			"once": {
-				Name: "once",
-				Params: []typecheck.Param{
-					{Name: "key", Type: typecheck.String},
-					{Name: "callable", Type: typecheck.Any},
-				},
-				ReturnType: typecheck.Any,
-			},
-		},
-	}
-
-	// Target type descriptor
-	env.TypeDescriptors["Target"] = &typecheck.TypeDescriptor{
-		Attrs: map[string]typecheck.Type{
-			"label":        typecheck.String,
-			"always":       typecheck.Bool,
-			"function":     typecheck.Any,
-			"dependencies": &typecheck.List{Elem: typecheck.String},
-			"sources":      &typecheck.List{Elem: typecheck.String},
-			"generates":    &typecheck.List{Elem: typecheck.String},
-			"position":     typecheck.Any,
-		},
-	}
-
 	return env
 }
 
@@ -361,21 +346,20 @@ func DawnEnv() *typecheck.Env {
 // in the given environment.
 func isPredeclared(env *typecheck.Env) func(string) bool {
 	return func(name string) bool {
-		_, ok := env.Names[name]
+		_, ok := env.Predeclared[name]
 		return ok
 	}
 }
 
 // isUniversal reports whether a name is a Starlark universal (built-in).
-// This matches the names in starlark.Universe plus struct and module.
 func isUniversal(name string) bool {
+	_, ok := typecheck.Universe[name]
+	if ok {
+		return true
+	}
+	// struct and module are also treated as universals in Dawn
 	switch name {
-	case "None", "True", "False",
-		"abs", "any", "all", "bool", "bytes", "chr", "dict", "dir",
-		"enumerate", "fail", "float", "getattr", "hasattr", "hash",
-		"int", "len", "list", "max", "min", "ord", "print", "range",
-		"repr", "reversed", "set", "sorted", "str", "tuple", "type", "zip",
-		"struct", "module":
+	case "struct", "module":
 		return true
 	}
 	return false

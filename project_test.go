@@ -66,6 +66,10 @@ func (e *testEvents) LoadDone(err error) {
 	e.event("LoadDone", nil, "err", err)
 }
 
+func (e *testEvents) OpenDone(results []CheckResult, err error) {
+	e.event("OpenDone", nil, "results", results, "err", err)
+}
+
 func (e *testEvents) TargetUpToDate(label *label.Label) {
 	e.event("TargetUpToDate", label)
 }
@@ -144,7 +148,7 @@ func (pt *projectTest) run(t *testing.T) {
 	})
 
 	events := &testEvents{}
-	options := &LoadOptions{
+	options := &OpenOptions{
 		Events: events,
 		Builtins: starlark.StringDict{
 			"cancel": cancelBuiltin,
@@ -160,7 +164,20 @@ func (pt *projectTest) run(t *testing.T) {
 		}})
 		require.NoError(t, err)
 
-		proj, err := Load(ctx, temp, options)
+		proj, err := Open(ctx, temp, options)
+		if pt.loadErr != "" {
+			if err != nil {
+				assert.ErrorContains(t, err, pt.loadErr)
+				return
+			}
+			// loadErr might occur during Load
+			err = proj.Load(ctx)
+			assert.ErrorContains(t, err, pt.loadErr)
+			return
+		}
+		require.NoError(t, err)
+
+		err = proj.Load(ctx)
 		if pt.loadErr != "" {
 			assert.ErrorContains(t, err, pt.loadErr)
 			return

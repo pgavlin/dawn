@@ -93,6 +93,21 @@ func (e *lineRenderer) LoadDone(err error) {
 	}
 }
 
+func (e *lineRenderer) OpenDone(results []dawn.CheckResult, err error) {
+	e.m.Lock()
+	defer e.m.Unlock()
+
+	for _, r := range results {
+		for _, ce := range r.Errors {
+			if ce.Pos.IsValid() {
+				fmt.Fprintf(e.stderr, "%s: %s\n", ce.Pos, ce.Msg)
+			} else {
+				fmt.Fprintf(e.stderr, "%s: %s\n", r.Path, ce.Msg)
+			}
+		}
+	}
+}
+
 func (e *lineRenderer) TargetUpToDate(label *label.Label) {
 	e.print(label, "up-to-date")
 }
@@ -190,6 +205,10 @@ func (e *dotRenderer) ModuleLoadFailed(label *label.Label, err error) {
 
 func (e *dotRenderer) LoadDone(err error) {
 	e.next.LoadDone(err)
+}
+
+func (e *dotRenderer) OpenDone(results []dawn.CheckResult, err error) {
+	e.next.OpenDone(results, err)
 }
 
 func (e *dotRenderer) TargetUpToDate(label *label.Label) {
@@ -295,6 +314,11 @@ func (e *jsonRenderer) ModuleLoadFailed(label *label.Label, err error) {
 func (e *jsonRenderer) LoadDone(err error) {
 	e.event("LoadDone", nil, "err", errMessage(err))
 	e.next.LoadDone(err)
+}
+
+func (e *jsonRenderer) OpenDone(results []dawn.CheckResult, err error) {
+	e.event("OpenDone", nil, "results", results, "err", errMessage(err))
+	e.next.OpenDone(results, err)
 }
 
 func (e *jsonRenderer) TargetUpToDate(label *label.Label) {
@@ -813,6 +837,22 @@ func (e *statusRenderer) LoadDone(err error) {
 	defer e.m.Unlock()
 
 	e.running, e.loaded, e.dirty = true, true, true
+}
+
+func (e *statusRenderer) OpenDone(results []dawn.CheckResult, err error) {
+	e.m.Lock()
+	defer e.m.Unlock()
+
+	for _, r := range results {
+		for _, ce := range r.Errors {
+			if ce.Pos.IsValid() {
+				e.lines = append(e.lines, fmt.Sprintf("%s: %s", ce.Pos, ce.Msg))
+			} else {
+				e.lines = append(e.lines, fmt.Sprintf("%s: %s", r.Path, ce.Msg))
+			}
+		}
+	}
+	e.dirty = true
 }
 
 func (e *statusRenderer) TargetUpToDate(label *label.Label) {

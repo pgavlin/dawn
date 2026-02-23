@@ -162,7 +162,7 @@ func (w *workspace) loadProject(args []string, index, quiet bool) error {
 		events = dawn.DiscardEvents
 	}
 
-	options := &dawn.LoadOptions{
+	proj, err := dawn.Open(w.context, w.root, &dawn.OpenOptions{
 		Args:   args,
 		Events: events,
 		Builtins: starlark.StringDict{
@@ -171,12 +171,16 @@ func (w *workspace) loadProject(args []string, index, quiet bool) error {
 			"sh":   starlark_sh.Module,
 		},
 		PreferIndex: !w.reindex && index,
-	}
-	project, err := dawn.Load(w.context, w.root, options)
+	})
 	if err != nil {
 		return errors.Join(renderer.Close(), err)
 	}
-	w.project = project
+
+	if err := proj.Load(w.context); err != nil {
+		return errors.Join(renderer.Close(), err)
+	}
+
+	w.project = proj
 	w.graph = buildGraph(w.project)
 
 	<-rendered

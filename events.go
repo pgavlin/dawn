@@ -45,6 +45,9 @@ type Events interface {
 	// RunDone is called when a run finishes.
 	RunDone(err error)
 
+	// OpenDone is called when a project finishes opening (config load + type-check).
+	OpenDone(results []CheckResult, err error)
+
 	// FileChanged is called during Watch when a file changes and triggers a reload.
 	FileChanged(label *label.Label)
 }
@@ -68,6 +71,7 @@ func (discardEventsT) TargetEvaluating(label *label.Label, reason string, diff d
 func (discardEventsT) TargetFailed(label *label.Label, err error)                              {}
 func (discardEventsT) TargetSucceeded(label *label.Label, changed bool)                        {}
 func (discardEventsT) RunDone(err error)                                                       {}
+func (discardEventsT) OpenDone(results []CheckResult, err error)                               {}
 func (discardEventsT) FileChanged(label *label.Label)                                          {}
 
 type runEvents struct {
@@ -94,6 +98,7 @@ func (*runEvents) ModuleLoading(label *label.Label)                             
 func (*runEvents) ModuleLoaded(label *label.Label)                                     {}
 func (*runEvents) ModuleLoadFailed(label *label.Label, err error)                      {}
 func (*runEvents) LoadDone(err error)                                                  {}
+func (*runEvents) OpenDone(results []CheckResult, err error)                           {}
 func (*runEvents) FileChanged(label *label.Label)                                      {}
 
 func (e *runEvents) Print(label *label.Label, line string) {

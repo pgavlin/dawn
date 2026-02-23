@@ -66,6 +66,9 @@ type Project struct {
 	always bool
 	dryrun bool
 
+	preferIndex  bool
+	checkResults []CheckResult
+
 	flags   map[string]*Flag
 	modules map[string]*module
 	targets map[string]*runTarget
@@ -73,25 +76,12 @@ type Project struct {
 	runner *runner.Runner
 }
 
-type LoadOptions struct {
-	Args   []string
-	Events Events
-
-	Builtins starlark.StringDict
-
+// OpenOptions configures a project Open.
+type OpenOptions struct {
+	Args        []string
+	Events      Events
+	Builtins    starlark.StringDict
 	PreferIndex bool
-}
-
-func (options *LoadOptions) apply(p *Project, preferIndex *bool) {
-	if options != nil {
-		p.args = options.Args
-		p.builtins = options.Builtins
-		p.events = options.Events
-		*preferIndex = options.PreferIndex
-	}
-	if p.events == nil {
-		p.events = DiscardEvents
-	}
 }
 
 // newProjectForCheck creates a minimally-initialized Project with config loaded.
@@ -122,32 +112,52 @@ func newProjectForCheck(root string, events Events) (*Project, error) {
 	return proj, nil
 }
 
-func Load(ctx context.Context, root string, options *LoadOptions) (proj *Project, err error) {
+// Open loads project config and type-checks all modules without evaluating Starlark.
+// Type-check errors are non-fatal and available via CheckResults().
+func Open(ctx context.Context, root string, options *OpenOptions) (*Project, error) {
 	var events Events
 	if options != nil {
 		events = options.Events
 	}
 
-	proj, err = newProjectForCheck(root, events)
+	proj, err := newProjectForCheck(root, events)
 	if err != nil {
 		return nil, err
 	}
 
-	proj.work = filepath.Join(root, ".dawn", "build")
-	proj.temp = filepath.Join(root, ".dawn", "build", "temp")
+	if options != nil {
+		proj.args = options.Args
+		proj.builtins = options.Builtins
+		proj.preferIndex = options.PreferIndex
+	}
 
-	preferIndex := false
-	options.apply(proj, &preferIndex)
-
-	proj.runner = runner.NewRunner(proj, runtime.NumCPU())
-
-	if err := proj.load(ctx, preferIndex); err != nil {
+	results, err := proj.typeCheckAll(ctx)
+	if err != nil {
+		proj.events.OpenDone(nil, err)
 		return nil, err
 	}
+	proj.checkResults = results
+	proj.events.OpenDone(results, nil)
+
 	return proj, nil
 }
 
-func (proj *Project) load(ctx context.Context, index bool) (err error) {
+// CheckResults returns the type-check results from the most recent Open or Reload.
+func (proj *Project) CheckResults() []CheckResult {
+	return proj.checkResults
+}
+
+// Load evaluates all Starlark modules in the project. Must be called after Open.
+func (proj *Project) Load(ctx context.Context) error {
+	proj.work = filepath.Join(proj.root, ".dawn", "build")
+	proj.temp = filepath.Join(proj.root, ".dawn", "build", "temp")
+
+	proj.runner = runner.NewRunner(proj, runtime.NumCPU())
+
+	return proj.eval(ctx, proj.preferIndex)
+}
+
+func (proj *Project) eval(ctx context.Context, index bool) (err error) {
 	defer func() {
 		proj.events.LoadDone(err)
 	}()
@@ -179,10 +189,20 @@ func (proj *Project) load(ctx context.Context, index bool) (err error) {
 }
 
 func (proj *Project) Reload(ctx context.Context) (err error) {
+	// Re-typecheck
+	results, err := proj.typeCheckAll(ctx)
+	if err != nil {
+		proj.events.OpenDone(results, err)
+		return err
+	}
+	proj.checkResults = results
+	proj.events.OpenDone(results, nil)
+
+	// Re-evaluate modules
 	proj.flags = map[string]*Flag{}
 	proj.modules = map[string]*module{}
 	proj.targets = map[string]*runTarget{}
-	return proj.load(ctx, false)
+	return proj.eval(ctx, false)
 }
 
 type RunOptions struct {
