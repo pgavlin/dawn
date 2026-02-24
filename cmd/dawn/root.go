@@ -26,7 +26,7 @@ var rootCmd = &cobra.Command{
 	PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
 		termWidth, _, _ = term.GetSize(os.Stdout)
 
-		if cmd.Use != "init" {
+		if cmd.Use != "init" && cmd.Use != "lsp" {
 			if err := work.init(); err != nil {
 				return err
 			}
@@ -72,6 +72,7 @@ func init() {
 	rootCmd.AddCommand(newGetCommand())
 	rootCmd.AddCommand(tidyCmd)
 	rootCmd.AddCommand(checkCmd)
+	rootCmd.AddCommand(lspCmd)
 
 	rootCmd.SetHelpCommand(helpCmd)
 }

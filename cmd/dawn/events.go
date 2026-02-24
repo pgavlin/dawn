@@ -739,7 +739,7 @@ func contextSize(edits starlark.Tuple, index, contextLen int) (headContext, tail
 		totalContext += contextLen
 	}
 
-	return
+	return headContext, tailContext, totalContext
 }
 
 func printStringDiff(w io.Writer, d *diff.SliceableDiff) {

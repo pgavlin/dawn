@@ -29,6 +29,8 @@ type module struct {
 	requirements map[string]string
 
 	// Type-check state (populated during Open)
+	file        *syntax.File    // retained parsed AST (with comments)
+	checkInfo   *typecheck.Info // retained type info (Defs, Uses, Types)
 	checkErrs   []typecheck.Error
 	exportTypes map[string]typecheck.Type
 
@@ -143,7 +145,7 @@ func (m *module) typeCheck(ctx context.Context, proj *Project, baseEnv *typechec
 		return
 	}
 
-	f, err := syntax.Parse(m.path, src, 0)
+	f, err := syntax.Parse(m.path, src, syntax.RetainComments)
 	if err != nil {
 		var synErr syntax.Error
 		if errors.As(err, &synErr) {
@@ -153,6 +155,7 @@ func (m *module) typeCheck(ctx context.Context, proj *Project, baseEnv *typechec
 		}
 		return
 	}
+	m.file = f
 
 	env := &typecheck.Env{
 		Predeclared: baseEnv.Predeclared,
@@ -169,7 +172,7 @@ func (m *module) typeCheck(ctx context.Context, proj *Project, baseEnv *typechec
 		},
 	}
 
-	if err := resolve.File(f, isPredeclared(env), isUniversal); err != nil {
+	if err := resolve.File(f, IsPredeclared(env), IsUniversal); err != nil {
 		var resolveErrs resolve.ErrorList
 		if errors.As(err, &resolveErrs) {
 			m.checkErrs = make([]typecheck.Error, len(resolveErrs))
@@ -182,8 +185,13 @@ func (m *module) typeCheck(ctx context.Context, proj *Project, baseEnv *typechec
 		return
 	}
 
-	info := &typecheck.Info{Defs: make(map[*syntax.Ident]*typecheck.Binding)}
+	info := &typecheck.Info{
+		Defs:  make(map[*syntax.Ident]*typecheck.Binding),
+		Uses:  make(map[*syntax.Ident]*typecheck.UseBinding),
+		Types: make(map[syntax.Expr]typecheck.TypeAndValue),
+	}
 	m.checkErrs = typecheck.Check(f, env, info)
+	m.checkInfo = info
 	m.exportTypes = extractExports(f, info)
 }
 

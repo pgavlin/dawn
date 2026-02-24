@@ -110,7 +110,7 @@ func CheckFile(filename string, src []byte, env *typecheck.Env) []typecheck.Erro
 		return []typecheck.Error{{Msg: err.Error()}}
 	}
 
-	if err := resolve.File(f, isPredeclared(env), isUniversal); err != nil {
+	if err := resolve.File(f, IsPredeclared(env), IsUniversal); err != nil {
 		var resolveErrs resolve.ErrorList
 		if errors.As(err, &resolveErrs) {
 			errs := make([]typecheck.Error, len(resolveErrs))
@@ -123,6 +123,54 @@ func CheckFile(filename string, src []byte, env *typecheck.Env) []typecheck.Erro
 	}
 
 	return typecheck.Check(f, env, nil)
+}
+
+// ModuleInfo provides read-only access to a type-checked module's AST and type info.
+type ModuleInfo struct {
+	Path    string
+	File    *syntax.File
+	Info    *typecheck.Info
+	Errors  []typecheck.Error
+	Exports map[string]typecheck.Type
+}
+
+// ModuleForFile returns the module info for the BUILD.dawn at the given path.
+func (proj *Project) ModuleForFile(path string) (ModuleInfo, bool) {
+	for _, m := range proj.modules {
+		if m.path == path {
+			return ModuleInfo{
+				Path:    m.path,
+				File:    m.file,
+				Info:    m.checkInfo,
+				Errors:  m.checkErrs,
+				Exports: m.exportTypes,
+			}, true
+		}
+	}
+	return ModuleInfo{}, false
+}
+
+// Modules returns info for all type-checked modules in the project.
+func (proj *Project) Modules() []ModuleInfo {
+	infos := make([]ModuleInfo, 0, len(proj.modules))
+	for _, m := range proj.modules {
+		if m.path == "" {
+			continue
+		}
+		infos = append(infos, ModuleInfo{
+			Path:    m.path,
+			File:    m.file,
+			Info:    m.checkInfo,
+			Errors:  m.checkErrs,
+			Exports: m.exportTypes,
+		})
+	}
+	return infos
+}
+
+// BaseEnv returns the type-check environment used during Open.
+func (proj *Project) BaseEnv() *typecheck.Env {
+	return proj.baseEnv
 }
 
 // extractExports walks the top-level statements of a checked file and collects
