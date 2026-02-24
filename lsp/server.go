@@ -10,7 +10,6 @@ import (
 	"sync"
 
 	"github.com/pgavlin/dawn"
-	"github.com/pgavlin/starlark-go/starlark"
 	"github.com/pgavlin/starlark-go/typecheck"
 )
 
@@ -21,16 +20,14 @@ type Server struct {
 	project   *ProjectContext
 	dawnProj  *dawn.Project
 	env       *typecheck.Env
-	builtins  starlark.StringDict
 	transport *transport
 	log       *log.Logger
 }
 
 // NewServer creates a new LSP server.
-func NewServer(r io.Reader, w io.Writer, builtins starlark.StringDict) *Server {
+func NewServer(r io.Reader, w io.Writer) *Server {
 	return &Server{
 		documents: make(map[string]*Document),
-		builtins:  builtins,
 		transport: newTransport(r, w),
 		log:       log.New(os.Stderr, "[dawn-lsp] ", log.LstdFlags),
 	}
@@ -113,20 +110,13 @@ func (s *Server) handleInitialize(msg *jsonrpcMessage) error {
 	// Try to open the project for type-checking.
 	if s.project != nil && s.project.Root != "" {
 		ctx := context.Background()
-		proj, err := dawn.Open(ctx, s.project.Root, &dawn.OpenOptions{
-			Builtins: s.builtins,
-		})
+		proj, err := dawn.Open(ctx, s.project.Root, nil)
 		if err != nil {
 			s.log.Printf("failed to open project: %v", err)
 		} else {
 			s.dawnProj = proj
 			s.env = proj.BaseEnv()
 		}
-	}
-
-	// Build a standalone env if project open failed.
-	if s.env == nil && s.builtins != nil {
-		s.env = dawn.BuildTypeEnv(s.builtins)
 	}
 
 	result := InitializeResult{
@@ -189,7 +179,7 @@ func (s *Server) handleDidOpen(msg *jsonrpcMessage) error {
 			doc.analyze(s.env)
 		}
 	} else {
-		doc.analyze(s.env)
+		doc.analyze(nil)
 	}
 
 	s.mu.Lock()

@@ -7,11 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-
-	starlark_os "github.com/pgavlin/dawn/lib/os"
-	starlark_sh "github.com/pgavlin/dawn/lib/sh"
-	starlark_json "github.com/pgavlin/starlark-go/lib/json"
-	"github.com/pgavlin/starlark-go/starlark"
 )
 
 // testServer creates a server connected to pipes for testing.
@@ -19,11 +14,7 @@ func testServer(t *testing.T) (*Server, *transport) {
 	t.Helper()
 	sr, cw := io.Pipe()
 	cr, sw := io.Pipe()
-	server := NewServer(sr, sw, starlark.StringDict{
-		"json": starlark_json.Module,
-		"os":   starlark_os.Module,
-		"sh":   starlark_sh.Module,
-	})
+	server := NewServer(sr, sw)
 	client := newTransport(cr, cw)
 	go func() {
 		_ = server.Run()
@@ -33,6 +24,40 @@ func testServer(t *testing.T) (*Server, *transport) {
 		sw.Close()
 	})
 	return server, client
+}
+
+// testProjectDir creates a temp directory with a dawn.toml so the LSP can open a project.
+func testProjectDir(t *testing.T) (dir string, uri string) {
+	t.Helper()
+	dir = t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "dawn.toml"), []byte("[project]\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return dir, "file://" + dir
+}
+
+// initAndOpenProject creates a project dir, initializes the server, opens a BUILD.dawn, and drains diagnostics.
+func initAndOpenProject(t *testing.T, client *transport, text string) (dir string, uri string) {
+	t.Helper()
+	dir, rootURI := testProjectDir(t)
+	buildPath := filepath.Join(dir, "BUILD.dawn")
+	if err := os.WriteFile(buildPath, []byte(text), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	uri = "file://" + buildPath
+	_ = sendRequest(t, client, 1, "initialize", InitializeParams{
+		RootURI: rootURI,
+	})
+	sendNotification(t, client, "textDocument/didOpen", DidOpenTextDocumentParams{
+		TextDocument: TextDocumentItem{
+			URI:        uri,
+			LanguageID: "starlark",
+			Version:    1,
+			Text:       text,
+		},
+	})
+	_, _ = client.read() // drain diagnostics
+	return dir, uri
 }
 
 func sendRequest(t *testing.T, client *transport, id int, method string, params interface{}) *jsonrpcMessage {
@@ -157,17 +182,24 @@ func TestDiagnosticsResolveError(t *testing.T) {
 	t.Parallel()
 	_, client := testServer(t)
 
+	dir, rootURI := testProjectDir(t)
+	buildPath := filepath.Join(dir, "BUILD.dawn")
+	text := "x = undefined_name\n"
+	if err := os.WriteFile(buildPath, []byte(text), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
 	_ = sendRequest(t, client, 1, "initialize", InitializeParams{
-		RootURI: "file:///tmp/test",
+		RootURI: rootURI,
 	})
 
 	// Open a document with an undefined name
 	sendNotification(t, client, "textDocument/didOpen", DidOpenTextDocumentParams{
 		TextDocument: TextDocumentItem{
-			URI:        "file:///tmp/test/BUILD.dawn",
+			URI:        "file://" + buildPath,
 			LanguageID: "starlark",
 			Version:    1,
-			Text:       "x = undefined_name\n",
+			Text:       text,
 		},
 	})
 
@@ -190,17 +222,24 @@ func TestNoDiagnosticsForValidFile(t *testing.T) {
 	t.Parallel()
 	_, client := testServer(t)
 
+	dir, rootURI := testProjectDir(t)
+	buildPath := filepath.Join(dir, "BUILD.dawn")
+	text := "x = glob([\"*.go\"])\ny = path(\":foo\")\n"
+	if err := os.WriteFile(buildPath, []byte(text), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
 	_ = sendRequest(t, client, 1, "initialize", InitializeParams{
-		RootURI: "file:///tmp/test",
+		RootURI: rootURI,
 	})
 
 	// Open a valid document that uses Dawn builtins
 	sendNotification(t, client, "textDocument/didOpen", DidOpenTextDocumentParams{
 		TextDocument: TextDocumentItem{
-			URI:        "file:///tmp/test/BUILD.dawn",
+			URI:        "file://" + buildPath,
 			LanguageID: "starlark",
 			Version:    1,
-			Text:       "x = glob([\"*.go\"])\ny = path(\":foo\")\n",
+			Text:       text,
 		},
 	})
 
@@ -223,25 +262,11 @@ func TestCompletion(t *testing.T) {
 	t.Parallel()
 	_, client := testServer(t)
 
-	_ = sendRequest(t, client, 1, "initialize", InitializeParams{
-		RootURI: "file:///tmp/test",
-	})
-
-	sendNotification(t, client, "textDocument/didOpen", DidOpenTextDocumentParams{
-		TextDocument: TextDocumentItem{
-			URI:        "file:///tmp/test/BUILD.dawn",
-			LanguageID: "starlark",
-			Version:    1,
-			Text:       "x = \n",
-		},
-	})
-
-	// Read diagnostics notification first
-	_, _ = client.read()
+	uri := initAndOpen(t, client, "x = \n")
 
 	resp := sendRequest(t, client, 2, "textDocument/completion", CompletionParams{
 		TextDocumentPositionParams: TextDocumentPositionParams{
-			TextDocument: TextDocumentIdentifier{URI: "file:///tmp/test/BUILD.dawn"},
+			TextDocument: TextDocumentIdentifier{URI: uri},
 			Position:     Position{Line: 0, Character: 4},
 		},
 	})
@@ -275,22 +300,10 @@ func TestHover(t *testing.T) {
 	t.Parallel()
 	_, client := testServer(t)
 
-	_ = sendRequest(t, client, 1, "initialize", InitializeParams{
-		RootURI: "file:///tmp/test",
-	})
-
-	sendNotification(t, client, "textDocument/didOpen", DidOpenTextDocumentParams{
-		TextDocument: TextDocumentItem{
-			URI:        "file:///tmp/test/BUILD.dawn",
-			LanguageID: "starlark",
-			Version:    1,
-			Text:       "x = glob([\"*.go\"])\n",
-		},
-	})
-	_, _ = client.read() // diagnostics
+	_, uri := initAndOpenProject(t, client, "x = glob([\"*.go\"])\n")
 
 	resp := sendRequest(t, client, 2, "textDocument/hover", TextDocumentPositionParams{
-		TextDocument: TextDocumentIdentifier{URI: "file:///tmp/test/BUILD.dawn"},
+		TextDocument: TextDocumentIdentifier{URI: uri},
 		Position:     Position{Line: 0, Character: 5}, // on "glob"
 	})
 
@@ -312,23 +325,11 @@ func TestDefinition(t *testing.T) {
 	t.Parallel()
 	_, client := testServer(t)
 
-	_ = sendRequest(t, client, 1, "initialize", InitializeParams{
-		RootURI: "file:///tmp/test",
-	})
-
-	sendNotification(t, client, "textDocument/didOpen", DidOpenTextDocumentParams{
-		TextDocument: TextDocumentItem{
-			URI:        "file:///tmp/test/BUILD.dawn",
-			LanguageID: "starlark",
-			Version:    1,
-			Text:       "def foo():\n  pass\n\nbar = foo\n",
-		},
-	})
-	_, _ = client.read() // diagnostics
+	_, uri := initAndOpenProject(t, client, "def foo():\n  pass\n\nbar = foo\n")
 
 	// Go to definition of "foo" on line 3 (the reference)
 	resp := sendRequest(t, client, 2, "textDocument/definition", TextDocumentPositionParams{
-		TextDocument: TextDocumentIdentifier{URI: "file:///tmp/test/BUILD.dawn"},
+		TextDocument: TextDocumentIdentifier{URI: uri},
 		Position:     Position{Line: 3, Character: 6}, // on "foo" in "bar = foo"
 	})
 
@@ -350,22 +351,10 @@ func TestDocumentSymbols(t *testing.T) {
 	t.Parallel()
 	_, client := testServer(t)
 
-	_ = sendRequest(t, client, 1, "initialize", InitializeParams{
-		RootURI: "file:///tmp/test",
-	})
-
-	sendNotification(t, client, "textDocument/didOpen", DidOpenTextDocumentParams{
-		TextDocument: TextDocumentItem{
-			URI:        "file:///tmp/test/BUILD.dawn",
-			LanguageID: "starlark",
-			Version:    1,
-			Text:       "@target\ndef build():\n  pass\n\ndef helper():\n  pass\n\nVERSION = \"1.0\"\n",
-		},
-	})
-	_, _ = client.read() // diagnostics
+	_, uri := initAndOpenProject(t, client, "@target\ndef build():\n  pass\n\ndef helper():\n  pass\n\nVERSION = \"1.0\"\n")
 
 	resp := sendRequest(t, client, 2, "textDocument/documentSymbol", DocumentSymbolParams{
-		TextDocument: TextDocumentIdentifier{URI: "file:///tmp/test/BUILD.dawn"},
+		TextDocument: TextDocumentIdentifier{URI: uri},
 	})
 
 	if resp.Error != nil {
@@ -416,22 +405,10 @@ func TestSemanticTokens(t *testing.T) {
 	t.Parallel()
 	_, client := testServer(t)
 
-	_ = sendRequest(t, client, 1, "initialize", InitializeParams{
-		RootURI: "file:///tmp/test",
-	})
-
-	sendNotification(t, client, "textDocument/didOpen", DidOpenTextDocumentParams{
-		TextDocument: TextDocumentItem{
-			URI:        "file:///tmp/test/BUILD.dawn",
-			LanguageID: "starlark",
-			Version:    1,
-			Text:       "@target\ndef build():\n  sh.exec(\"go build\")\n",
-		},
-	})
-	_, _ = client.read() // diagnostics
+	_, uri := initAndOpenProject(t, client, "@target\ndef build():\n  sh.exec(\"go build\")\n")
 
 	resp := sendRequest(t, client, 2, "textDocument/semanticTokens/full", SemanticTokensParams{
-		TextDocument: TextDocumentIdentifier{URI: "file:///tmp/test/BUILD.dawn"},
+		TextDocument: TextDocumentIdentifier{URI: uri},
 	})
 
 	if resp.Error != nil {
@@ -455,23 +432,11 @@ func TestReferences(t *testing.T) {
 	t.Parallel()
 	_, client := testServer(t)
 
-	_ = sendRequest(t, client, 1, "initialize", InitializeParams{
-		RootURI: "file:///tmp/test",
-	})
-
-	sendNotification(t, client, "textDocument/didOpen", DidOpenTextDocumentParams{
-		TextDocument: TextDocumentItem{
-			URI:        "file:///tmp/test/BUILD.dawn",
-			LanguageID: "starlark",
-			Version:    1,
-			Text:       "def foo():\n  pass\n\nx = foo\ny = foo()\n",
-		},
-	})
-	_, _ = client.read() // diagnostics
+	_, uri := initAndOpenProject(t, client, "def foo():\n  pass\n\nx = foo\ny = foo()\n")
 
 	resp := sendRequest(t, client, 2, "textDocument/references", ReferenceParams{
 		TextDocumentPositionParams: TextDocumentPositionParams{
-			TextDocument: TextDocumentIdentifier{URI: "file:///tmp/test/BUILD.dawn"},
+			TextDocument: TextDocumentIdentifier{URI: uri},
 			Position:     Position{Line: 0, Character: 4}, // on "foo" in def
 		},
 	})
@@ -495,23 +460,11 @@ func TestSignatureHelp(t *testing.T) {
 	t.Parallel()
 	_, client := testServer(t)
 
-	_ = sendRequest(t, client, 1, "initialize", InitializeParams{
-		RootURI: "file:///tmp/test",
-	})
-
-	sendNotification(t, client, "textDocument/didOpen", DidOpenTextDocumentParams{
-		TextDocument: TextDocumentItem{
-			URI:        "file:///tmp/test/BUILD.dawn",
-			LanguageID: "starlark",
-			Version:    1,
-			Text:       "x = glob([\"*.go\"], )\n",
-		},
-	})
-	_, _ = client.read() // diagnostics
+	_, uri := initAndOpenProject(t, client, "x = glob([\"*.go\"], )\n")
 
 	resp := sendRequest(t, client, 2, "textDocument/signatureHelp", SignatureHelpParams{
 		TextDocumentPositionParams: TextDocumentPositionParams{
-			TextDocument: TextDocumentIdentifier{URI: "file:///tmp/test/BUILD.dawn"},
+			TextDocument: TextDocumentIdentifier{URI: uri},
 			Position:     Position{Line: 0, Character: 19}, // inside glob()
 		},
 	})
@@ -534,21 +487,11 @@ func TestSignatureHelp(t *testing.T) {
 
 // --- Comprehensive tests for all LSP features ---
 
-// initAndOpen is a test helper that initializes the server, opens a document, and drains diagnostics.
-func initAndOpen(t *testing.T, client *transport, uri, text string) {
+// initAndOpen is a test helper that initializes the server with a project, opens a document, and drains diagnostics.
+func initAndOpen(t *testing.T, client *transport, text string) string {
 	t.Helper()
-	_ = sendRequest(t, client, 1, "initialize", InitializeParams{
-		RootURI: "file:///tmp/test",
-	})
-	sendNotification(t, client, "textDocument/didOpen", DidOpenTextDocumentParams{
-		TextDocument: TextDocumentItem{
-			URI:        uri,
-			LanguageID: "starlark",
-			Version:    1,
-			Text:       text,
-		},
-	})
-	_, _ = client.read() // drain diagnostics
+	_, uri := initAndOpenProject(t, client, text)
+	return uri
 }
 
 func TestDefinitionOfVariable(t *testing.T) {
@@ -556,11 +499,10 @@ func TestDefinitionOfVariable(t *testing.T) {
 	_, client := testServer(t)
 
 	// version is defined on line 0, used on line 1
-	initAndOpen(t, client, "file:///tmp/test/BUILD.dawn",
-		"version = \"1.0\"\nldflags = version\n")
+	uri := initAndOpen(t, client, "version = \"1.0\"\nldflags = version\n")
 
 	resp := sendRequest(t, client, 2, "textDocument/definition", TextDocumentPositionParams{
-		TextDocument: TextDocumentIdentifier{URI: "file:///tmp/test/BUILD.dawn"},
+		TextDocument: TextDocumentIdentifier{URI: uri},
 		Position:     Position{Line: 1, Character: 10}, // on "version" in "ldflags = version"
 	})
 	if resp.Error != nil {
@@ -581,11 +523,10 @@ func TestDefinitionOfParameter(t *testing.T) {
 	_, client := testServer(t)
 
 	// Parameter "name" defined in def signature, used in body
-	initAndOpen(t, client, "file:///tmp/test/BUILD.dawn",
-		"def greet(name):\n  x = name\n")
+	uri := initAndOpen(t, client, "def greet(name):\n  x = name\n")
 
 	resp := sendRequest(t, client, 2, "textDocument/definition", TextDocumentPositionParams{
-		TextDocument: TextDocumentIdentifier{URI: "file:///tmp/test/BUILD.dawn"},
+		TextDocument: TextDocumentIdentifier{URI: uri},
 		Position:     Position{Line: 1, Character: 6}, // on "name" in "x = name"
 	})
 	if resp.Error != nil {
@@ -607,12 +548,11 @@ func TestDefinitionInDecorator(t *testing.T) {
 	_, client := testServer(t)
 
 	// "all_go_sources" is defined on line 0, referenced inside the decorator on line 1
-	initAndOpen(t, client, "file:///tmp/test/BUILD.dawn",
-		"all_go_sources = glob([\"**/*.go\"])\n@target(sources=all_go_sources)\ndef build():\n  pass\n")
+	uri := initAndOpen(t, client, "all_go_sources = glob([\"**/*.go\"])\n@target(sources=all_go_sources)\ndef build():\n  pass\n")
 
 	// Go to definition of "all_go_sources" inside the decorator expression
 	resp := sendRequest(t, client, 2, "textDocument/definition", TextDocumentPositionParams{
-		TextDocument: TextDocumentIdentifier{URI: "file:///tmp/test/BUILD.dawn"},
+		TextDocument: TextDocumentIdentifier{URI: uri},
 		Position:     Position{Line: 1, Character: 17}, // on "all_go_sources" in @target(sources=all_go_sources)
 	})
 	if resp.Error != nil {
@@ -637,13 +577,12 @@ func TestReferencesInDecorator(t *testing.T) {
 	_, client := testServer(t)
 
 	// "all_go_sources" used in decorator and in a body
-	initAndOpen(t, client, "file:///tmp/test/BUILD.dawn",
-		"all_go_sources = glob([\"**/*.go\"])\n@target(sources=all_go_sources)\ndef build():\n  x = all_go_sources\n")
+	uri := initAndOpen(t, client, "all_go_sources = glob([\"**/*.go\"])\n@target(sources=all_go_sources)\ndef build():\n  x = all_go_sources\n")
 
 	// Find references of "all_go_sources" from its definition
 	resp := sendRequest(t, client, 2, "textDocument/references", ReferenceParams{
 		TextDocumentPositionParams: TextDocumentPositionParams{
-			TextDocument: TextDocumentIdentifier{URI: "file:///tmp/test/BUILD.dawn"},
+			TextDocument: TextDocumentIdentifier{URI: uri},
 			Position:     Position{Line: 0, Character: 0}, // on "all_go_sources" definition
 		},
 	})
@@ -670,11 +609,10 @@ func TestDefinitionOfForLoopVariable(t *testing.T) {
 	_, client := testServer(t)
 
 	// "item" defined in for loop, used in body
-	initAndOpen(t, client, "file:///tmp/test/BUILD.dawn",
-		"def process():\n  for item in [1, 2, 3]:\n    x = item\n")
+	uri := initAndOpen(t, client, "def process():\n  for item in [1, 2, 3]:\n    x = item\n")
 
 	resp := sendRequest(t, client, 2, "textDocument/definition", TextDocumentPositionParams{
-		TextDocument: TextDocumentIdentifier{URI: "file:///tmp/test/BUILD.dawn"},
+		TextDocument: TextDocumentIdentifier{URI: uri},
 		Position:     Position{Line: 2, Character: 8}, // on "item" in "x = item"
 	})
 	if resp.Error != nil {
@@ -837,12 +775,12 @@ func TestReferencesVariable(t *testing.T) {
 	_, client := testServer(t)
 
 	// "version" is assigned on line 0 and used on lines 1 and 2
-	initAndOpen(t, client, "file:///tmp/test/BUILD.dawn",
-		"version = \"1.0\"\nldflags = version\nx = version\n")
+	uri := initAndOpen(t, client,
+"version = \"1.0\"\nldflags = version\nx = version\n")
 
 	resp := sendRequest(t, client, 2, "textDocument/references", ReferenceParams{
 		TextDocumentPositionParams: TextDocumentPositionParams{
-			TextDocument: TextDocumentIdentifier{URI: "file:///tmp/test/BUILD.dawn"},
+			TextDocument: TextDocumentIdentifier{URI: uri},
 			Position:     Position{Line: 0, Character: 0}, // on "version" definition
 		},
 	})
@@ -865,13 +803,13 @@ func TestReferencesParameter(t *testing.T) {
 	_, client := testServer(t)
 
 	// "x" is a parameter used twice in body
-	initAndOpen(t, client, "file:///tmp/test/BUILD.dawn",
-		"def add(x, y):\n  z = x + y\n  return x\n")
+	uri := initAndOpen(t, client,
+"def add(x, y):\n  z = x + y\n  return x\n")
 
 	// Find references of "x" at parameter definition
 	resp := sendRequest(t, client, 2, "textDocument/references", ReferenceParams{
 		TextDocumentPositionParams: TextDocumentPositionParams{
-			TextDocument: TextDocumentIdentifier{URI: "file:///tmp/test/BUILD.dawn"},
+			TextDocument: TextDocumentIdentifier{URI: uri},
 			Position:     Position{Line: 0, Character: 8}, // on "x" parameter
 		},
 	})
@@ -894,12 +832,12 @@ func TestReferencesBuiltin(t *testing.T) {
 	t.Parallel()
 	_, client := testServer(t)
 
-	initAndOpen(t, client, "file:///tmp/test/BUILD.dawn",
-		"x = glob([\"*.go\"])\ny = glob([\"*.py\"])\n")
+	uri := initAndOpen(t, client,
+"x = glob([\"*.go\"])\ny = glob([\"*.py\"])\n")
 
 	resp := sendRequest(t, client, 2, "textDocument/references", ReferenceParams{
 		TextDocumentPositionParams: TextDocumentPositionParams{
-			TextDocument: TextDocumentIdentifier{URI: "file:///tmp/test/BUILD.dawn"},
+			TextDocument: TextDocumentIdentifier{URI: uri},
 			Position:     Position{Line: 0, Character: 4}, // on "glob"
 		},
 	})
@@ -922,12 +860,12 @@ func TestSignatureHelpBuiltin(t *testing.T) {
 	_, client := testServer(t)
 
 	// Cursor inside target() call
-	initAndOpen(t, client, "file:///tmp/test/BUILD.dawn",
-		"x = target(name=\"foo\", )\n")
+	uri := initAndOpen(t, client,
+"x = target(name=\"foo\", )\n")
 
 	resp := sendRequest(t, client, 2, "textDocument/signatureHelp", SignatureHelpParams{
 		TextDocumentPositionParams: TextDocumentPositionParams{
-			TextDocument: TextDocumentIdentifier{URI: "file:///tmp/test/BUILD.dawn"},
+			TextDocument: TextDocumentIdentifier{URI: uri},
 			Position:     Position{Line: 0, Character: 22}, // after comma inside target()
 		},
 	})
@@ -959,12 +897,12 @@ func TestSignatureHelpUserDefined(t *testing.T) {
 	t.Parallel()
 	_, client := testServer(t)
 
-	initAndOpen(t, client, "file:///tmp/test/BUILD.dawn",
-		"def my_func(a, b, c=None):\n  pass\n\nresult = my_func(1, )\n")
+	uri := initAndOpen(t, client,
+"def my_func(a, b, c=None):\n  pass\n\nresult = my_func(1, )\n")
 
 	resp := sendRequest(t, client, 2, "textDocument/signatureHelp", SignatureHelpParams{
 		TextDocumentPositionParams: TextDocumentPositionParams{
-			TextDocument: TextDocumentIdentifier{URI: "file:///tmp/test/BUILD.dawn"},
+			TextDocument: TextDocumentIdentifier{URI: uri},
 			Position:     Position{Line: 3, Character: 20}, // inside my_func()
 		},
 	})
@@ -1066,12 +1004,12 @@ func TestCompletionDotAccess(t *testing.T) {
 	t.Parallel()
 	_, client := testServer(t)
 
-	initAndOpen(t, client, "file:///tmp/test/BUILD.dawn",
-		"x = sh.\n")
+	uri := initAndOpen(t, client,
+"x = sh.\n")
 
 	resp := sendRequest(t, client, 2, "textDocument/completion", CompletionParams{
 		TextDocumentPositionParams: TextDocumentPositionParams{
-			TextDocument: TextDocumentIdentifier{URI: "file:///tmp/test/BUILD.dawn"},
+			TextDocument: TextDocumentIdentifier{URI: uri},
 			Position:     Position{Line: 0, Character: 7}, // after "sh."
 		},
 	})
@@ -1099,12 +1037,12 @@ func TestCompletionNestedDotAccess(t *testing.T) {
 	t.Parallel()
 	_, client := testServer(t)
 
-	initAndOpen(t, client, "file:///tmp/test/BUILD.dawn",
-		"x = os.path.\n")
+	uri := initAndOpen(t, client,
+"x = os.path.\n")
 
 	resp := sendRequest(t, client, 2, "textDocument/completion", CompletionParams{
 		TextDocumentPositionParams: TextDocumentPositionParams{
-			TextDocument: TextDocumentIdentifier{URI: "file:///tmp/test/BUILD.dawn"},
+			TextDocument: TextDocumentIdentifier{URI: uri},
 			Position:     Position{Line: 0, Character: 12}, // after "os.path."
 		},
 	})
@@ -1133,12 +1071,12 @@ func TestCompletionKeywordArgs(t *testing.T) {
 	_, client := testServer(t)
 
 	// Cursor inside target() call, after the opening paren
-	initAndOpen(t, client, "file:///tmp/test/BUILD.dawn",
-		"x = target( )\n")
+	uri := initAndOpen(t, client,
+"x = target( )\n")
 
 	resp := sendRequest(t, client, 2, "textDocument/completion", CompletionParams{
 		TextDocumentPositionParams: TextDocumentPositionParams{
-			TextDocument: TextDocumentIdentifier{URI: "file:///tmp/test/BUILD.dawn"},
+			TextDocument: TextDocumentIdentifier{URI: uri},
 			Position:     Position{Line: 0, Character: 12}, // inside target()
 		},
 	})
@@ -1169,12 +1107,12 @@ func TestCompletionKeywordArgsFilterUsed(t *testing.T) {
 	_, client := testServer(t)
 
 	// target() call with name= already used
-	initAndOpen(t, client, "file:///tmp/test/BUILD.dawn",
-		"x = target(name=\"foo\", )\n")
+	uri := initAndOpen(t, client,
+"x = target(name=\"foo\", )\n")
 
 	resp := sendRequest(t, client, 2, "textDocument/completion", CompletionParams{
 		TextDocumentPositionParams: TextDocumentPositionParams{
-			TextDocument: TextDocumentIdentifier{URI: "file:///tmp/test/BUILD.dawn"},
+			TextDocument: TextDocumentIdentifier{URI: uri},
 			Position:     Position{Line: 0, Character: 22}, // after comma
 		},
 	})
@@ -1199,11 +1137,11 @@ func TestHoverDotExpr(t *testing.T) {
 	t.Parallel()
 	_, client := testServer(t)
 
-	initAndOpen(t, client, "file:///tmp/test/BUILD.dawn",
-		"x = sh.exec(\"ls\")\n")
+	uri := initAndOpen(t, client,
+"x = sh.exec(\"ls\")\n")
 
 	resp := sendRequest(t, client, 2, "textDocument/hover", TextDocumentPositionParams{
-		TextDocument: TextDocumentIdentifier{URI: "file:///tmp/test/BUILD.dawn"},
+		TextDocument: TextDocumentIdentifier{URI: uri},
 		Position:     Position{Line: 0, Character: 8}, // on "exec" in "sh.exec"
 	})
 	if resp.Error != nil {
@@ -1227,11 +1165,11 @@ func TestHoverNestedDotExpr(t *testing.T) {
 	t.Parallel()
 	_, client := testServer(t)
 
-	initAndOpen(t, client, "file:///tmp/test/BUILD.dawn",
-		"x = os.path.join(\"a\", \"b\")\n")
+	uri := initAndOpen(t, client,
+"x = os.path.join(\"a\", \"b\")\n")
 
 	resp := sendRequest(t, client, 2, "textDocument/hover", TextDocumentPositionParams{
-		TextDocument: TextDocumentIdentifier{URI: "file:///tmp/test/BUILD.dawn"},
+		TextDocument: TextDocumentIdentifier{URI: uri},
 		Position:     Position{Line: 0, Character: 13}, // on "join" in "os.path.join"
 	})
 	if resp.Error != nil {
@@ -1255,11 +1193,11 @@ func TestHoverUserFunction(t *testing.T) {
 	t.Parallel()
 	_, client := testServer(t)
 
-	initAndOpen(t, client, "file:///tmp/test/BUILD.dawn",
-		"def my_func(a, b):\n  \"\"\"Does something useful.\"\"\"\n  pass\n\nx = my_func\n")
+	uri := initAndOpen(t, client,
+"def my_func(a, b):\n  \"\"\"Does something useful.\"\"\"\n  pass\n\nx = my_func\n")
 
 	resp := sendRequest(t, client, 2, "textDocument/hover", TextDocumentPositionParams{
-		TextDocument: TextDocumentIdentifier{URI: "file:///tmp/test/BUILD.dawn"},
+		TextDocument: TextDocumentIdentifier{URI: uri},
 		Position:     Position{Line: 4, Character: 5}, // on "my_func" in "x = my_func"
 	})
 	if resp.Error != nil {
@@ -1286,11 +1224,11 @@ func TestDocumentSymbolsComprehensive(t *testing.T) {
 	t.Parallel()
 	_, client := testServer(t)
 
-	initAndOpen(t, client, "file:///tmp/test/BUILD.dawn",
-		"load(\"//lib\", \"helper\")\n\nversion = \"1.0\"\n\n@target\ndef build():\n  pass\n\ndef helper_fn():\n  pass\n")
+	uri := initAndOpen(t, client,
+"load(\"//lib\", \"helper\")\n\nversion = \"1.0\"\n\n@target\ndef build():\n  pass\n\ndef helper_fn():\n  pass\n")
 
 	resp := sendRequest(t, client, 2, "textDocument/documentSymbol", DocumentSymbolParams{
-		TextDocument: TextDocumentIdentifier{URI: "file:///tmp/test/BUILD.dawn"},
+		TextDocument: TextDocumentIdentifier{URI: uri},
 	})
 	if resp.Error != nil {
 		t.Fatalf("document symbols failed: %s", resp.Error.Message)
@@ -1343,17 +1281,24 @@ func TestDiagnosticsMultipleErrors(t *testing.T) {
 	t.Parallel()
 	_, client := testServer(t)
 
+	dir, rootURI := testProjectDir(t)
+	buildPath := filepath.Join(dir, "BUILD.dawn")
+	text := "x = undefined1\ny = undefined2\nz = undefined3\n"
+	if err := os.WriteFile(buildPath, []byte(text), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
 	_ = sendRequest(t, client, 1, "initialize", InitializeParams{
-		RootURI: "file:///tmp/test",
+		RootURI: rootURI,
 	})
 
 	// File with multiple undefined names
 	sendNotification(t, client, "textDocument/didOpen", DidOpenTextDocumentParams{
 		TextDocument: TextDocumentItem{
-			URI:        "file:///tmp/test/BUILD.dawn",
+			URI:        "file://" + buildPath,
 			LanguageID: "starlark",
 			Version:    1,
-			Text:       "x = undefined1\ny = undefined2\nz = undefined3\n",
+			Text:       text,
 		},
 	})
 
@@ -1383,17 +1328,24 @@ func TestDiagnosticsClearedOnClose(t *testing.T) {
 	t.Parallel()
 	_, client := testServer(t)
 
+	dir, rootURI := testProjectDir(t)
+	buildPath := filepath.Join(dir, "BUILD.dawn")
+	text := "x = undefined\n"
+	if err := os.WriteFile(buildPath, []byte(text), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
 	_ = sendRequest(t, client, 1, "initialize", InitializeParams{
-		RootURI: "file:///tmp/test",
+		RootURI: rootURI,
 	})
 
-	uri := "file:///tmp/test/BUILD.dawn"
+	uri := "file://" + buildPath
 	sendNotification(t, client, "textDocument/didOpen", DidOpenTextDocumentParams{
 		TextDocument: TextDocumentItem{
 			URI:        uri,
 			LanguageID: "starlark",
 			Version:    1,
-			Text:       "x = undefined\n",
+			Text:       text,
 		},
 	})
 	_, _ = client.read() // read diagnostics (has errors)
@@ -1423,11 +1375,11 @@ func TestSemanticTokensComprehensive(t *testing.T) {
 	t.Parallel()
 	_, client := testServer(t)
 
-	initAndOpen(t, client, "file:///tmp/test/BUILD.dawn",
-		"@target\ndef build():\n  x = glob([\"*.go\"])\n  sh.exec(\"go build\")\n")
+	uri := initAndOpen(t, client,
+"@target\ndef build():\n  x = glob([\"*.go\"])\n  sh.exec(\"go build\")\n")
 
 	resp := sendRequest(t, client, 2, "textDocument/semanticTokens/full", SemanticTokensParams{
-		TextDocument: TextDocumentIdentifier{URI: "file:///tmp/test/BUILD.dawn"},
+		TextDocument: TextDocumentIdentifier{URI: uri},
 	})
 	if resp.Error != nil {
 		t.Fatalf("semantic tokens failed: %s", resp.Error.Message)
@@ -1500,12 +1452,12 @@ func TestCompletionIncludesLoadedNames(t *testing.T) {
 	t.Parallel()
 	_, client := testServer(t)
 
-	initAndOpen(t, client, "file:///tmp/test/BUILD.dawn",
-		"load(\"//lib\", \"helper\")\n\ndef build():\n  pass\n\nx = None\n")
+	uri := initAndOpen(t, client,
+"load(\"//lib\", \"helper\")\n\ndef build():\n  pass\n\nx = None\n")
 
 	resp := sendRequest(t, client, 2, "textDocument/completion", CompletionParams{
 		TextDocumentPositionParams: TextDocumentPositionParams{
-			TextDocument: TextDocumentIdentifier{URI: "file:///tmp/test/BUILD.dawn"},
+			TextDocument: TextDocumentIdentifier{URI: uri},
 			Position:     Position{Line: 5, Character: 4}, // on "None" in "x = None"
 		},
 	})
@@ -1545,9 +1497,16 @@ func TestDocumentChange(t *testing.T) {
 	t.Parallel()
 	_, client := testServer(t)
 
-	uri := "file:///tmp/test/BUILD.dawn"
+	dir, rootURI := testProjectDir(t)
+	buildPath := filepath.Join(dir, "BUILD.dawn")
+	text := "x = undefined\n"
+	if err := os.WriteFile(buildPath, []byte(text), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	uri := "file://" + buildPath
 	_ = sendRequest(t, client, 1, "initialize", InitializeParams{
-		RootURI: "file:///tmp/test",
+		RootURI: rootURI,
 	})
 
 	// Open with error
@@ -1556,7 +1515,7 @@ func TestDocumentChange(t *testing.T) {
 			URI:        uri,
 			LanguageID: "starlark",
 			Version:    1,
-			Text:       "x = undefined\n",
+			Text:       text,
 		},
 	})
 	msg, _ := client.read() // diagnostics with error
@@ -1586,12 +1545,12 @@ func TestCompletionKeywordArgsUserFunc(t *testing.T) {
 	_, client := testServer(t)
 
 	// User-defined function with parameters; cursor inside a call to it
-	initAndOpen(t, client, "file:///tmp/test/BUILD.dawn",
-		"def my_build(src, out, debug=False):\n  pass\n\nresult = my_build( )\n")
+	uri := initAndOpen(t, client,
+"def my_build(src, out, debug=False):\n  pass\n\nresult = my_build( )\n")
 
 	resp := sendRequest(t, client, 2, "textDocument/completion", CompletionParams{
 		TextDocumentPositionParams: TextDocumentPositionParams{
-			TextDocument: TextDocumentIdentifier{URI: "file:///tmp/test/BUILD.dawn"},
+			TextDocument: TextDocumentIdentifier{URI: uri},
 			Position:     Position{Line: 3, Character: 19}, // inside my_build()
 		},
 	})

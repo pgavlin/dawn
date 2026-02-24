@@ -3,7 +3,6 @@ package lsp
 import (
 	"github.com/pgavlin/dawn"
 	"github.com/pgavlin/starlark-go/resolve"
-	"github.com/pgavlin/starlark-go/starlark"
 	"github.com/pgavlin/starlark-go/syntax"
 	"github.com/pgavlin/starlark-go/typecheck"
 )
@@ -57,15 +56,6 @@ func (d *Document) analyze(env *typecheck.Env) {
 		}
 		d.checkErrs = typecheck.Check(f, env, info)
 		d.checkInfo = info
-	} else {
-		// No env available — resolve with builtinRegistry names as predeclared.
-		resolveErr := resolve.File(f, func(name string) bool {
-			_, ok := builtinRegistry[name]
-			return ok
-		}, starlark.Universe.Has)
-		if resolveErr != nil {
-			d.resolveErr = resolveErr
-		}
 	}
 
 	// Extract analysis info

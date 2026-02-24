@@ -43,18 +43,6 @@ type FuncDecl struct {
 	IsTarget bool
 }
 
-// newDocument creates a new document and analyzes it from buffer content.
-func newDocument(uri, path string, version int32, content string, env *typecheck.Env) *Document {
-	doc := &Document{
-		URI:     uri,
-		Path:    path,
-		Version: version,
-		Content: content,
-	}
-	doc.analyze(env)
-	return doc
-}
-
 // initFromModule initializes the document from pre-computed project module data.
 func (d *Document) initFromModule(info dawn.ModuleInfo) {
 	d.file = info.File
