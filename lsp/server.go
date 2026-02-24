@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/pgavlin/dawn"
 	"github.com/pgavlin/starlark-go/typecheck"
@@ -16,14 +17,15 @@ import (
 
 // Server is the Dawn LSP server.
 type Server struct {
-	mu        sync.RWMutex
-	documents map[string]*Document
-	project   *ProjectContext
-	dawnProj  *dawn.Project
-	env       *typecheck.Env
-	rootURI   string
-	transport *transport
-	log       *log.Logger
+	mu          sync.RWMutex
+	documents   map[string]*Document
+	project     *ProjectContext
+	dawnProj    *dawn.Project
+	env         *typecheck.Env
+	rootURI     string
+	transport   *transport
+	log         *log.Logger
+	reloadTimer *time.Timer
 }
 
 // NewServer creates a new LSP server.
@@ -152,6 +154,7 @@ func (s *Server) handleInitialize(msg *jsonrpcMessage) error {
 					Watchers: []FileSystemWatcher{
 						{GlobPattern: "**/dawn.toml", Kind: 7},
 						{GlobPattern: "**/.dawnconfig", Kind: 7},
+						{GlobPattern: "**/BUILD.dawn", Kind: 7},
 					},
 				},
 			},
@@ -317,21 +320,51 @@ func (s *Server) handleSignatureHelp(msg *jsonrpcMessage) error {
 	return s.respond(msg.ID, result)
 }
 
+const reloadDebounce = 300 * time.Millisecond
+
 func (s *Server) handleDidChangeWatchedFiles(msg *jsonrpcMessage) error {
 	var params DidChangeWatchedFilesParams
 	if err := json.Unmarshal(msg.Params, &params); err != nil {
 		return nil
 	}
 
+	configChanged := false
+	moduleChanged := false
 	for _, event := range params.Changes {
 		path := uriToPath(event.URI)
 		base := filepath.Base(path)
-		if base == "dawn.toml" || base == ".dawnconfig" {
-			s.reloadProject()
-			return nil
+		switch base {
+		case "dawn.toml", ".dawnconfig":
+			configChanged = true
+		case "BUILD.dawn":
+			moduleChanged = true
 		}
 	}
+
+	if configChanged {
+		s.cancelReloadTimer()
+		s.reloadProject()
+		return nil
+	}
+
+	if moduleChanged {
+		s.scheduleReload()
+	}
 	return nil
+}
+
+func (s *Server) scheduleReload() {
+	s.cancelReloadTimer()
+	s.reloadTimer = time.AfterFunc(reloadDebounce, func() {
+		s.reloadProject()
+	})
+}
+
+func (s *Server) cancelReloadTimer() {
+	if s.reloadTimer != nil {
+		s.reloadTimer.Stop()
+		s.reloadTimer = nil
+	}
 }
 
 func (s *Server) reloadProject() {

@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 // testServer creates a server connected to pipes for testing.
@@ -1644,5 +1645,113 @@ func TestProjectReload(t *testing.T) {
 	}
 	if len(diags2.Diagnostics) == 0 {
 		t.Error("expected diagnostics for undefined name after project reload")
+	}
+}
+
+func TestModuleFileReload(t *testing.T) {
+	t.Parallel()
+
+	// Create a project with two BUILD.dawn files: root and lib.
+	tmpDir := t.TempDir()
+	libDir := filepath.Join(tmpDir, "lib")
+	if err := os.MkdirAll(libDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := os.WriteFile(filepath.Join(tmpDir, "dawn.toml"), []byte("[project]\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	// lib/BUILD.dawn initially has helper_v1.
+	libBuild := "def helper_v1():\n  return 1\n"
+	libBuildPath := filepath.Join(libDir, "BUILD.dawn")
+	if err := os.WriteFile(libBuildPath, []byte(libBuild), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	// Root BUILD.dawn loads helper_v1 from lib — this should work initially.
+	mainBuild := "load(\"//lib\", \"helper_v1\")\nx = helper_v1()\n"
+	mainPath := filepath.Join(tmpDir, "BUILD.dawn")
+	if err := os.WriteFile(mainPath, []byte(mainBuild), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	_, client := testServer(t)
+	rootURI := "file://" + tmpDir
+	_ = sendRequest(t, client, 1, "initialize", InitializeParams{
+		RootURI: rootURI,
+	})
+
+	mainURI := "file://" + mainPath
+	sendNotification(t, client, "textDocument/didOpen", DidOpenTextDocumentParams{
+		TextDocument: TextDocumentItem{
+			URI:        mainURI,
+			LanguageID: "starlark",
+			Version:    1,
+			Text:       mainBuild,
+		},
+	})
+
+	// Drain initial diagnostics.
+	msg, err := client.read()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var diags1 PublishDiagnosticsParams
+	if err := json.Unmarshal(msg.Params, &diags1); err != nil {
+		t.Fatal(err)
+	}
+	if len(diags1.Diagnostics) != 0 {
+		t.Fatalf("expected 0 initial diagnostics, got %d: %v", len(diags1.Diagnostics), diags1.Diagnostics)
+	}
+
+	// Now change the root BUILD.dawn to load helper_v2 (which doesn't exist yet).
+	mainBuild2 := "load(\"//lib\", \"helper_v2\")\nx = helper_v2()\n"
+	sendNotification(t, client, "textDocument/didChange", DidChangeTextDocumentParams{
+		TextDocument: VersionedTextDocumentIdentifier{URI: mainURI, Version: 2},
+		ContentChanges: []TextDocumentContentChangeEvent{
+			{Text: mainBuild2},
+		},
+	})
+
+	// Drain diagnostics from the change — helper_v2 is not exported yet so we expect errors.
+	msg, err = client.read()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var diags2 PublishDiagnosticsParams
+	if err := json.Unmarshal(msg.Params, &diags2); err != nil {
+		t.Fatal(err)
+	}
+
+	// Now update lib/BUILD.dawn on disk to export helper_v2.
+	libBuild2 := "def helper_v1():\n  return 1\n\ndef helper_v2():\n  return 2\n"
+	if err := os.WriteFile(libBuildPath, []byte(libBuild2), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	// Notify server that lib/BUILD.dawn changed.
+	sendNotification(t, client, "workspace/didChangeWatchedFiles", DidChangeWatchedFilesParams{
+		Changes: []FileEvent{
+			{URI: "file://" + libBuildPath, Type: 2},
+		},
+	})
+
+	// Wait for debounce timer to fire.
+	time.Sleep(500 * time.Millisecond)
+
+	// Read diagnostics published after the reload.
+	msg, err = client.read()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var diags3 PublishDiagnosticsParams
+	if err := json.Unmarshal(msg.Params, &diags3); err != nil {
+		t.Fatal(err)
+	}
+
+	// After reload, helper_v2 should be available — expect no diagnostics.
+	if len(diags3.Diagnostics) != 0 {
+		t.Errorf("expected 0 diagnostics after module reload, got %d: %v", len(diags3.Diagnostics), diags3.Diagnostics)
 	}
 }
