@@ -1574,3 +1574,75 @@ func TestCompletionKeywordArgsUserFunc(t *testing.T) {
 		}
 	}
 }
+
+func TestProjectReload(t *testing.T) {
+	t.Parallel()
+	_, client := testServer(t)
+
+	// Create a temp dir with NO dawn.toml initially.
+	dir := t.TempDir()
+	rootURI := "file://" + dir
+
+	buildPath := filepath.Join(dir, "BUILD.dawn")
+	text := "x = undefined_name\n"
+	if err := os.WriteFile(buildPath, []byte(text), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	// Initialize — no project, so no resolve errors.
+	resp := sendRequest(t, client, 1, "initialize", InitializeParams{
+		RootURI: rootURI,
+	})
+	if resp.Error != nil {
+		t.Fatalf("initialize failed: %s", resp.Error.Message)
+	}
+
+	// Open a BUILD.dawn with an undefined name.
+	uri := "file://" + buildPath
+	sendNotification(t, client, "textDocument/didOpen", DidOpenTextDocumentParams{
+		TextDocument: TextDocumentItem{
+			URI:        uri,
+			LanguageID: "starlark",
+			Version:    1,
+			Text:       text,
+		},
+	})
+
+	// Read diagnostics — without a project, resolve doesn't run, so no errors expected.
+	msg, err := client.read()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var diags1 PublishDiagnosticsParams
+	if err := json.Unmarshal(msg.Params, &diags1); err != nil {
+		t.Fatal(err)
+	}
+	if len(diags1.Diagnostics) != 0 {
+		t.Fatalf("expected 0 diagnostics without project, got %d: %v", len(diags1.Diagnostics), diags1.Diagnostics)
+	}
+
+	// Now create dawn.toml to establish a project.
+	if err := os.WriteFile(filepath.Join(dir, "dawn.toml"), []byte("[project]\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	// Notify the server that dawn.toml was created.
+	sendNotification(t, client, "workspace/didChangeWatchedFiles", DidChangeWatchedFilesParams{
+		Changes: []FileEvent{
+			{URI: "file://" + filepath.Join(dir, "dawn.toml"), Type: 1},
+		},
+	})
+
+	// Read diagnostics — now that the project is loaded, resolve should detect the undefined name.
+	msg, err = client.read()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var diags2 PublishDiagnosticsParams
+	if err := json.Unmarshal(msg.Params, &diags2); err != nil {
+		t.Fatal(err)
+	}
+	if len(diags2.Diagnostics) == 0 {
+		t.Error("expected diagnostics for undefined name after project reload")
+	}
+}

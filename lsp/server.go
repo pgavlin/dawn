@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 	"sync"
 
 	"github.com/pgavlin/dawn"
@@ -20,6 +21,7 @@ type Server struct {
 	project   *ProjectContext
 	dawnProj  *dawn.Project
 	env       *typecheck.Env
+	rootURI   string
 	transport *transport
 	log       *log.Logger
 }
@@ -83,6 +85,8 @@ func (s *Server) dispatch(msg *jsonrpcMessage) error {
 		return s.handleSemanticTokensFull(msg)
 	case "textDocument/signatureHelp":
 		return s.handleSignatureHelp(msg)
+	case "workspace/didChangeWatchedFiles":
+		return s.handleDidChangeWatchedFiles(msg)
 	default:
 		// Unknown method. If it has an ID, respond with method not found.
 		if msg.ID != nil {
@@ -105,6 +109,7 @@ func (s *Server) handleInitialize(msg *jsonrpcMessage) error {
 		rootURI = "file://" + params.RootPath
 	}
 
+	s.rootURI = rootURI
 	s.project = newProjectContext(rootURI)
 
 	// Try to open the project for type-checking.
@@ -141,6 +146,14 @@ func (s *Server) handleInitialize(msg *jsonrpcMessage) error {
 					TokenModifiers: SemanticTokenModifiers,
 				},
 				Full: true,
+			},
+			Workspace: &ServerWorkspaceCapabilities{
+				DidChangeWatchedFiles: &DidChangeWatchedFilesRegistrationOptions{
+					Watchers: []FileSystemWatcher{
+						{GlobPattern: "**/dawn.toml", Kind: 7},
+						{GlobPattern: "**/.dawnconfig", Kind: 7},
+					},
+				},
 			},
 		},
 		ServerInfo: &ServerInfo{
@@ -302,6 +315,68 @@ func (s *Server) handleSignatureHelp(msg *jsonrpcMessage) error {
 	}
 	result := s.signatureHelp(&params)
 	return s.respond(msg.ID, result)
+}
+
+func (s *Server) handleDidChangeWatchedFiles(msg *jsonrpcMessage) error {
+	var params DidChangeWatchedFilesParams
+	if err := json.Unmarshal(msg.Params, &params); err != nil {
+		return nil
+	}
+
+	for _, event := range params.Changes {
+		path := uriToPath(event.URI)
+		base := filepath.Base(path)
+		if base == "dawn.toml" || base == ".dawnconfig" {
+			s.reloadProject()
+			return nil
+		}
+	}
+	return nil
+}
+
+func (s *Server) reloadProject() {
+	s.log.Printf("reloading project: rootURI=%s", s.rootURI)
+
+	project := newProjectContext(s.rootURI)
+
+	var dawnProj *dawn.Project
+	var env *typecheck.Env
+	if project != nil && project.Root != "" {
+		ctx := context.Background()
+		proj, err := dawn.Open(ctx, project.Root, nil)
+		if err != nil {
+			s.log.Printf("failed to open project on reload: %v", err)
+		} else {
+			dawnProj = proj
+			env = proj.BaseEnv()
+		}
+	}
+
+	s.mu.Lock()
+	s.project = project
+	s.dawnProj = dawnProj
+	s.env = env
+	docs := make([]*Document, 0, len(s.documents))
+	for _, doc := range s.documents {
+		docs = append(docs, doc)
+	}
+	s.mu.Unlock()
+
+	// Re-analyze all open documents with the new project context.
+	for _, doc := range docs {
+		if dawnProj != nil {
+			if info, ok := dawnProj.ModuleForFile(doc.Path); ok {
+				doc.initFromModule(info)
+			} else {
+				doc.analyze(env)
+			}
+		} else {
+			doc.analyze(nil)
+		}
+		if err := s.publishDiagnostics(doc); err != nil {
+			s.log.Printf("failed to publish diagnostics for %s: %v", doc.URI, err)
+		}
+	}
 }
 
 // publishDiagnostics sends diagnostics for a document.

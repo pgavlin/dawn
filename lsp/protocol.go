@@ -55,6 +55,20 @@ type ServerCapabilities struct {
 	ReferencesProvider     bool                     `json:"referencesProvider,omitempty"`
 	DocumentSymbolProvider bool                     `json:"documentSymbolProvider,omitempty"`
 	SemanticTokensProvider *SemanticTokensOptions   `json:"semanticTokensProvider,omitempty"`
+	Workspace              *ServerWorkspaceCapabilities `json:"workspace,omitempty"`
+}
+
+type ServerWorkspaceCapabilities struct {
+	DidChangeWatchedFiles *DidChangeWatchedFilesRegistrationOptions `json:"didChangeWatchedFiles,omitempty"`
+}
+
+type DidChangeWatchedFilesRegistrationOptions struct {
+	Watchers []FileSystemWatcher `json:"watchers"`
+}
+
+type FileSystemWatcher struct {
+	GlobPattern string `json:"globPattern"`
+	Kind        int    `json:"kind,omitempty"` // bitmask: 1=Create, 2=Change, 4=Delete
 }
 
 type TextDocumentSyncOptions struct {
@@ -115,6 +129,15 @@ type DidCloseTextDocumentParams struct {
 
 type DidSaveTextDocumentParams struct {
 	TextDocument TextDocumentIdentifier `json:"textDocument"`
+}
+
+type DidChangeWatchedFilesParams struct {
+	Changes []FileEvent `json:"changes"`
+}
+
+type FileEvent struct {
+	URI  string `json:"uri"`
+	Type int    `json:"type"` // 1=Created, 2=Changed, 3=Deleted
 }
 
 type TextDocumentPositionParams struct {
