@@ -1,5 +1,5 @@
 ignore = ['testdata/**']
 
 [requirements]
-golang = {path = 'github.com/pgavlin/dawn-golang', version = 'v0.1.6'}
+golang = {path = 'github.com/pgavlin/dawn-golang', version = 'v0.1.7'}
 python = {path = 'github.com/pgavlin/dawn-python', version = 'v0.1.1'}
