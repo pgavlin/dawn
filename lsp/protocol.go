@@ -47,14 +47,14 @@ type ServerInfo struct {
 }
 
 type ServerCapabilities struct {
-	TextDocumentSync       *TextDocumentSyncOptions `json:"textDocumentSync,omitempty"`
-	CompletionProvider     *CompletionOptions       `json:"completionProvider,omitempty"`
-	HoverProvider          bool                     `json:"hoverProvider,omitempty"`
-	SignatureHelpProvider  *SignatureHelpOptions    `json:"signatureHelpProvider,omitempty"`
-	DefinitionProvider     bool                     `json:"definitionProvider,omitempty"`
-	ReferencesProvider     bool                     `json:"referencesProvider,omitempty"`
-	DocumentSymbolProvider bool                     `json:"documentSymbolProvider,omitempty"`
-	SemanticTokensProvider *SemanticTokensOptions   `json:"semanticTokensProvider,omitempty"`
+	TextDocumentSync       *TextDocumentSyncOptions     `json:"textDocumentSync,omitempty"`
+	CompletionProvider     *CompletionOptions           `json:"completionProvider,omitempty"`
+	HoverProvider          bool                         `json:"hoverProvider,omitempty"`
+	SignatureHelpProvider  *SignatureHelpOptions        `json:"signatureHelpProvider,omitempty"`
+	DefinitionProvider     bool                         `json:"definitionProvider,omitempty"`
+	ReferencesProvider     bool                         `json:"referencesProvider,omitempty"`
+	DocumentSymbolProvider bool                         `json:"documentSymbolProvider,omitempty"`
+	SemanticTokensProvider *SemanticTokensOptions       `json:"semanticTokensProvider,omitempty"`
 	Workspace              *ServerWorkspaceCapabilities `json:"workspace,omitempty"`
 }
 

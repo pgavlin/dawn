@@ -117,4 +117,3 @@ func IsUniversal(name string) bool {
 	}
 	return false
 }
-

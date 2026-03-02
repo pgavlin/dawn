@@ -777,7 +777,7 @@ func TestReferencesVariable(t *testing.T) {
 
 	// "version" is assigned on line 0 and used on lines 1 and 2
 	uri := initAndOpen(t, client,
-"version = \"1.0\"\nldflags = version\nx = version\n")
+		"version = \"1.0\"\nldflags = version\nx = version\n")
 
 	resp := sendRequest(t, client, 2, "textDocument/references", ReferenceParams{
 		TextDocumentPositionParams: TextDocumentPositionParams{
@@ -805,7 +805,7 @@ func TestReferencesParameter(t *testing.T) {
 
 	// "x" is a parameter used twice in body
 	uri := initAndOpen(t, client,
-"def add(x, y):\n  z = x + y\n  return x\n")
+		"def add(x, y):\n  z = x + y\n  return x\n")
 
 	// Find references of "x" at parameter definition
 	resp := sendRequest(t, client, 2, "textDocument/references", ReferenceParams{
@@ -834,7 +834,7 @@ func TestReferencesBuiltin(t *testing.T) {
 	_, client := testServer(t)
 
 	uri := initAndOpen(t, client,
-"x = glob([\"*.go\"])\ny = glob([\"*.py\"])\n")
+		"x = glob([\"*.go\"])\ny = glob([\"*.py\"])\n")
 
 	resp := sendRequest(t, client, 2, "textDocument/references", ReferenceParams{
 		TextDocumentPositionParams: TextDocumentPositionParams{
@@ -862,7 +862,7 @@ func TestSignatureHelpBuiltin(t *testing.T) {
 
 	// Cursor inside target() call
 	uri := initAndOpen(t, client,
-"x = target(name=\"foo\", )\n")
+		"x = target(name=\"foo\", )\n")
 
 	resp := sendRequest(t, client, 2, "textDocument/signatureHelp", SignatureHelpParams{
 		TextDocumentPositionParams: TextDocumentPositionParams{
@@ -899,7 +899,7 @@ func TestSignatureHelpUserDefined(t *testing.T) {
 	_, client := testServer(t)
 
 	uri := initAndOpen(t, client,
-"def my_func(a, b, c=None):\n  pass\n\nresult = my_func(1, )\n")
+		"def my_func(a, b, c=None):\n  pass\n\nresult = my_func(1, )\n")
 
 	resp := sendRequest(t, client, 2, "textDocument/signatureHelp", SignatureHelpParams{
 		TextDocumentPositionParams: TextDocumentPositionParams{
@@ -1006,7 +1006,7 @@ func TestCompletionDotAccess(t *testing.T) {
 	_, client := testServer(t)
 
 	uri := initAndOpen(t, client,
-"x = sh.\n")
+		"x = sh.\n")
 
 	resp := sendRequest(t, client, 2, "textDocument/completion", CompletionParams{
 		TextDocumentPositionParams: TextDocumentPositionParams{
@@ -1039,7 +1039,7 @@ func TestCompletionNestedDotAccess(t *testing.T) {
 	_, client := testServer(t)
 
 	uri := initAndOpen(t, client,
-"x = os.path.\n")
+		"x = os.path.\n")
 
 	resp := sendRequest(t, client, 2, "textDocument/completion", CompletionParams{
 		TextDocumentPositionParams: TextDocumentPositionParams{
@@ -1073,7 +1073,7 @@ func TestCompletionKeywordArgs(t *testing.T) {
 
 	// Cursor inside target() call, after the opening paren
 	uri := initAndOpen(t, client,
-"x = target( )\n")
+		"x = target( )\n")
 
 	resp := sendRequest(t, client, 2, "textDocument/completion", CompletionParams{
 		TextDocumentPositionParams: TextDocumentPositionParams{
@@ -1109,7 +1109,7 @@ func TestCompletionKeywordArgsFilterUsed(t *testing.T) {
 
 	// target() call with name= already used
 	uri := initAndOpen(t, client,
-"x = target(name=\"foo\", )\n")
+		"x = target(name=\"foo\", )\n")
 
 	resp := sendRequest(t, client, 2, "textDocument/completion", CompletionParams{
 		TextDocumentPositionParams: TextDocumentPositionParams{
@@ -1139,7 +1139,7 @@ func TestHoverDotExpr(t *testing.T) {
 	_, client := testServer(t)
 
 	uri := initAndOpen(t, client,
-"x = sh.exec(\"ls\")\n")
+		"x = sh.exec(\"ls\")\n")
 
 	resp := sendRequest(t, client, 2, "textDocument/hover", TextDocumentPositionParams{
 		TextDocument: TextDocumentIdentifier{URI: uri},
@@ -1167,7 +1167,7 @@ func TestHoverNestedDotExpr(t *testing.T) {
 	_, client := testServer(t)
 
 	uri := initAndOpen(t, client,
-"x = os.path.join(\"a\", \"b\")\n")
+		"x = os.path.join(\"a\", \"b\")\n")
 
 	resp := sendRequest(t, client, 2, "textDocument/hover", TextDocumentPositionParams{
 		TextDocument: TextDocumentIdentifier{URI: uri},
@@ -1195,7 +1195,7 @@ func TestHoverUserFunction(t *testing.T) {
 	_, client := testServer(t)
 
 	uri := initAndOpen(t, client,
-"def my_func(a, b):\n  \"\"\"Does something useful.\"\"\"\n  pass\n\nx = my_func\n")
+		"def my_func(a, b):\n  \"\"\"Does something useful.\"\"\"\n  pass\n\nx = my_func\n")
 
 	resp := sendRequest(t, client, 2, "textDocument/hover", TextDocumentPositionParams{
 		TextDocument: TextDocumentIdentifier{URI: uri},
@@ -1226,7 +1226,7 @@ func TestDocumentSymbolsComprehensive(t *testing.T) {
 	_, client := testServer(t)
 
 	uri := initAndOpen(t, client,
-"load(\"//lib\", \"helper\")\n\nversion = \"1.0\"\n\n@target\ndef build():\n  pass\n\ndef helper_fn():\n  pass\n")
+		"load(\"//lib\", \"helper\")\n\nversion = \"1.0\"\n\n@target\ndef build():\n  pass\n\ndef helper_fn():\n  pass\n")
 
 	resp := sendRequest(t, client, 2, "textDocument/documentSymbol", DocumentSymbolParams{
 		TextDocument: TextDocumentIdentifier{URI: uri},
@@ -1377,7 +1377,7 @@ func TestSemanticTokensComprehensive(t *testing.T) {
 	_, client := testServer(t)
 
 	uri := initAndOpen(t, client,
-"@target\ndef build():\n  x = glob([\"*.go\"])\n  sh.exec(\"go build\")\n")
+		"@target\ndef build():\n  x = glob([\"*.go\"])\n  sh.exec(\"go build\")\n")
 
 	resp := sendRequest(t, client, 2, "textDocument/semanticTokens/full", SemanticTokensParams{
 		TextDocument: TextDocumentIdentifier{URI: uri},
@@ -1454,7 +1454,7 @@ func TestCompletionIncludesLoadedNames(t *testing.T) {
 	_, client := testServer(t)
 
 	uri := initAndOpen(t, client,
-"load(\"//lib\", \"helper\")\n\ndef build():\n  pass\n\nx = None\n")
+		"load(\"//lib\", \"helper\")\n\ndef build():\n  pass\n\nx = None\n")
 
 	resp := sendRequest(t, client, 2, "textDocument/completion", CompletionParams{
 		TextDocumentPositionParams: TextDocumentPositionParams{
@@ -1547,7 +1547,7 @@ func TestCompletionKeywordArgsUserFunc(t *testing.T) {
 
 	// User-defined function with parameters; cursor inside a call to it
 	uri := initAndOpen(t, client,
-"def my_build(src, out, debug=False):\n  pass\n\nresult = my_build( )\n")
+		"def my_build(src, out, debug=False):\n  pass\n\nresult = my_build( )\n")
 
 	resp := sendRequest(t, client, 2, "textDocument/completion", CompletionParams{
 		TextDocumentPositionParams: TextDocumentPositionParams{
