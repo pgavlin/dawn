@@ -104,6 +104,13 @@ func IsPredeclared(env *typecheck.Env) func(string) bool {
 	}
 }
 
+// BuildTypeEnv constructs a typecheck.Env from the given builtins.
+// This is useful for creating an env without a fully-initialized Project.
+func BuildTypeEnv(builtins starlark.StringDict) *typecheck.Env {
+	proj := &Project{builtins: builtins}
+	return proj.buildTypeEnv()
+}
+
 // IsUniversal reports whether a name is a Starlark universal (built-in).
 func IsUniversal(name string) bool {
 	_, ok := typecheck.Universe[name]

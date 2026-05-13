@@ -8,6 +8,11 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	starlark_os "github.com/pgavlin/dawn/lib/os"
+	starlark_sh "github.com/pgavlin/dawn/lib/sh"
+	starlark_json "github.com/pgavlin/starlark-go/lib/json"
+	"github.com/pgavlin/starlark-go/starlark"
 )
 
 // testServer creates a server connected to pipes for testing.
@@ -15,7 +20,11 @@ func testServer(t *testing.T) (*Server, *transport) {
 	t.Helper()
 	sr, cw := io.Pipe()
 	cr, sw := io.Pipe()
-	server := NewServer(sr, sw)
+	server := NewServer(sr, sw, starlark.StringDict{
+		"json": starlark_json.Module,
+		"os":   starlark_os.Module,
+		"sh":   starlark_sh.Module,
+	})
 	client := newTransport(cr, cw)
 	go func() {
 		_ = server.Run()
@@ -1609,7 +1618,7 @@ func TestProjectReload(t *testing.T) {
 		},
 	})
 
-	// Read diagnostics — without a project, resolve doesn't run, so no errors expected.
+	// Read diagnostics — with fallback analysis, resolve runs even without a project.
 	msg, err := client.read()
 	if err != nil {
 		t.Fatal(err)
@@ -1618,8 +1627,8 @@ func TestProjectReload(t *testing.T) {
 	if err := json.Unmarshal(msg.Params, &diags1); err != nil {
 		t.Fatal(err)
 	}
-	if len(diags1.Diagnostics) != 0 {
-		t.Fatalf("expected 0 diagnostics without project, got %d: %v", len(diags1.Diagnostics), diags1.Diagnostics)
+	if len(diags1.Diagnostics) == 0 {
+		t.Fatal("expected diagnostics for undefined name with fallback analysis")
 	}
 
 	// Now create dawn.toml to establish a project.
