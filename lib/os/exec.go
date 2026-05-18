@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/pgavlin/dawn/util"
@@ -138,6 +139,11 @@ func command(
 
 	if cwd == "" {
 		cwd = util.Getwd(thread)
+	} else if !filepath.IsAbs(cwd) {
+		// Go's exec resolves a relative Cmd.Dir against the calling
+		// process's cwd. Anchor it against the calling module's directory
+		// to match the docstring and the default branch above.
+		cwd = filepath.Join(util.Getwd(thread), cwd)
 	}
 
 	env := os.Environ()

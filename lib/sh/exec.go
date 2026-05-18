@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/pgavlin/dawn/util"
@@ -117,6 +118,11 @@ func command(thread *starlark.Thread, command, cwd string, env starlark.Iterable
 	var options []interp.RunnerOption
 	if cwd == "" {
 		cwd = util.Getwd(thread)
+	} else if !filepath.IsAbs(cwd) {
+		// interp.Dir resolves a relative path against the process cwd via
+		// filepath.Abs. Anchor it against the calling module's directory
+		// to match the docstring and the default branch above.
+		cwd = filepath.Join(util.Getwd(thread), cwd)
 	}
 	options = append(options, interp.Dir(cwd))
 
