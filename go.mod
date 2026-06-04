@@ -11,8 +11,8 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/otiai10/copy v1.6.0
 	github.com/pelletier/go-toml/v2 v2.2.4
-	github.com/pgavlin/fx/v2 v2.0.11
-	github.com/pgavlin/glob v0.0.0-20250924034531-68797d8d9100
+	github.com/pgavlin/fx/v2 v2.0.12
+	github.com/pgavlin/glob v0.0.0-20260528080512-8517e49380d9
 	github.com/pgavlin/mvs v0.0.0-20250123095647-090776a03765
 	github.com/pgavlin/starlark-go v0.0.0-20260223201547-55cb955737ab
 	github.com/rjeczalik/notify v0.9.3

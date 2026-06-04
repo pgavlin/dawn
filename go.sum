@@ -244,8 +244,12 @@ github.com/pelletier/go-toml/v2 v2.2.4 h1:mye9XuhQ6gvn5h28+VilKrrPoQVanw5PMw/TB0
 github.com/pelletier/go-toml/v2 v2.2.4/go.mod h1:2gIqNv+qfxSVS7cM2xJQKtLSTLUE9V8t9Stt+h56mCY=
 github.com/pgavlin/fx/v2 v2.0.11 h1:wNQfWdaoaAWOoAxyXbXFMpGQ2hVz5/52JA5yQuHdB1o=
 github.com/pgavlin/fx/v2 v2.0.11/go.mod h1:M/nF/ooAOy+NUBooYYXl2REARzJ/giPJxfMs8fINfKc=
+github.com/pgavlin/fx/v2 v2.0.12 h1:SjjaJ68Dt8Z4zHwOpY/RPijd7lShs6xYupJbF9ra00M=
+github.com/pgavlin/fx/v2 v2.0.12/go.mod h1:M/nF/ooAOy+NUBooYYXl2REARzJ/giPJxfMs8fINfKc=
 github.com/pgavlin/glob v0.0.0-20250924034531-68797d8d9100 h1:Q22SIuEFQAbKHjEIEDGaPjr+XxdnMzxNaJ/QmUKZOrA=
 github.com/pgavlin/glob v0.0.0-20250924034531-68797d8d9100/go.mod h1:V5mD4+tvu3ZBZP7a9TkkTwPEC/SOLcrgWF5ZujCL8RM=
+github.com/pgavlin/glob v0.0.0-20260528080512-8517e49380d9 h1:X3bj38cHNq3d+mCGFAUfLHOmYFYZP3z0ZVNWEO1g5hM=
+github.com/pgavlin/glob v0.0.0-20260528080512-8517e49380d9/go.mod h1:V5mD4+tvu3ZBZP7a9TkkTwPEC/SOLcrgWF5ZujCL8RM=
 github.com/pgavlin/mvs v0.0.0-20250123095647-090776a03765 h1:/HgcjkeTWBaURvJT1DzXrpxl017r4wWMRjDLHupWB3U=
 github.com/pgavlin/mvs v0.0.0-20250123095647-090776a03765/go.mod h1:W28LY2nUddQsVDvie8Lb9n/ITqoHQWg0tUK5gZZQlkQ=
 github.com/pgavlin/starlark-go v0.0.0-20260223201547-55cb955737ab h1:DjdCHfgHGKIVN/516qu122MwS75RJqoBH6VUJKKVsfQ=
