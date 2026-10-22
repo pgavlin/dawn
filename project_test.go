@@ -299,6 +299,131 @@ func TestEarlyCutoff(t *testing.T) {
 	pt.run(t)
 }
 
+func TestDependencySetChanges(t *testing.T) {
+	t.Parallel()
+
+	temp := t.TempDir()
+	writeFile := func(name, contents string) {
+		path := filepath.Join(temp, name)
+		require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o750))
+		require.NoError(t, os.WriteFile(path, []byte(contents), 0o600))
+	}
+	removeFile := func(name string) {
+		require.NoError(t, os.Remove(filepath.Join(temp, name)))
+	}
+
+	writeFile("dawn.toml", "")
+	writeFile("BUILD.dawn", `@target(sources=glob("inputs/*.txt"), default=True)
+def consume():
+    fail_if_requested()
+`)
+	writeFile("inputs/a.txt", "a\n")
+
+	fail := starlark.NewBuiltin("fail_if_requested", func(_ *starlark.Thread, _ *starlark.Builtin, _ starlark.Tuple, _ []starlark.Tuple) (starlark.Value, error) {
+		if _, err := os.Stat(filepath.Join(temp, "fail")); err == nil {
+			return nil, assert.AnError
+		} else if !os.IsNotExist(err) {
+			return nil, err
+		}
+		return starlark.None, nil
+	})
+	events := &testEvents{}
+	options := &OpenOptions{
+		Events:   events,
+		Builtins: starlark.StringDict{"fail_if_requested": fail},
+	}
+	defaultLabel := tryParseLabel(t, "//:default")
+	consumeLabel := tryParseLabel(t, "//:consume")
+
+	run := func(wantErr bool) (*Project, []testEvent) {
+		offset := len(events.events)
+		proj, err := Open(t.Context(), temp, options)
+		require.NoError(t, err)
+		require.NoError(t, proj.Load(t.Context()))
+		err = proj.Run(t.Context(), defaultLabel, nil)
+		if wantErr {
+			require.Error(t, err)
+		} else {
+			require.NoError(t, err)
+		}
+		return proj, events.events[offset:]
+	}
+	find := func(events []testEvent, kind, target string) testEvent {
+		i := slices.IndexFunc(events, func(e testEvent) bool {
+			l, ok := e["label"].(*label.Label)
+			return ok && e["kind"].(string) == kind && l.String() == target
+		})
+		if i == -1 {
+			return nil
+		}
+		return events[i]
+	}
+	assertInfo := func(proj *Project, wantDeps []string, rerun bool) {
+		info, err := proj.loadTargetInfo(consumeLabel)
+		require.NoError(t, err)
+		assert.Len(t, info.Dependencies, len(wantDeps))
+		for _, dep := range wantDeps {
+			assert.Contains(t, info.Dependencies, dep)
+		}
+		assert.Equal(t, rerun, info.Rerun)
+	}
+
+	proj, evts := run(false)
+	assert.NotNil(t, find(evts, "TargetEvaluating", "//:consume"))
+	assertInfo(proj, []string{"source://inputs:a.txt"}, false)
+
+	_, evts = run(false)
+	assert.Nil(t, find(evts, "TargetEvaluating", "//:consume"))
+
+	writeFile("inputs/b.txt", "b\n")
+	proj, evts = run(false)
+	assert.NotNil(t, find(evts, "TargetEvaluating", "//:consume"))
+	assertInfo(proj, []string{"source://inputs:a.txt", "source://inputs:b.txt"}, false)
+
+	_, evts = run(false)
+	assert.Nil(t, find(evts, "TargetEvaluating", "//:consume"))
+
+	removeFile("inputs/b.txt")
+	proj, evts = run(false)
+	assert.NotNil(t, find(evts, "TargetEvaluating", "//:consume"))
+	assertInfo(proj, []string{"source://inputs:a.txt"}, false)
+
+	_, evts = run(false)
+	assert.Nil(t, find(evts, "TargetEvaluating", "//:consume"))
+
+	// A failed run after an addition must preserve the dependency set from the
+	// last successful run.
+	writeFile("inputs/b.txt", "b\n")
+	writeFile("fail", "")
+	proj, evts = run(true)
+	assert.NotNil(t, find(evts, "TargetEvaluating", "//:consume"))
+	assertInfo(proj, []string{"source://inputs:a.txt"}, true)
+
+	removeFile("fail")
+	proj, evts = run(false)
+	assert.NotNil(t, find(evts, "TargetEvaluating", "//:consume"))
+	assertInfo(proj, []string{"source://inputs:a.txt", "source://inputs:b.txt"}, false)
+
+	// The same rule applies to a failed run after a removal.
+	removeFile("inputs/b.txt")
+	writeFile("fail", "")
+	proj, evts = run(true)
+	assert.NotNil(t, find(evts, "TargetEvaluating", "//:consume"))
+	assertInfo(proj, []string{"source://inputs:a.txt", "source://inputs:b.txt"}, true)
+
+	removeFile("fail")
+	proj, evts = run(false)
+	assert.NotNil(t, find(evts, "TargetEvaluating", "//:consume"))
+	assertInfo(proj, []string{"source://inputs:a.txt"}, false)
+}
+
+func tryParseLabel(t *testing.T, raw string) *label.Label {
+	t.Helper()
+	l, err := label.Parse(raw)
+	require.NoError(t, err)
+	return l
+}
+
 func TestTargetDiffs(t *testing.T) {
 	t.Parallel()
 	dirs := []string{"constants", "functions", "names", "predeclared", "universal", "globals", "freevars"}

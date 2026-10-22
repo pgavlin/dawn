@@ -11,6 +11,8 @@ import (
 	"github.com/pgavlin/dawn/diff"
 	"github.com/pgavlin/dawn/label"
 	"github.com/pgavlin/dawn/runner"
+	"github.com/pgavlin/fx/v2"
+	fxm "github.com/pgavlin/fx/v2/maps"
 	fxs "github.com/pgavlin/fx/v2/slices"
 	"github.com/pgavlin/fx/v2/try"
 	"github.com/pgavlin/starlark-go/starlark"
@@ -69,6 +71,7 @@ func (t *runTarget) Evaluate(ctx context.Context, engine runner.Engine) error {
 	// Evaluate the target's dependencies.
 	depsUpToDate := true
 	deps := t.target.dependencies()
+	currentDeps := fx.NewSet(deps...)
 
 	depData := map[string]string{}
 	var cyclicDepErr *runner.CyclicDependencyError
@@ -104,6 +107,9 @@ func (t *runTarget) Evaluate(ctx context.Context, engine runner.Engine) error {
 			}
 		}
 	}
+	depsUpToDate = depsUpToDate && !fxm.Any(info.Dependencies, func(dep, _ string) bool {
+		return !currentDeps.Has(dep)
+	})
 
 	// Check for missing dependencies.
 	switch len(missingDeps) {
@@ -153,7 +159,11 @@ func (t *runTarget) Evaluate(ctx context.Context, engine runner.Engine) error {
 	case proj.always:
 		reason = "always"
 	case !depsUpToDate:
-		reason = fmt.Sprintf("out-of-date dependencies: %v", strings.Join(outOfDateDeps, ", "))
+		if len(outOfDateDeps) == 0 {
+			reason = "dependency set changed"
+		} else {
+			reason = fmt.Sprintf("out-of-date dependencies: %v", strings.Join(outOfDateDeps, ", "))
+		}
 	case info.Rerun:
 		reason = "failed during last run"
 	}
