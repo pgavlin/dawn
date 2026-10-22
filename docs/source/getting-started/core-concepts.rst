@@ -126,13 +126,26 @@ a target does not generate any files--or if the set of files it generates is not
 known at the time the target is defined--it must be explicitly named by its
 dependents.
 
-When a target is built, its body is only executed if its dependencies are
+When a target is built, its body is only executed if its dependencies
 have changed with respect to the last time the target was successfully run. A
 target is considered to have changed each time it successfully runs. A
 dependency on a :ref:`source file <Sources>` is only considered to have changed
 if the file's contents have changed since the last time the target was
 successfully run. A target's dependencies are always built before the target
 itself, and it is an error for targets to have cyclic dependencies.
+
+The difference between these two rules comes down to what dawn can observe.
+An entity may be considered unchanged only if dawn can reliably detect whether
+its outputs changed: the outputs must be completely captured (no side
+channels), and they must have a well-defined notion of identity.
+:ref:`Sources <Sources>` meet both requirements--the output is the file
+itself, and "changed" means its contents changed. Targets meet neither: a
+target's outputs include its side effects, in memory or on disk, and side
+effects are difficult to describe completely and may not fit a byte- or
+value-based definition of identity. dawn therefore assumes that a target
+changes each time it runs. Note that a target's *generated files* are sources,
+so they get the more precise rule: if a target runs and regenerates a file
+with identical contents, dependents of that file are not re-run.
 
 Sources
 ^^^^^^^

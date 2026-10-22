@@ -1,0 +1,7 @@
+@target(sources=["in.txt", "constant.txt"], generates=["mid.txt"])
+def build_mid():
+    sh.exec("cp constant.txt mid.txt")
+
+@target(sources=["mid.txt"], default=True)
+def consume():
+    print("CONSUME RAN")

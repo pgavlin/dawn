@@ -39,6 +39,17 @@ type Target interface {
 	generates() []string
 	info() targetInfo
 	upToDate(ctx context.Context) (bool, string, diff.ValueDiff, error)
+
+	// evaluate runs the target and returns its new data. A target may return false
+	// for changed only if it can reliably detect whether its outputs changed during
+	// evaluation. Reliability requires two things: the outputs must be completely
+	// captured (no side channels), and they must have a well-defined notion of
+	// identity. File targets meet both--the output is the file itself, and "changed"
+	// means its contents changed. Function targets meet neither: a function's
+	// outputs include its side effects, in memory or on disk, and side effects are
+	// difficult (and occasionally inconvenient) to describe completely and may not
+	// fit a byte- or value-based definition of identity. A target that cannot meet
+	// this bar must return true for changed whenever it runs.
 	evaluate(ctx context.Context) (data string, changed bool, err error)
 }
 

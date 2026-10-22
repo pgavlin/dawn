@@ -120,8 +120,9 @@ func (f *sourceFile) upToDate(ctx context.Context) (bool, string, diff.ValueDiff
 }
 
 func (f *sourceFile) evaluate(_ context.Context) (data string, changed bool, err error) {
+	changed = f.sum != f.oldSum
 	f.oldSum = f.sum
-	return f.sum, true, nil
+	return f.sum, changed, nil
 }
 
 func (f *sourceFile) load() error {

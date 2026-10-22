@@ -246,6 +246,59 @@ func TestSimpleTargets(t *testing.T) {
 	pt.run(t)
 }
 
+func TestEarlyCutoff(t *testing.T) {
+	t.Parallel()
+
+	// //:build_mid copies constant.txt to mid.txt, so editing its source in.txt
+	// re-runs it but regenerates mid.txt with identical contents. //:consume's only
+	// source is mid.txt, so it must be cut off.
+	run, offset := 0, 0
+	pt := projectTest{
+		path:  "testdata/early-cutoff",
+		edits: []string{"edit1", "edit2"},
+		validate: func(t *testing.T, _ string, events []testEvent) {
+			evts := events[offset:]
+			offset = len(events)
+			run++
+
+			find := func(kind, target string) testEvent {
+				i := slices.IndexFunc(evts, func(e testEvent) bool {
+					l, ok := e["label"].(*label.Label)
+					return ok && e["kind"].(string) == kind && l.String() == target
+				})
+				if i == -1 {
+					return nil
+				}
+				return evts[i]
+			}
+
+			switch run {
+			case 1:
+				assert.NotNil(t, find("TargetEvaluating", "//:build_mid"))
+				assert.NotNil(t, find("TargetEvaluating", "//:consume"))
+			case 2:
+				assert.NotNil(t, find("TargetEvaluating", "//:build_mid"))
+				assert.Nil(t, find("TargetEvaluating", "//:consume"))
+				assert.NotNil(t, find("TargetUpToDate", "//:consume"))
+
+				mid := find("TargetSucceeded", "source://:mid.txt")
+				if assert.NotNil(t, mid) {
+					assert.False(t, mid["changed"].(bool))
+				}
+			case 3:
+				assert.NotNil(t, find("TargetEvaluating", "//:build_mid"))
+				assert.NotNil(t, find("TargetEvaluating", "//:consume"))
+
+				mid := find("TargetSucceeded", "source://:mid.txt")
+				if assert.NotNil(t, mid) {
+					assert.True(t, mid["changed"].(bool))
+				}
+			}
+		},
+	}
+	pt.run(t)
+}
+
 func TestTargetDiffs(t *testing.T) {
 	t.Parallel()
 	dirs := []string{"constants", "functions", "names", "predeclared", "universal", "globals", "freevars"}
