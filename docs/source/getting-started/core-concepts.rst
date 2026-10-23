@@ -71,8 +71,19 @@ Projects
 A dawn *project* is a tree of :ref:`packages <Packages>`, each of which is
 composed of :ref:`modules <Modules>` that define :ref:`build targets <Targets>`.
 and/or implement shared utility functions. The root of a project is demarcated
-by a `.dawnconfig` file. When a project is loaded, each of its constituent
-:ref:`packages <Packages>` is loaded in parallel.
+by a `dawn.toml` (or legacy `.dawnconfig`) file. When a project is loaded, each
+of its constituent :ref:`packages <Packages>` is loaded in parallel.
+
+A project, including an external module project, may declare the minimum Dawn
+version needed to evaluate it:
+
+.. code-block:: toml
+
+    [dawn]
+    version = "v0.2.0"
+
+Dawn rejects the project when the running release is older than the declared
+version.
 
 Packages
 ^^^^^^^^

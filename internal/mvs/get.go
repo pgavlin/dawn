@@ -171,6 +171,26 @@ func BuildList(ctx context.Context, root *project.Config, resolver *Resolver) (m
 	return versionMap, nil
 }
 
+// ValidateDawnVersion checks the root and final selected module versions
+// against the running Dawn version.
+func ValidateDawnVersion(ctx context.Context, current string, root *project.Config, buildList map[string]string, resolver *Resolver) error {
+	required, requiredBy := root.Dawn.Version, ""
+	moduleRequired, modulePath, err := resolver.RequiredDawnVersion(ctx, buildList)
+	if err != nil {
+		return err
+	}
+	if semver.Compare(moduleRequired, required) > 0 {
+		required, requiredBy = moduleRequired, modulePath
+	}
+	if err := project.CheckDawnVersion(current, required); err != nil {
+		if requiredBy != "" {
+			return fmt.Errorf("project %s: %w", requiredBy, err)
+		}
+		return err
+	}
+	return nil
+}
+
 func Tidy(ctx context.Context, root *project.Config, resolver *Resolver) (map[string]project.RequirementConfig, error) {
 	return transformReqs(ctx, root, resolver, func(ctx context.Context, root *mvsProject) ([]module.Version, error) {
 		return mvs.Req(ctx, root.Version, nil, newReqs(root, resolver))

@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/mitchellh/go-homedir"
+	"github.com/pgavlin/dawn"
 	"github.com/pgavlin/dawn/internal/mvs"
 	"github.com/pgavlin/dawn/internal/project"
 	"github.com/spf13/cobra"
@@ -27,7 +28,6 @@ func newGetCommand() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("loading config file: %w", err)
 			}
-
 			home, err := homedir.Dir()
 			if err != nil {
 				return fmt.Errorf("getting home directory: %w", err)
@@ -55,6 +55,16 @@ func newGetCommand() *cobra.Command {
 				newReqs, err = mvs.Get(context.TODO(), config, resolver, args[0])
 			}
 			if err != nil {
+				return err
+			}
+
+			updated := *config
+			updated.Requirements = newReqs
+			buildList, err := mvs.BuildList(context.TODO(), &updated, resolver)
+			if err != nil {
+				return err
+			}
+			if err := mvs.ValidateDawnVersion(context.TODO(), dawn.Version, &updated, buildList, resolver); err != nil {
 				return err
 			}
 

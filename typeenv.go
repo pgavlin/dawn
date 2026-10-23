@@ -78,17 +78,12 @@ func (proj *Project) buildTypeEnv() *typecheck.Env {
 	// package is always a string
 	env.Predeclared["package"] = typecheck.String
 
-	// struct and module constructors — treated as universals by isUniversal
-	// but must be in Predeclared so the type checker can resolve their types
-	// (they are not in typecheck.Universe).
+	// The struct constructor is treated as a universal by IsUniversal, but must
+	// be in Predeclared so the type checker can resolve its type (it is not in
+	// typecheck.Universe).
 	env.Predeclared["struct"] = &typecheck.Callable{
 		Name:       "struct",
 		Params:     []typecheck.Param{{Name: "kwargs", Type: typecheck.Any, StarStar: true}},
-		ReturnType: typecheck.Any,
-	}
-	env.Predeclared["module"] = &typecheck.Callable{
-		Name:       "module",
-		Params:     []typecheck.Param{{Name: "name", Type: typecheck.String}, {Name: "kwargs", Type: typecheck.Any, StarStar: true}},
 		ReturnType: typecheck.Any,
 	}
 
@@ -117,9 +112,9 @@ func IsUniversal(name string) bool {
 	if ok {
 		return true
 	}
-	// struct and module are also treated as universals in Dawn
+	// struct is also treated as a universal in Dawn.
 	switch name {
-	case "struct", "module":
+	case "struct":
 		return true
 	}
 	return false

@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"golang.org/x/mod/module"
+	"golang.org/x/mod/semver"
 
 	"github.com/gofrs/flock"
 	"github.com/pgavlin/dawn/internal/project"
@@ -70,9 +71,10 @@ func (defaultDialer) dialRepository(ctx context.Context, vcsKind, address string
 }
 
 type mvsProject struct {
-	Name         string
-	Version      module.Version
-	Requirements []module.Version
+	Name                string
+	Version             module.Version
+	RequiredDawnVersion string
+	Requirements        []module.Version
 }
 
 type projectRepository struct {
@@ -197,13 +199,33 @@ func (r *Resolver) resolveProject(ctx context.Context, p module.Version) (*mvsPr
 		})
 	}
 	summary := &mvsProject{
-		Name:         config.Name,
-		Version:      p,
-		Requirements: reqs,
+		Name:                config.Name,
+		Version:             p,
+		RequiredDawnVersion: config.Dawn.Version,
+		Requirements:        reqs,
 	}
 
 	summaryV, _ = r.projectSummaries.LoadOrStore(p.String(), summary)
 	return summaryV.(*mvsProject), nil
+}
+
+// RequiredDawnVersion returns the highest Dawn version required by the
+// projects in the final build list and the path of the project requiring it.
+func (r *Resolver) RequiredDawnVersion(ctx context.Context, buildList map[string]string) (string, string, error) {
+	var required, requiredBy string
+	for _, path := range slices.Sorted(maps.Keys(buildList)) {
+		if path == "" {
+			continue
+		}
+		p, err := r.resolveProject(ctx, module.Version{Path: path, Version: buildList[path]})
+		if err != nil {
+			return "", "", err
+		}
+		if semver.Compare(p.RequiredDawnVersion, required) > 0 {
+			required, requiredBy = p.RequiredDawnVersion, path
+		}
+	}
+	return required, requiredBy, nil
 }
 
 func (r *Resolver) listVersions(ctx context.Context, p module.Version) ([]module.Version, error) {

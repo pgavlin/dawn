@@ -17,12 +17,17 @@ type RequirementConfig struct {
 	Version string `toml:"version,inline"`
 }
 
+type DawnConfig struct {
+	Version string `toml:"version,omitempty"`
+}
+
 type Config struct {
 	Name    string `toml:"name,omitempty"`
 	Version string `toml:"version,omitempty"`
 
 	Ignore []string `toml:"ignore,omitempty"`
 
+	Dawn         DawnConfig                   `toml:"dawn,omitempty"`
 	Requirements map[string]RequirementConfig `toml:"requirements,omitempty"`
 }
 
@@ -42,6 +47,9 @@ func LoadConfigBytes(contents []byte) (*Config, error) {
 	}
 
 	var errs []error
+	if c.Dawn.Version != "" && (!semver.IsValid(c.Dawn.Version) || semver.Canonical(c.Dawn.Version) != c.Dawn.Version) {
+		errs = append(errs, fmt.Errorf("invalid Dawn version %q", c.Dawn.Version))
+	}
 	for _, k := range slices.Sorted(maps.Keys(c.Requirements)) {
 		req := c.Requirements[k]
 		if !semver.IsValid(req.Version) || semver.Canonical(req.Version) != req.Version {
@@ -86,6 +94,11 @@ func WriteConfigFile(path string, c *Config) error {
 
 	if len(c.Ignore) != 0 {
 		printSection("ignore = %v\n", encodeValue(c.Ignore))
+	}
+
+	if c.Dawn.Version != "" {
+		printSection("[dawn]\n")
+		print("version = %v\n", encodeValue(c.Dawn.Version))
 	}
 
 	if len(c.Requirements) != 0 {

@@ -61,8 +61,9 @@ type Project struct {
 	requirements map[string]string // maps project name to project path. local to each module.
 	buildList    map[string]string // maps project path to version
 
-	builtins starlark.StringDict
-	baseEnv  *typecheck.Env
+	builtins    starlark.StringDict
+	baseEnv     *typecheck.Env
+	dawnVersion string
 
 	always bool
 	dryrun bool
@@ -84,12 +85,16 @@ type OpenOptions struct {
 	Events      Events
 	Builtins    starlark.StringDict
 	PreferIndex bool
+
+	// DawnVersion overrides Version for compatibility checks. It is primarily
+	// useful to applications that embed Dawn and to tests.
+	DawnVersion string
 }
 
 // newProjectForCheck creates a minimally-initialized Project with config loaded.
 // It sets up root, ignore patterns, requirements, buildList, and MVS resolver,
 // but does not create a runner, temp dirs, or execute any modules.
-func newProjectForCheck(root string, events Events) (*Project, error) {
+func newProjectForCheck(root string, events Events, dawnVersion string) (*Project, error) {
 	home, err := homedir.Dir()
 	if err != nil {
 		return nil, fmt.Errorf("getting home directory: %w", err)
@@ -100,6 +105,7 @@ func newProjectForCheck(root string, events Events) (*Project, error) {
 		root:        root,
 		moduleCache: moduleCache,
 		events:      events,
+		dawnVersion: dawnVersion,
 		modules:     map[string]*module{},
 		targets:     map[string]*runTarget{},
 		flags:       map[string]*Flag{},
@@ -122,7 +128,12 @@ func Open(ctx context.Context, root string, options *OpenOptions) (*Project, err
 		events = options.Events
 	}
 
-	proj, err := newProjectForCheck(root, events)
+	dawnVersion := Version
+	if options != nil && options.DawnVersion != "" {
+		dawnVersion = options.DawnVersion
+	}
+
+	proj, err := newProjectForCheck(root, events, dawnVersion)
 	if err != nil {
 		return nil, err
 	}

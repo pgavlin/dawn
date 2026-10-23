@@ -3,6 +3,9 @@ package project
 import (
 	"fmt"
 	"path"
+	"strings"
+
+	"golang.org/x/mod/semver"
 )
 
 func CleanPath(p string) string {
@@ -29,4 +32,25 @@ func JoinPathVersion(p, major string) string {
 		return p
 	}
 	return fmt.Sprintf("%v@%v", p, major)
+}
+
+// CheckDawnVersion verifies that current satisfies the project's minimum Dawn
+// version. Development builds are accepted so locally-built Dawn binaries can
+// be used to develop modules that require a released version.
+func CheckDawnVersion(current, required string) error {
+	if required == "" || current == "" || current == "development" {
+		return nil
+	}
+
+	rawCurrent := current
+	if !strings.HasPrefix(current, "v") {
+		current = "v" + current
+	}
+	if !semver.IsValid(current) {
+		return fmt.Errorf("invalid current Dawn version %q", rawCurrent)
+	}
+	if semver.Compare(current, required) < 0 {
+		return fmt.Errorf("requires Dawn %s or newer (running %s)", required, current)
+	}
+	return nil
 }

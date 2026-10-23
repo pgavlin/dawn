@@ -156,6 +156,7 @@ func (r *testRepository) FetchRevision(ctx context.Context, projectPath string, 
 	return project.WriteConfigFile(filepath.Join(projectDir, "dawn.toml"), &project.Config{
 		Name:         summary.Name,
 		Version:      summary.Version.Version,
+		Dawn:         project.DawnConfig{Version: summary.RequiredDawnVersion},
 		Requirements: reqs,
 	})
 }

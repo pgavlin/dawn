@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 
+	"github.com/pgavlin/dawn"
 	"github.com/pgavlin/dawn/cmd/dawn/internal/term"
 	"github.com/pgavlin/dawn/util"
 	"github.com/spf13/cobra"
@@ -11,12 +12,11 @@ import (
 var (
 	prof      = &profiler{}
 	work      = &workspace{}
-	version   = "development"
 	termWidth int
 )
 
 var rootCmd = &cobra.Command{
-	Version:       version,
+	Version:       dawn.Version,
 	Use:           "dawn",
 	Short:         "dawn is a pragmatic polyglot build system.",
 	Long:          `A pragmatic polyglot build system.`,

@@ -67,8 +67,9 @@ func TestMVS(t *testing.T) {
 							Requirements: []module.Version{m("d", 3)},
 						},
 						"c": {
-							Version:      m("c", 1),
-							Requirements: []module.Version{m("d", 2)},
+							Version:             m("c", 1),
+							RequiredDawnVersion: "v9.0.0",
+							Requirements:        []module.Version{m("d", 2)},
 						},
 						"e": {
 							Version: m("e", 1),
@@ -109,8 +110,9 @@ func TestMVS(t *testing.T) {
 					},
 					{
 						"c": {
-							Version:      m("c", 4),
-							Requirements: []module.Version{m("g", 1)},
+							Version:             m("c", 4),
+							RequiredDawnVersion: "v0.2.0",
+							Requirements:        []module.Version{m("g", 1)},
 						},
 						"d": {
 							Version:      m("d", 4),
@@ -127,6 +129,23 @@ func TestMVS(t *testing.T) {
 			},
 		},
 	}
+
+	t.Run("DawnVersionUsesFinalBuildList", func(t *testing.T) {
+		root := &project.Config{Requirements: map[string]project.RequirementConfig{
+			"c": r("c", 1),
+			"g": r("g", 1),
+		}}
+		resolver := NewResolver(t.TempDir(), dialer, nil)
+		buildList, err := BuildList(context.Background(), root, resolver)
+		require.NoError(t, err)
+		assert.Equal(t, "v1.4.0", buildList[m("c", 1).Path])
+
+		// c v1.1.0 requires Dawn v9.0.0, but it is upgraded out of the final
+		// build list by g's requirement on c v1.4.0.
+		require.NoError(t, ValidateDawnVersion(context.Background(), "v0.2.0", root, buildList, resolver))
+		err = ValidateDawnVersion(context.Background(), "v0.1.0", root, buildList, resolver)
+		assert.ErrorContains(t, err, "project github.com/pgavlin/sandbox/c: requires Dawn v0.2.0 or newer")
+	})
 
 	t.Run("Reqs", func(t *testing.T) {
 		t.Parallel()

@@ -17,7 +17,6 @@ func (proj *Project) loadConfigFile(p string) error {
 	if err != nil {
 		return err
 	}
-
 	if len(c.Ignore) == 0 {
 		proj.ignore = nil
 	} else {
@@ -37,6 +36,9 @@ func (proj *Project) loadConfigFile(p string) error {
 	buildList, err := mvs.BuildList(context.TODO(), c, proj.resolver)
 	if err != nil {
 		return fmt.Errorf("computing requirements: %w", err)
+	}
+	if err := mvs.ValidateDawnVersion(context.TODO(), proj.dawnVersion, c, buildList, proj.resolver); err != nil {
+		return fmt.Errorf("checking Dawn version: %w", err)
 	}
 	proj.buildList = buildList
 

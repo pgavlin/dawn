@@ -25,7 +25,7 @@ def lint():
 gen_builtins("cli_builtins", "./cmd/dawn", "./cmd/dawn/builtins.go")
 gen_builtins()
 
-ldflags = f"-X main.version={version}"
+ldflags = f"-X github.com/pgavlin/dawn.Version={version}"
 
 dawn = go_binary(
     name="dawn",

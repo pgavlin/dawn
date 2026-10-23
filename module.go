@@ -12,6 +12,7 @@ import (
 	"github.com/pgavlin/dawn/util"
 	"github.com/pgavlin/starlark-go/resolve"
 	"github.com/pgavlin/starlark-go/starlark"
+	"github.com/pgavlin/starlark-go/starlarkstruct"
 	"github.com/pgavlin/starlark-go/syntax"
 	"github.com/pgavlin/starlark-go/typecheck"
 )
@@ -101,6 +102,7 @@ func (m *module) env(proj *Project) (*starlark.Thread, starlark.StringDict, erro
 	}
 
 	builtins["host"] = builtin_host
+	builtins["struct"] = starlark.NewBuiltin("struct", starlarkstruct.Make)
 
 	builtins["Cache"] = builtin_cache
 	builtins["path"] = proj.newBuiltin_path()

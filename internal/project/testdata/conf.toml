@@ -3,6 +3,9 @@ version = 'v1.2.3'
 
 ignore = ['**/testdata']
 
+[dawn]
+version = 'v0.1.0'
+
 [requirements]
 alpha = {path = 'reqs/alpha', version = 'v1.2.3'}
 beta = {path = 'reqs/beta', version = 'v1.2.3'}
